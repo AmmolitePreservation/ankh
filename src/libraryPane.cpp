@@ -1,15 +1,19 @@
 #include "libraryPane.h"
 
 #include "gameCatalog.h"
+#include "icons.h"
 
-#include <QComboBox>
+#include <QAction>
+#include <QActionGroup>
 #include <QEvent>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
 #include <QListView>
+#include <QMenu>
 #include <QMouseEvent>
 #include <QPainter>
+#include <QPushButton>
 #include <QSettings>
 #include <QSortFilterProxyModel>
 #include <QStandardItemModel>
@@ -26,14 +30,16 @@ enum Role {
   tintRole,
   favoriteRole,
   installedRole,
-  sortKeyRole,
+  nameKeyRole,
+  installKeyRole,
 };
 
-constexpr int rowHeight = 64;
+constexpr int rowHeight = 78;
+constexpr int iconSize = 56;
 
 QRect starRectFor(const QRect& row)
 {
-  return QRect(row.right() - 38, row.top() + (rowHeight - 24) / 2, 24, 24);
+  return QRect(row.right() - 44, row.top() + (rowHeight - 28) / 2, 28, 28);
 }
 
 }
@@ -46,9 +52,15 @@ public:
     invalidate();
   }
 
-  void setMode(int newMode)
+  void setFavoritesOnly(bool isOnly)
   {
-    mode = newMode;
+    favoritesOnly = isOnly;
+    invalidate();
+  }
+
+  void setInstalledOnly(bool isOnly)
+  {
+    installedOnly = isOnly;
     invalidate();
   }
 
@@ -56,10 +68,10 @@ protected:
   bool filterAcceptsRow(int row, const QModelIndex& parent) const override
   {
     const QModelIndex index = sourceModel()->index(row, 0, parent);
-    if (mode == 1 && !index.data(installedRole).toBool()) {
+    if (installedOnly && !index.data(installedRole).toBool()) {
       return false;
     }
-    if (mode == 2 && !index.data(favoriteRole).toBool()) {
+    if (favoritesOnly && !index.data(favoriteRole).toBool()) {
       return false;
     }
     if (searchText.isEmpty()) {
@@ -71,7 +83,8 @@ protected:
 
 private:
   QString searchText;
-  int mode = 0;
+  bool favoritesOnly = false;
+  bool installedOnly = false;
 };
 
 class GameDelegate : public QStyledItemDelegate {
@@ -96,48 +109,47 @@ public:
     painter->save();
     painter->setRenderHint(QPainter::Antialiasing, true);
     const QRect row = option.rect;
-    if (option.state & QStyle::State_Selected) {
-      painter->fillRect(row, skin.border);
-    } else if (option.state & QStyle::State_MouseOver) {
-      QColor hover = skin.border;
-      hover.setAlpha(110);
-      painter->fillRect(row, hover);
+    const bool isSelected = option.state & QStyle::State_Selected;
+    if (isSelected) {
+      painter->setPen(QPen(skin.accent, 1));
+      painter->setBrush(skin.base.lighter(125));
+      painter->drawRoundedRect(QRectF(row.adjusted(2, 3, -3, -4)).translated(0.5, 0.5), 6, 6);
+    } else {
+      if (option.state & QStyle::State_MouseOver) {
+        QColor hover = skin.border;
+        hover.setAlpha(90);
+        painter->fillRect(row.adjusted(0, 0, 0, -1), hover);
+      }
+      painter->setPen(skin.border);
+      painter->drawLine(row.left() + 8, row.bottom(), row.right() - 8, row.bottom());
     }
-    const QRect iconRect(row.left() + 14, row.top() + (rowHeight - 40) / 2, 40, 40);
+    const QRect iconRect(row.left() + 14, row.top() + (rowHeight - iconSize) / 2, iconSize, iconSize);
     paintGameIcon(*painter, iconRect, index.data(initialsRole).toString(), index.data(tintRole).value<QColor>());
 
+    const int textLeft = iconRect.right() + 18;
+    const int textWidth = starRectFor(row).left() - textLeft - 4;
     QFont titleFont = painter->font();
-    titleFont.setPixelSize(14);
-    titleFont.setBold(true);
+    titleFont.setPixelSize(17);
+    titleFont.setWeight(QFont::DemiBold);
     painter->setFont(titleFont);
     painter->setPen(skin.text);
-    const int textLeft = iconRect.right() + 14;
-    const int textWidth = starRectFor(row).left() - textLeft - 4;
-    const QFontMetrics titleMetrics(titleFont);
-    painter->drawText(QRect(textLeft, row.top() + 10, textWidth, 22), Qt::AlignVCenter | Qt::AlignLeft,
-      titleMetrics.elidedText(index.data(titleRole).toString(), Qt::ElideRight, textWidth));
+    painter->drawText(QRect(textLeft, row.top() + 15, textWidth, 24), Qt::AlignVCenter | Qt::AlignLeft,
+      QFontMetrics(titleFont).elidedText(index.data(titleRole).toString(), Qt::ElideRight, textWidth));
 
     QFont editionFont = painter->font();
-    editionFont.setPixelSize(13);
-    editionFont.setBold(false);
+    editionFont.setPixelSize(15);
+    editionFont.setWeight(QFont::Normal);
     painter->setFont(editionFont);
     painter->setPen(skin.secondary);
-    const QFontMetrics editionMetrics(editionFont);
-    painter->drawText(QRect(textLeft, row.top() + 32, textWidth, 20), Qt::AlignVCenter | Qt::AlignLeft,
-      editionMetrics.elidedText(index.data(editionRole).toString(), Qt::ElideRight, textWidth));
+    painter->drawText(QRect(textLeft, row.top() + 40, textWidth, 22), Qt::AlignVCenter | Qt::AlignLeft,
+      QFontMetrics(editionFont).elidedText(index.data(editionRole).toString(), Qt::ElideRight, textWidth));
 
     const bool isFavorite = index.data(favoriteRole).toBool();
     QFont starFont = painter->font();
-    starFont.setPixelSize(18);
+    starFont.setPixelSize(22);
     painter->setFont(starFont);
     painter->setPen(isFavorite ? skin.accent : skin.secondary);
     painter->drawText(starRectFor(row), Qt::AlignCenter, QString(QChar(isFavorite ? 0x2605 : 0x2606)));
-
-    if (option.state & QStyle::State_HasFocus) {
-      painter->setPen(QPen(skin.accent, 1));
-      painter->setBrush(Qt::NoBrush);
-      painter->drawRect(row.adjusted(0, 0, -1, -1));
-    }
     painter->restore();
   }
 
@@ -163,10 +175,19 @@ LibraryPane::LibraryPane(QSettings& settings, QWidget* parent)
     model(new QStandardItemModel(this)),
     proxy(new GameFilterProxy),
     delegate(new GameDelegate(skinNamed(QStringLiteral("Ankh")), this)),
-    search(new QLineEdit(this)),
-    filterChoice(new QComboBox(this)),
-    sortChoice(new QComboBox(this)),
     countLabel(new QLabel(this)),
+    search(new QLineEdit(this)),
+    searchAction(new QAction(this)),
+    filterMenuAction(new QAction(QStringLiteral("Filter and sort"), this)),
+    filterMenu(new QMenu(this)),
+    installedOnlyAction(filterMenu->addAction(QStringLiteral("Installed only"))),
+    sortGroup(new QActionGroup(this)),
+    customSortAction(nullptr),
+    nameSortAction(nullptr),
+    installSortAction(nullptr),
+    allChip(new QPushButton(QStringLiteral("All games"), this)),
+    favoritesChip(new QPushButton(QStringLiteral("Favorites"), this)),
+    nameChip(new QPushButton(QStringLiteral("Name A-Z"), this)),
     emptyLabel(new QLabel(QStringLiteral("No games match."), this)),
     list(new QListView(this))
 {
@@ -181,21 +202,42 @@ LibraryPane::LibraryPane(QSettings& settings, QWidget* parent)
     item->setData(game.tint, tintRole);
     item->setData(favorites.contains(game.id), favoriteRole);
     item->setData(game.isInstalled, installedRole);
-    item->setData(game.title.toLower() + QLatin1Char(' ') + game.edition.toLower(), sortKeyRole);
+    const QString nameKey = game.title.toLower() + QLatin1Char(' ') + game.edition.toLower();
+    item->setData(nameKey, nameKeyRole);
+    item->setData((game.isInstalled ? QStringLiteral("0 ") : QStringLiteral("1 ")) + nameKey, installKeyRole);
     item->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
     model->appendRow(item);
   }
   proxy->setSourceModel(model);
-  proxy->setSortRole(sortKeyRole);
 
-  search->setPlaceholderText(QStringLiteral("Search games"));
-  search->setClearButtonEnabled(true);
-  search->setAccessibleName(QStringLiteral("Search games"));
-  filterChoice->addItems({QStringLiteral("All"), QStringLiteral("Installed"), QStringLiteral("Favorites")});
-  filterChoice->setAccessibleName(QStringLiteral("Filter"));
-  sortChoice->addItems({QStringLiteral("Custom"), QStringLiteral("Name")});
-  sortChoice->setAccessibleName(QStringLiteral("Sort"));
+  auto* heading = new QLabel(QStringLiteral("Library"), this);
+  heading->setProperty("paneHeading", true);
   countLabel->setProperty("secondary", true);
+
+  search->setPlaceholderText(QStringLiteral("Search games..."));
+  search->setAccessibleName(QStringLiteral("Search games"));
+  searchAction->setText(QStringLiteral("Search"));
+  search->addAction(searchAction, QLineEdit::LeadingPosition);
+  search->addAction(filterMenuAction, QLineEdit::TrailingPosition);
+
+  installedOnlyAction->setCheckable(true);
+  filterMenu->addSeparator();
+  customSortAction = filterMenu->addAction(QStringLiteral("Sort: Custom"));
+  nameSortAction = filterMenu->addAction(QStringLiteral("Sort: Name A-Z"));
+  installSortAction = filterMenu->addAction(QStringLiteral("Sort: Installed first"));
+  for (QAction* action : {customSortAction, nameSortAction, installSortAction}) {
+    action->setCheckable(true);
+    sortGroup->addAction(action);
+  }
+  customSortAction->setChecked(true);
+
+  for (QPushButton* chip : {allChip, favoritesChip, nameChip}) {
+    chip->setProperty("chip", true);
+    chip->setCheckable(true);
+    chip->setCursor(Qt::PointingHandCursor);
+  }
+  allChip->setChecked(true);
+
   emptyLabel->setProperty("secondary", true);
   emptyLabel->setAlignment(Qt::AlignHCenter | Qt::AlignTop);
   emptyLabel->setContentsMargins(0, 24, 0, 0);
@@ -207,25 +249,48 @@ LibraryPane::LibraryPane(QSettings& settings, QWidget* parent)
   list->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
   list->setAccessibleName(QStringLiteral("Games"));
 
-  auto* controls = new QHBoxLayout;
-  controls->setSpacing(8);
-  controls->addWidget(filterChoice, 1);
-  controls->addWidget(sortChoice, 1);
+  auto* headingRow = new QHBoxLayout;
+  headingRow->addWidget(heading);
+  headingRow->addStretch(1);
+  headingRow->addWidget(countLabel, 0, Qt::AlignBottom);
+
+  auto* chips = new QHBoxLayout;
+  chips->setSpacing(8);
+  chips->addWidget(allChip);
+  chips->addWidget(favoritesChip);
+  chips->addWidget(nameChip);
+  chips->addStretch(1);
 
   auto* layout = new QVBoxLayout(this);
-  layout->setContentsMargins(12, 12, 12, 8);
-  layout->setSpacing(8);
+  layout->setContentsMargins(24, 20, 24, 8);
+  layout->setSpacing(12);
+  layout->addLayout(headingRow);
   layout->addWidget(search);
-  layout->addLayout(controls);
-  layout->addWidget(countLabel);
+  layout->addLayout(chips);
   layout->addWidget(list, 1);
   layout->addWidget(emptyLabel, 1);
 
   connect(search, &QLineEdit::textChanged, this, [this] { applyFilters(); });
-  connect(filterChoice, &QComboBox::currentIndexChanged, this, [this] { applyFilters(); });
-  connect(sortChoice, &QComboBox::currentIndexChanged, this, [this](int index) {
-    proxy->sort(index == 1 ? 0 : -1);
+  connect(filterMenuAction, &QAction::triggered, this, [this] {
+    filterMenu->exec(search->mapToGlobal(QPoint(search->width() - filterMenu->sizeHint().width(), search->height())));
   });
+  connect(installedOnlyAction, &QAction::toggled, this, [this] { applyFilters(); });
+  connect(allChip, &QPushButton::clicked, this, [this] {
+    allChip->setChecked(true);
+    favoritesChip->setChecked(false);
+    applyFilters();
+  });
+  connect(favoritesChip, &QPushButton::clicked, this, [this] {
+    favoritesChip->setChecked(true);
+    allChip->setChecked(false);
+    applyFilters();
+  });
+  connect(nameChip, &QPushButton::clicked, this, [this](bool isChecked) {
+    setSortMode(isChecked ? SortMode::name : SortMode::custom);
+  });
+  connect(customSortAction, &QAction::triggered, this, [this] { setSortMode(SortMode::custom); });
+  connect(nameSortAction, &QAction::triggered, this, [this] { setSortMode(SortMode::name); });
+  connect(installSortAction, &QAction::triggered, this, [this] { setSortMode(SortMode::installState); });
   connect(list->selectionModel(), &QItemSelectionModel::currentChanged, this, [this](const QModelIndex& current) {
     if (current.isValid()) {
       emit gameSelected(current.data(idRole).toString());
@@ -241,6 +306,8 @@ LibraryPane::LibraryPane(QSettings& settings, QWidget* parent)
 void LibraryPane::applySkin(const Skin& skin)
 {
   delegate->setSkin(skin);
+  searchAction->setIcon(makeIcon(IconKind::search, 18, skin.secondary));
+  filterMenuAction->setIcon(makeIcon(IconKind::chevronDown, 18, skin.secondary));
   list->viewport()->update();
 }
 
@@ -258,11 +325,27 @@ void LibraryPane::selectGame(const QString& id)
 void LibraryPane::applyFilters()
 {
   proxy->setSearchText(search->text());
-  proxy->setMode(filterChoice->currentIndex());
+  proxy->setFavoritesOnly(favoritesChip->isChecked());
+  proxy->setInstalledOnly(installedOnlyAction->isChecked());
   const int shown = proxy->rowCount();
-  countLabel->setText(QStringLiteral("%1 of %2").arg(shown).arg(model->rowCount()));
+  const int total = model->rowCount();
+  countLabel->setText(shown == total ? QStringLiteral("%1 games").arg(total) : QStringLiteral("%1 of %2 games").arg(shown).arg(total));
   list->setVisible(shown > 0);
   emptyLabel->setVisible(shown == 0);
+}
+
+void LibraryPane::setSortMode(SortMode mode)
+{
+  nameChip->setChecked(mode == SortMode::name);
+  customSortAction->setChecked(mode == SortMode::custom);
+  nameSortAction->setChecked(mode == SortMode::name);
+  installSortAction->setChecked(mode == SortMode::installState);
+  if (mode == SortMode::custom) {
+    proxy->sort(-1);
+    return;
+  }
+  proxy->setSortRole(mode == SortMode::name ? nameKeyRole : installKeyRole);
+  proxy->sort(0);
 }
 
 void LibraryPane::saveFavorites()

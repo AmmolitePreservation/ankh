@@ -5,16 +5,20 @@
 #include "fatal.h"
 #include "gameCatalog.h"
 #include "gamePage.h"
+#include "icons.h"
 #include "libraryPane.h"
 #include "settingsPage.h"
 #include "settingsPane.h"
-#include "titleBar.h"
 #include "updateChecker.h"
 #include "updateSheet.h"
+#include "windowControls.h"
 
+#include <QAbstractScrollArea>
 #include <QApplication>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QLineEdit>
+#include <QMenu>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPushButton>
@@ -33,10 +37,58 @@ namespace {
 constexpr int minimumSidebarWidth = 300;
 constexpr int maximumSidebarWidth = 420;
 constexpr int defaultSidebarWidth = 360;
-constexpr int headerHeight = 64;
+constexpr int headerHeight = 84;
 constexpr int resizeBorder = 6;
 
 }
+
+class UserMenuButton : public QPushButton {
+public:
+  UserMenuButton(const QString& name, QWidget* parent)
+    : QPushButton(parent), userName(name)
+  {
+    setCursor(Qt::PointingHandCursor);
+    setFlat(true);
+    setAccessibleName(QStringLiteral("%1 menu").arg(name));
+    setFixedHeight(48);
+    QFont measured = font();
+    measured.setPixelSize(17);
+    setFixedWidth(56 + QFontMetrics(measured).horizontalAdvance(name) + 40);
+  }
+
+  void setColors(const QColor& text, const QColor& secondary, const QColor& border)
+  {
+    textColor = text;
+    secondaryColor = secondary;
+    borderColor = border;
+    update();
+  }
+
+protected:
+  void paintEvent(QPaintEvent*) override
+  {
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    const qreal ratio = devicePixelRatioF();
+    painter.drawPixmap(QRect(0, 4, 40, 40), iconPixmap(IconKind::user, 40, secondaryColor, ratio));
+    painter.setPen(textColor);
+    QFont textFont = font();
+    textFont.setPixelSize(17);
+    painter.setFont(textFont);
+    painter.drawText(QRect(52, 0, width() - 52 - 32, height()), Qt::AlignVCenter | Qt::AlignLeft, userName);
+    painter.drawPixmap(QRect(width() - 24, 15, 18, 18), iconPixmap(IconKind::chevronDown, 18, secondaryColor, ratio));
+    if (hasFocus()) {
+      painter.setPen(QPen(borderColor, 1, Qt::DotLine));
+      painter.drawRect(rect().adjusted(0, 0, -1, -1));
+    }
+  }
+
+private:
+  QString userName;
+  QColor textColor;
+  QColor secondaryColor;
+  QColor borderColor;
+};
 
 SplitHandle::SplitHandle(QWidget* parent)
   : QWidget(parent)
@@ -68,7 +120,7 @@ void SplitHandle::mouseMoveEvent(QMouseEvent* event)
 MainWindow::MainWindow()
   : settings(QSettings::IniFormat, QSettings::UserScope, QStringLiteral("AmmolitePreservation"), QStringLiteral("Ankh")),
     skin(&skinNamed(settings.value(QStringLiteral("appearance/skin"), QStringLiteral("Ankh")).toString())),
-    titleBar(new TitleBar(this)),
+    windowControls(new WindowControls(this)),
     sidebar(new QWidget(this)),
     handle(new SplitHandle(this)),
     wordmarkImage(new QSvgWidget(QStringLiteral(":/ankhWordmark.svg"), this)),
@@ -81,38 +133,54 @@ MainWindow::MainWindow()
     settingsPage(new SettingsPage(skin->name, this)),
     libraryNavigation(new QPushButton(QStringLiteral("Library"), this)),
     settingsButton(new QPushButton(QStringLiteral("Settings"), this)),
+    activityButton(new QPushButton(QStringLiteral("Activity"), this)),
+    userMenuButton(nullptr),
     updateChecker(new UpdateChecker(QString::fromLatin1(appVersion), this))
 {
+  const QString userName = qEnvironmentVariable("USERNAME");
+  if (userName.isEmpty()) {
+    fatal(QStringLiteral("The USERNAME environment variable is not set."));
+  }
+  userMenuButton = new UserMenuButton(userName, this);
+
   setWindowTitle(QStringLiteral("Ankh"));
   setWindowIcon(QIcon(QStringLiteral(":/ankh.ico")));
   setMinimumSize(1180, 760);
-  resize(settings.value(QStringLiteral("window/size"), QSize(1280, 800)).toSize());
+  resize(settings.value(QStringLiteral("window/size"), QSize(1600, 1000)).toSize());
   winId();
 
   sidebar->setObjectName(QStringLiteral("sidebar"));
   auto* sidebarHeader = new QWidget(sidebar);
   sidebarHeader->setObjectName(QStringLiteral("sidebarHeader"));
   sidebarHeader->setFixedHeight(headerHeight);
-  wordmarkImage->setFixedSize(140, 36);
+  wordmarkImage->setFixedSize(176, 45);
   wordmarkImage->setAccessibleName(QStringLiteral("Ankh"));
-  QFont wordmarkFont(QStringLiteral("Georgia"), 17);
-  wordmarkText->setFont(wordmarkFont);
+  wordmarkText->setFont(QFont(QStringLiteral("Georgia"), 19));
   wordmarkText->setAccessibleName(QStringLiteral("MMOnomicon"));
-  auto* headerLayout = new QHBoxLayout(sidebarHeader);
-  headerLayout->setContentsMargins(20, 0, 20, 0);
-  headerLayout->addWidget(wordmarkImage);
-  headerLayout->addWidget(wordmarkText);
-  headerLayout->addStretch(1);
+  auto* sidebarHeaderLayout = new QHBoxLayout(sidebarHeader);
+  sidebarHeaderLayout->setContentsMargins(26, 0, 20, 0);
+  sidebarHeaderLayout->addWidget(wordmarkImage);
+  sidebarHeaderLayout->addWidget(wordmarkText);
+  sidebarHeaderLayout->addStretch(1);
 
-  settingsButton->setProperty("link", true);
-  settingsButton->setCursor(Qt::PointingHandCursor);
   leftStack->addWidget(libraryPane);
   leftStack->addWidget(settingsPane);
+
+  settingsButton->setProperty("footer", true);
+  settingsButton->setIconSize(QSize(22, 22));
+  activityButton->setIconSize(QSize(22, 22));
+  settingsButton->setCursor(Qt::PointingHandCursor);
+  activityButton->setProperty("footer", true);
+  activityButton->setEnabled(false);
+  activityButton->setToolTip(QStringLiteral("Activity is not built yet."));
   auto* foot = new QWidget(sidebar);
-  foot->setObjectName(QStringLiteral("sidebar"));
+  foot->setObjectName(QStringLiteral("sidebarFoot"));
+  foot->setFixedHeight(76);
   auto* footLayout = new QHBoxLayout(foot);
-  footLayout->setContentsMargins(16, 6, 16, 10);
+  footLayout->setContentsMargins(24, 0, 24, 0);
   footLayout->addWidget(settingsButton);
+  footLayout->addStretch(1);
+  footLayout->addWidget(activityButton);
   footLayout->addStretch(1);
 
   auto* sidebarLayout = new QVBoxLayout(sidebar);
@@ -125,19 +193,16 @@ MainWindow::MainWindow()
   libraryNavigation->setProperty("navigation", true);
   libraryNavigation->setCheckable(true);
   libraryNavigation->setChecked(true);
-  const QString userName = qEnvironmentVariable("USERNAME");
-  if (userName.isEmpty()) {
-    fatal(QStringLiteral("The USERNAME environment variable is not set."));
-  }
-  auto* profile = new QLabel(userName, this);
-  profile->setProperty("secondary", true);
+  libraryNavigation->setFixedHeight(headerHeight - 16);
   auto* mainHeader = new QWidget(this);
+  mainHeader->setObjectName(QStringLiteral("header"));
   mainHeader->setFixedHeight(headerHeight);
   auto* mainHeaderLayout = new QHBoxLayout(mainHeader);
-  mainHeaderLayout->setContentsMargins(28, 0, 28, 0);
+  mainHeaderLayout->setContentsMargins(28, 16, 36, 0);
+  mainHeaderLayout->setSpacing(8);
   mainHeaderLayout->addWidget(libraryNavigation);
   mainHeaderLayout->addStretch(1);
-  mainHeaderLayout->addWidget(profile);
+  mainHeaderLayout->addWidget(userMenuButton, 0, Qt::AlignVCenter);
 
   auto* emptyLibrary = new QLabel(QStringLiteral("Select a game"), this);
   emptyLibrary->setProperty("secondary", true);
@@ -152,36 +217,39 @@ MainWindow::MainWindow()
   mainColumn->addWidget(mainHeader);
   mainColumn->addWidget(mainStack, 1);
 
-  auto* body = new QHBoxLayout;
-  body->setContentsMargins(0, 0, 0, 0);
-  body->setSpacing(0);
-  body->addWidget(sidebar);
-  body->addWidget(handle);
-  body->addLayout(mainColumn, 1);
-
-  auto* layout = new QVBoxLayout(this);
+  auto* layout = new QHBoxLayout(this);
   layout->setContentsMargins(0, 0, 0, 0);
   layout->setSpacing(0);
-  layout->addWidget(titleBar);
-  layout->addLayout(body, 1);
+  layout->addWidget(sidebar);
+  layout->addWidget(handle);
+  layout->addLayout(mainColumn, 1);
 
   setSidebarWidth(settings.value(QStringLiteral("window/sidebarWidth"), defaultSidebarWidth).toInt());
   applySkin(skin->name);
+  placeWindowControls();
 
-  connect(titleBar, &TitleBar::minimizeRequested, this, &QWidget::showMinimized);
-  connect(titleBar, &TitleBar::maximizeRequested, this, [this] {
+  auto* userMenu = new QMenu(userMenuButton);
+  connect(userMenu->addAction(QStringLiteral("Settings")), &QAction::triggered, this, [this] { showSettings(0); });
+  connect(userMenu->addAction(QStringLiteral("Attributions")), &QAction::triggered, this, [this] { showSettings(2); });
+  connect(userMenuButton, &QPushButton::clicked, this, [this, userMenu] {
+    userMenu->exec(userMenuButton->mapToGlobal(QPoint(userMenuButton->width() - userMenu->sizeHint().width(), userMenuButton->height())));
+  });
+
+  connect(windowControls, &WindowControls::minimizeRequested, this, &QWidget::showMinimized);
+  connect(windowControls, &WindowControls::maximizeRequested, this, [this] {
     if (isMaximized()) {
       showNormal();
     } else {
       showMaximized();
     }
   });
-  connect(titleBar, &TitleBar::closeRequested, this, &QWidget::close);
+  connect(windowControls, &WindowControls::closeRequested, this, &QWidget::close);
+  connect(windowControls, &WindowControls::resized, this, &MainWindow::placeWindowControls);
   connect(handle, &SplitHandle::dragged, this, [this](int globalX) {
     setSidebarWidth(globalX - mapToGlobal(QPoint(0, 0)).x());
   });
   connect(libraryNavigation, &QPushButton::clicked, this, &MainWindow::showLibrary);
-  connect(settingsButton, &QPushButton::clicked, this, &MainWindow::showSettings);
+  connect(settingsButton, &QPushButton::clicked, this, [this] { showSettings(0); });
   connect(settingsPane, &SettingsPane::sectionSelected, settingsPage, &SettingsPage::showSection);
   connect(settingsPage, &SettingsPage::skinChosen, this, &MainWindow::applySkin);
   connect(settingsPage, &SettingsPage::updateCheckRequested, updateChecker, &UpdateChecker::check);
@@ -195,11 +263,11 @@ MainWindow::MainWindow()
     settingsPage->setUpdateStatus(QStringLiteral("Checking for updates..."));
   });
   connect(updateChecker, &UpdateChecker::upToDate, this, [this] {
-    titleBar->updateButton()->setVisible(false);
+    windowControls->updateButton()->setVisible(false);
     settingsPage->setUpdateStatus(QStringLiteral("Ankh is up to date."));
   });
   connect(updateChecker, &UpdateChecker::noReleases, this, [this] {
-    titleBar->updateButton()->setVisible(false);
+    windowControls->updateButton()->setVisible(false);
     settingsPage->setUpdateStatus(QStringLiteral("No releases have been published yet."));
   });
   connect(updateChecker, &UpdateChecker::failed, this, [this](const QString& message) {
@@ -209,11 +277,11 @@ MainWindow::MainWindow()
     pendingVersion = version;
     pendingNotes = notes;
     pendingPage = page;
-    titleBar->updateButton()->setToolTip(QStringLiteral("Update available: %1").arg(version));
-    titleBar->updateButton()->setVisible(true);
+    windowControls->updateButton()->setToolTip(QStringLiteral("Update available: %1").arg(version));
+    windowControls->updateButton()->setVisible(true);
     settingsPage->setUpdateStatus(QStringLiteral("Update available: %1").arg(version));
   });
-  connect(titleBar->updateButton(), &QAbstractButton::clicked, this, &MainWindow::openUpdateSheet);
+  connect(windowControls->updateButton(), &QAbstractButton::clicked, this, &MainWindow::openUpdateSheet);
 
   updateTimer.setInterval(24 * 60 * 60 * 1000);
   connect(&updateTimer, &QTimer::timeout, updateChecker, &UpdateChecker::check);
@@ -238,11 +306,15 @@ void MainWindow::applySkin(const QString& name)
   wordmarkImage->setVisible(skin->usesWordmarkImage);
   wordmarkText->setVisible(!skin->usesWordmarkImage);
   handle->setLineColor(skin->border);
-  titleBar->applySkin(*skin);
+  windowControls->applySkin(*skin);
   libraryPane->applySkin(*skin);
-  QPalette palette = handle->palette();
-  palette.setColor(QPalette::Window, skin->base);
-  handle->setPalette(palette);
+  gamePage->applySkin(*skin);
+  userMenuButton->setColors(skin->text, skin->secondary, skin->border);
+  settingsButton->setIcon(makeIcon(IconKind::settings, 22, skin->text));
+  activityButton->setIcon(makeIcon(IconKind::activity, 22, skin->secondary));
+  QPalette handlePalette = handle->palette();
+  handlePalette.setColor(QPalette::Window, skin->base);
+  handle->setPalette(handlePalette);
 }
 
 void MainWindow::showLibrary()
@@ -252,10 +324,12 @@ void MainWindow::showLibrary()
   mainStack->setCurrentIndex(settings.contains(QStringLiteral("library/selected")) ? 1 : 0);
 }
 
-void MainWindow::showSettings()
+void MainWindow::showSettings(int section)
 {
   libraryNavigation->setChecked(false);
   leftStack->setCurrentWidget(settingsPane);
+  settingsPane->selectSection(section);
+  settingsPage->showSection(section);
   mainStack->setCurrentWidget(settingsPage);
 }
 
@@ -264,6 +338,12 @@ void MainWindow::setSidebarWidth(int width)
   const int clamped = qBound(minimumSidebarWidth, width, maximumSidebarWidth);
   sidebar->setFixedWidth(clamped);
   settings.setValue(QStringLiteral("window/sidebarWidth"), clamped);
+}
+
+void MainWindow::placeWindowControls()
+{
+  windowControls->move(width() - windowControls->width(), 0);
+  windowControls->raise();
 }
 
 void MainWindow::openUpdateSheet()
@@ -288,14 +368,20 @@ long MainWindow::hitTest(const QPoint& position) const
     if (onTop) return HTTOP;
     if (onBottom) return HTBOTTOM;
   }
-  if (position.y() < TitleBar::barHeight) {
-    const QPoint local = titleBar->mapFrom(this, position);
-    if (titleBar->isMaximizeButtonAt(local)) {
+  if (position.y() < headerHeight) {
+    const QWidget* child = childAt(position);
+    if (child == windowControls->maximizeButton()) {
       return HTMAXBUTTON;
     }
-    if (titleBar->isCaptionAt(local)) {
-      return HTCAPTION;
+    if (child == handle) {
+      return HTCLIENT;
     }
+    for (const QWidget* widget = child; widget != nullptr; widget = widget->parentWidget()) {
+      if (qobject_cast<const QAbstractButton*>(widget) || qobject_cast<const QLineEdit*>(widget) || qobject_cast<const QAbstractScrollArea*>(widget)) {
+        return HTCLIENT;
+      }
+    }
+    return HTCAPTION;
   }
   return HTCLIENT;
 }
@@ -332,21 +418,21 @@ bool MainWindow::nativeEvent(const QByteArray& eventType, void* message, qintptr
   }
   case WM_NCMOUSEMOVE:
     if (msg->wParam == HTMAXBUTTON) {
-      titleBar->maximizeButton()->setNonClientState(true, isMaximizePressed);
+      windowControls->maximizeButton()->setNonClientState(true, isMaximizePressed);
       TRACKMOUSEEVENT track{sizeof(TRACKMOUSEEVENT), TME_LEAVE | TME_NONCLIENT, msg->hwnd, 0};
       TrackMouseEvent(&track);
     } else {
-      titleBar->maximizeButton()->setNonClientState(false, false);
+      windowControls->maximizeButton()->setNonClientState(false, false);
     }
     break;
   case WM_NCMOUSELEAVE:
     isMaximizePressed = false;
-    titleBar->maximizeButton()->setNonClientState(false, false);
+    windowControls->maximizeButton()->setNonClientState(false, false);
     break;
   case WM_NCLBUTTONDOWN:
     if (msg->wParam == HTMAXBUTTON) {
       isMaximizePressed = true;
-      titleBar->maximizeButton()->setNonClientState(true, true);
+      windowControls->maximizeButton()->setNonClientState(true, true);
       *result = 0;
       return true;
     }
@@ -354,7 +440,7 @@ bool MainWindow::nativeEvent(const QByteArray& eventType, void* message, qintptr
   case WM_NCLBUTTONUP:
     if (msg->wParam == HTMAXBUTTON) {
       isMaximizePressed = false;
-      titleBar->maximizeButton()->setNonClientState(true, false);
+      windowControls->maximizeButton()->setNonClientState(true, false);
       if (isMaximized()) {
         showNormal();
       } else {
@@ -376,11 +462,17 @@ void MainWindow::showEvent(QShowEvent* event)
   SetWindowPos(reinterpret_cast<HWND>(winId()), nullptr, 0, 0, 0, 0, SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
 }
 
+void MainWindow::resizeEvent(QResizeEvent* event)
+{
+  QWidget::resizeEvent(event);
+  placeWindowControls();
+}
+
 void MainWindow::changeEvent(QEvent* event)
 {
   QWidget::changeEvent(event);
   if (event->type() == QEvent::WindowStateChange) {
-    titleBar->setMaximized(isMaximized());
+    windowControls->setMaximized(isMaximized());
   }
 }
 

@@ -43,4 +43,4 @@ Layers 1 to 3 are the product; 4 to 7 are independently enabled features. See th
 
 ## Current state
 
-The shell, skins, library list, game page, settings (appearance, About Ankh, attributions), update check with the title-bar update button, and the installer exist. Installing, launching and updating games, and installing updates from inside Ankh, are not built.
+The library data is a hardcoded sample list (seven games, one marked installed) standing in for a real catalog. The shell, skins, library list, game page, settings (appearance, About Ankh, attributions), update check with the title-bar update button, and the installer exist. Installing, launching and updating games, and installing updates from inside Ankh, are not built.

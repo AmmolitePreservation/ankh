@@ -1,11 +1,9 @@
-#include "titleBar.h"
+#include "windowControls.h"
 
 #include "captionButton.h"
 
 #include <QHBoxLayout>
-#include <QLabel>
 #include <QPainter>
-#include <QPainterPath>
 
 UpdateButton::UpdateButton(QWidget* parent)
   : QAbstractButton(parent)
@@ -41,17 +39,15 @@ void UpdateButton::paintEvent(QPaintEvent*)
   painter.drawLine(QPointF(centerX - 5.5, 18), QPointF(centerX + 5.5, 18));
 }
 
-TitleBar::TitleBar(QWidget* parent)
+WindowControls::WindowControls(QWidget* parent)
   : QWidget(parent),
-    titleLabel(new QLabel(QStringLiteral("Ankh"), this)),
     update(new UpdateButton(this)),
     minimize(new CaptionButton(CaptionButton::Kind::minimize, this)),
     maximize(new CaptionButton(CaptionButton::Kind::maximize, this)),
     close(new CaptionButton(CaptionButton::Kind::close, this))
 {
-  setObjectName(QStringLiteral("titleBar"));
+  setObjectName(QStringLiteral("windowControls"));
   setFixedHeight(barHeight);
-  titleLabel->setProperty("secondary", true);
   update->setVisible(false);
   update->setToolTip(QStringLiteral("Update available"));
   update->setAccessibleName(QStringLiteral("Update available"));
@@ -60,52 +56,45 @@ TitleBar::TitleBar(QWidget* parent)
   close->setAccessibleName(QStringLiteral("Close"));
 
   auto* layout = new QHBoxLayout(this);
-  layout->setContentsMargins(12, 0, 0, 0);
+  layout->setContentsMargins(0, 0, 0, 0);
   layout->setSpacing(0);
-  layout->addWidget(titleLabel);
-  layout->addStretch(1);
+  layout->setSizeConstraint(QLayout::SetFixedSize);
   layout->addWidget(update, 0, Qt::AlignVCenter);
   layout->addSpacing(8);
   layout->addWidget(minimize);
   layout->addWidget(maximize);
   layout->addWidget(close);
 
-  connect(minimize, &QAbstractButton::clicked, this, &TitleBar::minimizeRequested);
-  connect(maximize, &QAbstractButton::clicked, this, &TitleBar::maximizeRequested);
-  connect(close, &QAbstractButton::clicked, this, &TitleBar::closeRequested);
+  connect(minimize, &QAbstractButton::clicked, this, &WindowControls::minimizeRequested);
+  connect(maximize, &QAbstractButton::clicked, this, &WindowControls::maximizeRequested);
+  connect(close, &QAbstractButton::clicked, this, &WindowControls::closeRequested);
 }
 
-UpdateButton* TitleBar::updateButton() const
+UpdateButton* WindowControls::updateButton() const
 {
   return update;
 }
 
-CaptionButton* TitleBar::maximizeButton() const
+CaptionButton* WindowControls::maximizeButton() const
 {
   return maximize;
 }
 
-void TitleBar::applySkin(const Skin& skin)
+void WindowControls::applySkin(const Skin& skin)
 {
-  const QColor hover = skin.border;
-  minimize->setColors(skin.text, hover);
-  maximize->setColors(skin.text, hover);
-  close->setColors(skin.text, hover);
+  minimize->setColors(skin.text, skin.border);
+  maximize->setColors(skin.text, skin.border);
+  close->setColors(skin.text, skin.border);
 }
 
-void TitleBar::setMaximized(bool isMaximized)
+void WindowControls::setMaximized(bool isMaximized)
 {
   maximize->setKind(isMaximized ? CaptionButton::Kind::restore : CaptionButton::Kind::maximize);
   maximize->setAccessibleName(isMaximized ? QStringLiteral("Restore") : QStringLiteral("Maximize"));
 }
 
-bool TitleBar::isCaptionAt(const QPoint& position) const
+void WindowControls::resizeEvent(QResizeEvent* event)
 {
-  const QWidget* child = childAt(position);
-  return child == nullptr || child == titleLabel;
-}
-
-bool TitleBar::isMaximizeButtonAt(const QPoint& position) const
-{
-  return childAt(position) == maximize;
+  QWidget::resizeEvent(event);
+  emit resized();
 }

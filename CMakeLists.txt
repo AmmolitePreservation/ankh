@@ -33,7 +33,8 @@ qt_add_executable(ankh WIN32
   src/fatal.cpp
   src/calendarVersion.cpp
   src/captionButton.cpp
-  src/titleBar.cpp
+  src/windowControls.cpp
+  src/icons.cpp
   src/skin.cpp
   src/gameCatalog.cpp
   src/libraryPane.cpp

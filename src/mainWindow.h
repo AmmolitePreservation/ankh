@@ -15,8 +15,9 @@ class QStackedWidget;
 class QSvgWidget;
 class SettingsPage;
 class SettingsPane;
-class TitleBar;
 class UpdateChecker;
+class UserMenuButton;
+class WindowControls;
 
 class SplitHandle : public QWidget {
   Q_OBJECT
@@ -46,20 +47,22 @@ public:
 protected:
   bool nativeEvent(const QByteArray& eventType, void* message, qintptr* result) override;
   void showEvent(QShowEvent* event) override;
+  void resizeEvent(QResizeEvent* event) override;
   void changeEvent(QEvent* event) override;
   void closeEvent(QCloseEvent* event) override;
 
 private:
   void applySkin(const QString& name);
   void showLibrary();
-  void showSettings();
+  void showSettings(int section);
   void setSidebarWidth(int width);
+  void placeWindowControls();
   void openUpdateSheet();
   long hitTest(const QPoint& position) const;
 
   QSettings settings;
   const Skin* skin;
-  TitleBar* titleBar;
+  WindowControls* windowControls;
   QWidget* sidebar;
   SplitHandle* handle;
   QSvgWidget* wordmarkImage;
@@ -72,6 +75,8 @@ private:
   SettingsPage* settingsPage;
   QPushButton* libraryNavigation;
   QPushButton* settingsButton;
+  QPushButton* activityButton;
+  UserMenuButton* userMenuButton;
   UpdateChecker* updateChecker;
   QTimer updateTimer;
   QString pendingVersion;

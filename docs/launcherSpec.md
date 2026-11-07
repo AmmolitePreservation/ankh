@@ -68,15 +68,15 @@ Dependencies are operational, not arbitrary: a script that arranges windows need
 ### Layout
 
 - Reference desktop size: **1600 × 1000 logical pixels**. Comfortable minimum: **1180 × 760**. Respect system scaling rather than shrinking text.
-- Custom title bar: 32 px, drawn by the application in the skin's colors, with its own minimize, maximize and close buttons at the right edge. The window keeps the system frame behavior: dragging, edge resizing, Aero Snap and the Windows 11 snap-layout flyout on the maximize button. Application header: 60–84 px. Left context pane: 360 px by default, resizable from 300 to 420 px. Main pane uses the remaining width.
+- There is no separate title bar. The application header, 84 px, is also the window's title bar: any empty header space drags the window, and the minimize, maximize and close buttons are drawn by the application in the skin's colors in the header's top-right corner. The window keeps the system frame behavior: edge resizing, Aero Snap and the Windows 11 snap-layout flyout on the maximize button. Left context pane: 360 px by default, resizable from 300 to 420 px. Main pane uses the remaining width.
 - **Divider alignment is a shell invariant:** the wordmark area and the context pane have exactly the same width. Use one continuous vertical divider from the top edge through the header to the bottom edge. There is no separately sized brand box. Top navigation starts inside the main pane with a normal content gutter. Apply this to both Ankh and MMOnomicon, on every page.
 - Define sidebar width once in the shared layout component and reuse it for the wordmark and context pane. Resizing or changing skins must update both together; do not calculate their widths independently.
 - Exactly **two primary columns**: context list and selected detail. Top navigation is horizontal, not a third vertical rail. Editors may have internal panels or a temporary drawer.
-- Header: small brand mark and wordmark at left; **Library / Sessions / Bots / Automation / Connections** across the top when enabled; compact user menu at right showing the user's Windows login name.
+- Header: brand mark and wordmark at left; **Library / Sessions / Bots / Automation / Connections** across the top when enabled, the selected destination underlined in the accent color; at right a compact user menu with a user glyph, the user's Windows login name and a chevron, opening Settings and Attributions. The window controls sit above it in the corner.
 - Left pane changes with destination: game library, saved sessions, script list, or connection list. Settings and Activity remain at its foot.
 - The main pane owns its scroll position. The context list scrolls independently. Selection, search, sort, filters, and scroll position survive navigation.
 - A contextual bottom action bar stays within the main pane. It shows status and the primary action for that page; it never covers the final row of content.
-- **Update button:** when a verified update is waiting, a green download button appears in the title bar, immediately left of the window controls, with the new version in its tooltip. It is absent otherwise. Clicking it shows the version and release notes and installs on confirmation. Updates are click-only. See `docs/updates.md`.
+- **Update button:** when a verified update is waiting, a green download button appears in the header's top-right corner, immediately left of the window controls, with the new version in its tooltip. It is absent otherwise. Clicking it shows the version and release notes and installs on confirmation. Updates are click-only. See `docs/updates.md`.
 - Background jobs appear in a small global Activity indicator. Opening it produces a drawer with downloads, patching, preflight, scripts, and connection activity.
 
 ### Navigation
@@ -93,8 +93,9 @@ The simple default exposes Library and Settings. Screens in this concept set del
 
 ### Library rows
 
-- 64 px row height, 36–40 px game icon, title and edition on separate lines, favorite star, and a small status icon when attention is needed.
-- Search covers title, edition, tags, and configured realm aliases. Filter: All / Installed / Favorites. Sort: Custom / Name / Recently played / Install state.
+- 78 px row height with a hairline divider between rows, 56 px game icon, title and edition on separate lines, favorite star, and a small status icon when attention is needed. The selected row has an accent outline.
+- The pane starts with a **Library** heading and a count ("7 games" or "3 of 7 games" when filtered). The search field has a search glyph and a chevron that opens a filter and sort menu.
+- Search covers title, edition, tags, and configured realm aliases. Chips below the search: **All games**, **Favorites**, and **Name A-Z**, a sort toggle. The filter menu adds Installed only and the sorts Custom, Name A-Z and Installed first; Recently played joins it once play history exists.
 - Virtualize long lists; there is no fixed game limit in the UI. Filter counts, empty results, keyboard movement, and a visible scrollbar are required.
 - A game release is selectable independently of other releases of the same game. WoW Classic, TBC, and WotLK are distinct entries.
 
@@ -118,10 +119,10 @@ Illustrative initial rows:
 
 1. **Game header:** 48 px icon; game title; edition and build beneath; one Game options menu. No scenic banner.
 2. **Tabs:** Play, Characters when supported, Client tools, Media, About.
-3. **Launch setup:** Realm dropdown, Account dropdown, and a collapsed More launch settings disclosure. The last valid choices are remembered per person and release.
-4. **Client readiness:** one status line and a concise maintenance summary. Example: “Up to date · Required compatibility ready.” An optional-tools summary is a small link, not a promotional card.
-5. **Continue with:** at most one small recent-character row when reliable data exists. It identifies the account/realm context and does not imply automatic in-game selection.
-6. **Bottom action:** status at left, primary Install / Update / Repair / Play action at right. When ready: “Ready to play” and “Arcanite · Main account.”
+3. **Launch setup:** a section heading, then Realm and Account dropdowns side by side with their labels above, a Manage accounts link under Account, and a collapsed More launch settings disclosure. The last valid choices are remembered per person and release. For a game that is not installed the dropdowns are disabled and a line says to install first.
+Up“Up to date · Required compatibility ready.” An optional-tools summary is a small link, not a promotional card.
+5. **Recent character:** a section with at most one small row (portrait, name, level, race, class and location) when reliable data exists. It identifies the account/realm context and does not imply automatic in-game selection.
+Ready“Ready to play” and “Arcanite · Main account.”
 
 The default profile does not require users to understand tool bundles. More launch settings exposes launch profile, display mode, and additional arguments only if relevant. Manage accounts is a secondary link near Account.
 

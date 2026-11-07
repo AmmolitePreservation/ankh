@@ -6,7 +6,6 @@
 #include <QWidget>
 
 class CaptionButton;
-class QLabel;
 
 class UpdateButton : public QAbstractButton {
   Q_OBJECT
@@ -20,28 +19,29 @@ protected:
   void paintEvent(QPaintEvent* event) override;
 };
 
-class TitleBar : public QWidget {
+class WindowControls : public QWidget {
   Q_OBJECT
 
 public:
   static constexpr int barHeight = 32;
 
-  explicit TitleBar(QWidget* parent = nullptr);
+  explicit WindowControls(QWidget* parent = nullptr);
 
   UpdateButton* updateButton() const;
   CaptionButton* maximizeButton() const;
   void applySkin(const Skin& skin);
   void setMaximized(bool isMaximized);
-  bool isCaptionAt(const QPoint& position) const;
-  bool isMaximizeButtonAt(const QPoint& position) const;
 
 signals:
   void minimizeRequested();
   void maximizeRequested();
   void closeRequested();
+  void resized();
+
+protected:
+  void resizeEvent(QResizeEvent* event) override;
 
 private:
-  QLabel* titleLabel;
   UpdateButton* update;
   CaptionButton* minimize;
   CaptionButton* maximize;
