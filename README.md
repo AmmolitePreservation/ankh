@@ -2,14 +2,34 @@
 
 A minimalist, robust game management application for a private collection of preserved games. It starts as a download-and-play launcher and grows, only for those who want it, into client tools, mixed-game sessions, automation, server-side bots, and MCP access.
 
-Ankh and MMOnomicon are two skins of the same application.
-
 - Product and interface specification: [docs/launcherSpec.md](docs/launcherSpec.md)
+- Release process and version format: [docs/releases.md](docs/releases.md)
+- Update flow: [docs/updates.md](docs/updates.md)
 - Wordmark: [assets/ankhWordmark.svg](assets/ankhWordmark.svg)
 
 ## Stack
 
-C++ with Qt, Windows first. Qt is linked dynamically and its DLLs ship beside `ankh.exe` in the package; nothing is installed separately. Qt is used under the LGPL, so the package carries Qt's license text.
+C++20 with Qt 6 (Widgets, Svg, Network), Windows first. Qt is linked dynamically and its DLLs ship beside `ankh.exe`. The installer is built with Inno Setup and installs the Microsoft Visual C++ runtime only when the machine lacks it.
+
+## Build
+
+Required environment variables (machine values, no defaults):
+
+- `ANKH_QT_ROOT`: the Qt MSVC kit, for example `C:\Qt\6.10.3\msvc2022_64`.
+- `ANKH_ISCC`: the Inno Setup compiler, for example `C:\Program Files (x86)\Inno Setup 6\ISCC.exe`.
+
+Visual Studio 2022 with the C++ workload is also required.
+
+```
+.\build.ps1                      builds build\Release\ankh.exe
+.\package.ps1                    builds, stages with windeployqt, and writes dist\ankhSetup-<version>-win64.exe and its .sha256
+```
+
+Both take `-version YYYY.MM.DD.HHMM`; without it they use the current UTC time.
+
+## Assets
+
+Vector first. Glyphs live in `assets/glyphs` as SVG with `currentColor` and are recolored at load. The header uses `assets/ankhWordmarkGold.svg` (gradient mark); `assets/ankhWordmark.svg` is the flat original. The edge grain is two transparent PNGs in `assets/textures` built by `tools/makeEdgeGrain.py` and layered over the window. The icon pack and installer images come from `tools/makeInstallerImages.py`.
 
 ## Layers
 
@@ -22,3 +42,13 @@ C++ with Qt, Windows first. Qt is linked dynamically and its DLLs ship beside `a
 7. MCP.
 
 Layers 1 to 3 are the product; 4 to 7 are independently enabled features. See the specification, section 17, for the delivery sequence.
+
+## Current state
+
+Built and tested: the shell, library list, game page, settings (About Ankh, attributions), the installer (per-user or all-users, silent flags), and in-app updating (signed manifest check, verified download, silent install, relaunch). Releases are made by `release.ps1`, run locally or by `.github/workflows/release.yml` once the `ANKH_SIGNING_KEY` repository secret exists.
+
+The library data is a hardcoded sample list (seven games, one marked installed) standing in for a real catalog. Installing, launching and updating games are not built.
+
+## Tests
+
+`.\test.ps1` runs the signature tests (needs a build first).

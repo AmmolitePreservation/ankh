@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="248" height="64" viewBox="0 0 248 64" role="img" aria-labelledby="ankh-wordmark-title">
+  <title id="ankh-wordmark-title">Ankh</title>
+  <desc>Antique-gold ankh with widely spaced ivory ANKH lettering. Transparent background; vector paths only.</desc>
+  <defs><linearGradient id="ankhGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F6DC8E"/><stop offset="0.55" stop-color="#E3BB5E"/><stop offset="1" stop-color="#C99A3E"/></linearGradient></defs><g id="ankh-symbol" fill="url(#ankhGold)">
+    <path fill-rule="evenodd" d="M28 4C20.7 4 16.5 9.5 16.5 15.5C16.5 22 23 29 28 33C33 29 39.5 22 39.5 15.5C39.5 9.5 35.3 4 28 4ZM28 7.8C32.7 7.8 35.8 11.1 35.8 15.5C35.8 20.1 31.4 26.2 28 29.5C24.6 26.2 20.2 20.1 20.2 15.5C20.2 11.1 23.3 7.8 28 7.8Z"/>
+    <path d="M8 30.6L26.4 32V29H29.6V32L48 30.6V36.4L29.6 35L31.3 60H24.7L26.4 35L8 36.4Z"/>
+  </g>
+  <g id="ankh-lettering" fill="#F2EFE6">
+    <path id="letter-a" fill-rule="evenodd" d="M88 44L97.3 20H99.7L109 44H106.4L103.6 36.5H93.4L90.6 44ZM94.2 34.3H102.8L98.5 22.9Z"/>
+    <path id="letter-n" d="M131 44V20H133.7L148.8 40.1V20H151.1V44H148.5L133.3 23.8V44Z"/>
+    <path id="letter-k" d="M174 20H176.3V32.1L189 20H192.2L180.1 31.5L193 44H189.7L178.4 33.1L176.3 35.1V44H174Z"/>
+    <path id="letter-h" d="M216 20H218.3V30.7H232.7V20H235V44H232.7V33H218.3V44H216Z"/>
+  </g>
+</svg>

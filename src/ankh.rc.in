@@ -1,0 +1,30 @@
+#include <winver.h>
+
+1 ICON "@CMAKE_CURRENT_SOURCE_DIR@/assets/ankh.ico"
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION @ANKH_V1@,@ANKH_V2@,@ANKH_V3@,@ANKH_V4@
+PRODUCTVERSION @ANKH_V1@,@ANKH_V2@,@ANKH_V3@,@ANKH_V4@
+FILEFLAGSMASK 0x3fL
+FILEFLAGS 0x0L
+FILEOS VOS_NT_WINDOWS32
+FILETYPE VFT_APP
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "040904b0"
+    BEGIN
+      VALUE "CompanyName", "AmmolitePreservation"
+      VALUE "FileDescription", "Ankh"
+      VALUE "FileVersion", "@ANKH_V1@.@ANKH_V2@.@ANKH_V3@.@ANKH_V4@"
+      VALUE "InternalName", "ankh"
+      VALUE "OriginalFilename", "ankh.exe"
+      VALUE "ProductName", "Ankh"
+      VALUE "ProductVersion", "@ANKH_VERSION@"
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x409, 1200
+  END
+END

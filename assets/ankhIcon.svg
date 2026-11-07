@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 64 64" role="img" aria-labelledby="ankh-title">
+<title id="ankh-title">Ankh</title>
+<desc>Antique-gold ankh on a charcoal rounded square. Original symbol geometry from the Ankh wordmark.</desc>
+<rect width="64" height="64" rx="13" fill="#171A19"/>
+<g fill="#C4A565" transform="translate(10 6.857143) scale(0.785714286)"><path fill-rule="evenodd" d="M28 4C20.7 4 16.5 9.5 16.5 15.5C16.5 22 23 29 28 33C33 29 39.5 22 39.5 15.5C39.5 9.5 35.3 4 28 4ZM28 7.8C32.7 7.8 35.8 11.1 35.8 15.5C35.8 20.1 31.4 26.2 28 29.5C24.6 26.2 20.2 20.1 20.2 15.5C20.2 11.1 23.3 7.8 28 7.8Z"/>
+    <path d="M8 30.6L26.4 32V29H29.6V32L48 30.6V36.4L29.6 35L31.3 60H24.7L26.4 35L8 36.4Z"/></g>
+</svg>
