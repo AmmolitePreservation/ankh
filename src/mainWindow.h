@@ -80,5 +80,7 @@ private:
   UpdateChecker* updateChecker;
   QTimer updateTimer;
   UpdateOffer pendingOffer;
+  QSize desiredSize;
+  bool isSizeApplied = false;
   bool isMaximizePressed = false;
 };

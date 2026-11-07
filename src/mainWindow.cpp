@@ -149,7 +149,8 @@ MainWindow::MainWindow()
   setWindowTitle(QStringLiteral("Ankh"));
   setWindowIcon(QIcon(QStringLiteral(":/ankh.ico")));
   setMinimumSize(1180, 760);
-  resize(settings.value(QStringLiteral("window/size"), QSize(1600, 1000)).toSize());
+  desiredSize = settings.value(QStringLiteral("window/size"), QSize(1600, 1000)).toSize();
+  resize(desiredSize);
   winId();
 
   sidebar->setObjectName(QStringLiteral("sidebar"));
@@ -466,6 +467,10 @@ void MainWindow::showEvent(QShowEvent* event)
   const MARGINS margins{1, 1, 1, 1};
   DwmExtendFrameIntoClientArea(reinterpret_cast<HWND>(winId()), &margins);
   SetWindowPos(reinterpret_cast<HWND>(winId()), nullptr, 0, 0, 0, 0, SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+  if (!isSizeApplied) {
+    isSizeApplied = true;
+    resize(desiredSize);
+  }
 }
 
 void MainWindow::resizeEvent(QResizeEvent* event)

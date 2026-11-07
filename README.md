@@ -45,4 +45,10 @@ Layers 1 to 3 are the product; 4 to 7 are independently enabled features. See th
 
 ## Current state
 
-The library data is a hardcoded sample list (seven games, one marked installed) standing in for a real catalog. The shell, library list, game page, settings (About Ankh, attributions), update check with the title-bar update button, and the installer exist. Installing, launching and updating games, and installing updates from inside Ankh, are not built.
+Built and tested: the shell, library list, game page, settings (About Ankh, attributions), the installer (per-user or all-users, silent flags), and in-app updating (signed manifest check, verified download, silent install, relaunch). Releases are made by `release.ps1`, run locally or by `.github/workflows/release.yml` once the `ANKH_SIGNING_KEY` repository secret exists.
+
+The library data is a hardcoded sample list (seven games, one marked installed) standing in for a real catalog. Installing, launching and updating games are not built.
+
+## Tests
+
+`.\test.ps1` runs the signature tests (needs a build first).

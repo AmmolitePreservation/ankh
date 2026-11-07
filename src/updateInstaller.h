@@ -10,6 +10,8 @@ class QNetworkAccessManager;
 class QNetworkReply;
 class QWinEventNotifier;
 
+void removeUpdateLeftovers();
+
 class UpdateInstaller : public QObject {
   Q_OBJECT
 

@@ -32,6 +32,16 @@ QNetworkRequest assetRequest(const QUrl& url, const QString& version)
   return request;
 }
 
+QString updateFolder()
+{
+  return QDir(QStandardPaths::writableLocation(QStandardPaths::TempLocation)).filePath(QStringLiteral("ankhUpdate"));
+}
+
+}
+
+void removeUpdateLeftovers()
+{
+  QDir(updateFolder()).removeRecursively();
 }
 
 UpdateInstaller::UpdateInstaller(const UpdateOffer& offer, const QString& currentVersion, QObject* parent)
@@ -45,7 +55,7 @@ void UpdateInstaller::start()
     emit failed(QStringLiteral("This copy of Ankh was not set up by the installer, so it cannot update itself."));
     return;
   }
-  workFolder = QDir(QStandardPaths::writableLocation(QStandardPaths::TempLocation)).filePath(QStringLiteral("ankhUpdate"));
+  workFolder = updateFolder();
   QDir(workFolder).removeRecursively();
   if (!QDir().mkpath(workFolder)) {
     emit failed(QStringLiteral("Could not create a folder for the update in %1.").arg(workFolder));

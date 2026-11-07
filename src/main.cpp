@@ -1,5 +1,6 @@
 #include "appVersion.h"
 #include "mainWindow.h"
+#include "updateInstaller.h"
 
 #include <QApplication>
 
@@ -10,6 +11,7 @@ int main(int argc, char* argv[])
   application.setOrganizationName(QStringLiteral("AmmolitePreservation"));
   application.setApplicationVersion(QString::fromLatin1(appVersion));
 
+  removeUpdateLeftovers();
   MainWindow window;
   window.show();
   return application.exec();
