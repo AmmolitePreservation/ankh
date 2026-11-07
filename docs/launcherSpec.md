@@ -68,7 +68,7 @@ Dependencies are operational, not arbitrary: a script that arranges windows need
 ### Layout
 
 - Reference desktop size: **1600 × 1000 logical pixels**. Comfortable minimum: **1180 × 760**. Respect system scaling rather than shrinking text.
-- Native title bar: 32 px. Application header: 60–84 px. Left context pane: 360 px by default, resizable from 300 to 420 px. Main pane uses the remaining width.
+- Custom title bar: 32 px, drawn by the application in the skin's colors, with its own minimize, maximize and close buttons at the right edge. The window keeps the system frame behavior: dragging, edge resizing, Aero Snap and the Windows 11 snap-layout flyout on the maximize button. Application header: 60–84 px. Left context pane: 360 px by default, resizable from 300 to 420 px. Main pane uses the remaining width.
 - **Divider alignment is a shell invariant:** the wordmark area and the context pane have exactly the same width. Use one continuous vertical divider from the top edge through the header to the bottom edge. There is no separately sized brand box. Top navigation starts inside the main pane with a normal content gutter. Apply this to both Ankh and MMOnomicon, on every page.
 - Define sidebar width once in the shared layout component and reuse it for the wordmark and context pane. Resizing or changing skins must update both together; do not calculate their widths independently.
 - Exactly **two primary columns**: context list and selected detail. Top navigation is horizontal, not a third vertical rail. Editors may have internal panels or a temporary drawer.
@@ -76,6 +76,7 @@ Dependencies are operational, not arbitrary: a script that arranges windows need
 - Left pane changes with destination: game library, saved sessions, script list, or connection list. Settings and Activity remain at its foot.
 - The main pane owns its scroll position. The context list scrolls independently. Selection, search, sort, filters, and scroll position survive navigation.
 - A contextual bottom action bar stays within the main pane. It shows status and the primary action for that page; it never covers the final row of content.
+- **Update button:** when a verified update is waiting, a green download button appears in the title bar, immediately left of the window controls, with the new version in its tooltip. It is absent otherwise. Clicking it shows the version and release notes and installs on confirmation. Updates are click-only. See `docs/updates.md`.
 - Background jobs appear in a small global Activity indicator. Opening it produces a drawer with downloads, patching, preflight, scripts, and connection activity.
 
 ### Navigation
@@ -547,6 +548,8 @@ Use specific recoverable states: Build mismatch, Required component missing, Too
 **About:** original game metadata, preserved edition/build, local notes, source references, and adapter/manifest versions. Keep operational setup elsewhere.
 
 **Attributions:** a Help page inside the application, opened from **Settings → About Ankh → Attributions** and from the Help item of the profile menu. It lists every third-party component in the running build: name, version, what Ankh uses it for, license name, copyright line, a source link, and the full license text in an expandable row. Qt's entry states that it is used under the LGPL, linked dynamically, and that its libraries sit beside the executable and can be replaced. The installer's tool is listed too. The page reads a manifest generated at build time from the same dependency list the build uses, bundled with the application, so it is correct offline and cannot drift from what ships. It is plain text in the application's own components, searchable, with no web view. Attribution is given even where a license does not require it.
+
+**About Ankh:** version, install scope and folder, Check for updates, and the Attributions page, under Settings.
 
 **Settings:** household profile, storage, features, defaults, accessibility, credentials, package sources, and advanced diagnostics. Curator settings are visually separate from everyday launch preferences.
 
