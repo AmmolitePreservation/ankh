@@ -21,7 +21,7 @@ project(ankh VERSION ${ANKH_V1}.${ANKH_V2}.${ANKH_V3}.${ANKH_V4} LANGUAGES CXX R
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Widgets Svg SvgWidgets Network)
+find_package(Qt6 REQUIRED COMPONENTS Widgets Svg SvgWidgets Network Test)
 qt_standard_project_setup()
 
 configure_file(src/appVersion.h.in appVersion.h @ONLY)
@@ -36,6 +36,9 @@ qt_add_executable(ankh WIN32
   src/windowControls.cpp
   src/icons.cpp
   src/edgeGrain.cpp
+  src/installInfo.cpp
+  src/updateSignature.cpp
+  src/updateInstaller.cpp
   src/palette.cpp
   src/gameCatalog.cpp
   src/libraryPane.cpp
@@ -50,12 +53,12 @@ qt_add_executable(ankh WIN32
 )
 
 target_include_directories(ankh PRIVATE src ${CMAKE_CURRENT_BINARY_DIR})
-target_link_libraries(ankh PRIVATE Qt6::Widgets Qt6::Svg Qt6::SvgWidgets Qt6::Network dwmapi)
+target_link_libraries(ankh PRIVATE Qt6::Widgets Qt6::Svg Qt6::SvgWidgets Qt6::Network dwmapi bcrypt)
 target_compile_definitions(ankh PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN)
 
 file(GLOB glyphFiles CONFIGURE_DEPENDS assets/glyphs/*.svg)
 file(GLOB textureFiles CONFIGURE_DEPENDS assets/textures/*.png)
-set(resourceFiles assets/ankhWordmarkGold.svg assets/ankh.ico ${glyphFiles} ${textureFiles} licenses/lgpl-3.0.txt licenses/gpl-3.0.txt licenses/innoSetup.txt)
+set(resourceFiles assets/ankhWordmarkGold.svg assets/ankh.ico assets/updatePublicKeys.txt ${glyphFiles} ${textureFiles} licenses/lgpl-3.0.txt licenses/gpl-3.0.txt licenses/innoSetup.txt)
 foreach(resourceFile IN LISTS resourceFiles)
   get_filename_component(resourceName "${resourceFile}" NAME)
   get_filename_component(resourceFolder "${resourceFile}" DIRECTORY)
@@ -68,3 +71,10 @@ foreach(resourceFile IN LISTS resourceFiles)
 endforeach()
 set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/thirdParty.json PROPERTIES QT_RESOURCE_ALIAS thirdParty.json)
 qt_add_resources(ankh resources PREFIX "/" FILES ${resourceFiles} ${CMAKE_CURRENT_BINARY_DIR}/thirdParty.json)
+
+enable_testing()
+qt_add_executable(updateSignatureTest tests/updateSignatureTest.cpp src/updateSignature.cpp src/fatal.cpp)
+target_include_directories(updateSignatureTest PRIVATE src)
+target_link_libraries(updateSignatureTest PRIVATE Qt6::Test Qt6::Widgets bcrypt)
+target_compile_definitions(updateSignatureTest PRIVATE "ANKH_FIXTURE_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures\"")
+add_test(NAME updateSignature COMMAND updateSignatureTest)

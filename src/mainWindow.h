@@ -1,6 +1,7 @@
 #pragma once
 
 #include "palette.h"
+#include "updateChecker.h"
 
 #include <QSettings>
 #include <QTimer>
@@ -78,8 +79,6 @@ private:
   UserMenuButton* userMenuButton;
   UpdateChecker* updateChecker;
   QTimer updateTimer;
-  QString pendingVersion;
-  QString pendingNotes;
-  QUrl pendingPage;
+  UpdateOffer pendingOffer;
   bool isMaximizePressed = false;
 };

@@ -16,10 +16,14 @@ When a verified update is waiting, a green download button appears in the title 
 
 1. The client downloads `ankhSetup-<version>-win64.exe`, `manifest.json` and `manifest.json.sig` into a private temporary folder.
 2. It verifies the manifest signature, then the installer's size and SHA-256 against the manifest. Any mismatch deletes the files and reports the failure.
-3. It waits until no install, launch or other job is active. If something is running, the sheet names what it is waiting for.
+3. Once Ankh runs jobs of its own (installs, launches), the update waits until none is active and the sheet names what it is waiting for. Today there are no such jobs.
 4. It starts the installer silently with the flags of its own scope: `/VERYSILENT /SUPPRESSMSGBOXES /CURRENTUSER /CLOSEAPPLICATIONS /RELAUNCH=1` for a per-user install, `/ALLUSERS` instead of `/CURRENTUSER` for an all-users install. The all-users case raises one UAC prompt.
 5. The installer closes Ankh, replaces the files, and starts the new Ankh because of `/RELAUNCH=1`. Running games are never closed.
 
 ## Manifest and signature
 
-`manifest.json` holds the version, installer filename, size, SHA-256 and the UTC time it was made. `manifest.json.sig` is an Ed25519 signature over its exact bytes. The release workflow signs with a private key held as a GitHub Actions secret readable only by the release job on `main`. The client holds two public keys, the current and the next, so a key can be rotated without stranding installed copies. The client downloads updates itself, so Windows does not mark them as downloaded from the internet and SmartScreen is not involved; only a first manual install from the release page can show it.
+`manifest.json` holds the version, installer filename, size, SHA-256 and the UTC time it was made. `manifest.json.sig` is a base64 ECDSA P-256 signature (64 bytes, r then s) over the SHA-256 of the manifest's exact bytes, made and checked with Windows' own CNG, so Ankh adds no crypto library. The client verifies the signature first and parses the manifest only after it passes. It then requires the manifest version to equal the release tag and to be newer than the running version, and checks the installer's size and SHA-256 against the manifest.
+
+The private key is the GitHub Actions secret `ANKH_SIGNING_KEY`, readable only by the release workflow on `main`, with a copy in OpenBao at `services/ankh/updateSigningKey`. The public keys the client accepts are listed one per line in `assets/updatePublicKeys.txt` and built into the exe. A key is rotated by shipping a release, signed with the old key, whose build lists the new key too. One key is listed today.
+
+The client downloads updates itself, so Windows does not mark them as downloaded from the internet and SmartScreen is not involved; only a first manual install from the release page can show it. The installer is not Authenticode-signed.

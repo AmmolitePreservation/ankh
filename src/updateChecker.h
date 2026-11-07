@@ -1,9 +1,17 @@
 #pragma once
 
+#include <QMap>
 #include <QObject>
 #include <QUrl>
 
 class QNetworkAccessManager;
+
+struct UpdateOffer {
+  QString version;
+  QString notes;
+  QUrl page;
+  QMap<QString, QUrl> assets;
+};
 
 class UpdateChecker : public QObject {
   Q_OBJECT
@@ -15,7 +23,7 @@ public:
 
 signals:
   void checking();
-  void updateFound(const QString& version, const QString& notes, const QUrl& page);
+  void updateFound(const UpdateOffer& offer);
   void upToDate();
   void noReleases();
   void failed(const QString& message);

@@ -2,9 +2,8 @@
 
 #include "appVersion.h"
 #include "attributionsView.h"
+#include "installInfo.h"
 
-#include <QCoreApplication>
-#include <QDir>
 #include <QFormLayout>
 #include <QLabel>
 #include <QPushButton>
@@ -13,24 +12,15 @@
 
 namespace {
 
-QString installScope()
+QString scopeText()
 {
-  const QString folder = QDir::toNativeSeparators(QCoreApplication::applicationDirPath());
-  const QString programFiles = qEnvironmentVariable("ProgramFiles");
-  const QString programFilesX86 = qEnvironmentVariable("ProgramFiles(x86)");
-  const QString localData = qEnvironmentVariable("LOCALAPPDATA");
-  if (!programFiles.isEmpty() && folder.startsWith(QDir::toNativeSeparators(programFiles), Qt::CaseInsensitive)) {
-    return QStringLiteral("All users");
+  switch (installScope()) {
+  case InstallScope::allUsers: return QStringLiteral("All users");
+  case InstallScope::thisUser: return QStringLiteral("This user");
+  case InstallScope::buildFolder: return QStringLiteral("Not installed (running from a build folder)");
   }
-  if (!programFilesX86.isEmpty() && folder.startsWith(QDir::toNativeSeparators(programFilesX86), Qt::CaseInsensitive)) {
-    return QStringLiteral("All users");
-  }
-  if (!localData.isEmpty() && folder.startsWith(QDir::toNativeSeparators(localData), Qt::CaseInsensitive)) {
-    return QStringLiteral("This user");
-  }
-  return QStringLiteral("Not installed (running from a build folder)");
+  return QString();
 }
-
 QLabel* headingLabel(const QString& text, QWidget* parent)
 {
   auto* label = new QLabel(text, parent);
@@ -52,8 +42,8 @@ SettingsPage::SettingsPage(QWidget* parent)
   aboutForm->setHorizontalSpacing(24);
   aboutForm->setVerticalSpacing(10);
   aboutForm->addRow(QStringLiteral("Version"), new QLabel(QString::fromLatin1(appVersion), about));
-  aboutForm->addRow(QStringLiteral("Install scope"), new QLabel(installScope(), about));
-  auto* folderLabel = new QLabel(QDir::toNativeSeparators(QCoreApplication::applicationDirPath()), about);
+  aboutForm->addRow(QStringLiteral("Install scope"), new QLabel(scopeText(), about));
+  auto* folderLabel = new QLabel(installFolder(), about);
   folderLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
   aboutForm->addRow(QStringLiteral("Install folder"), folderLabel);
   aboutLayout->addLayout(aboutForm);

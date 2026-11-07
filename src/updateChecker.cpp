@@ -3,6 +3,7 @@
 #include "calendarVersion.h"
 #include "fatal.h"
 
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QNetworkAccessManager>
@@ -49,14 +50,18 @@ void UpdateChecker::check()
       return;
     }
     const auto current = parseCalendarVersion(currentVersion);
-    if (*latest > *current) {
-      QString version = tag;
-      if (version.startsWith(QLatin1Char('v'))) {
-        version.remove(0, 1);
-      }
-      emit updateFound(version, release.value(QStringLiteral("body")).toString(), QUrl(release.value(QStringLiteral("html_url")).toString()));
-    } else {
+    if (*latest <= *current) {
       emit upToDate();
+      return;
     }
+    UpdateOffer offer;
+    offer.version = tag.startsWith(QLatin1Char('v')) ? tag.mid(1) : tag;
+    offer.notes = release.value(QStringLiteral("body")).toString();
+    offer.page = QUrl(release.value(QStringLiteral("html_url")).toString());
+    for (const QJsonValue& asset : release.value(QStringLiteral("assets")).toArray()) {
+      const QJsonObject object = asset.toObject();
+      offer.assets.insert(object.value(QStringLiteral("name")).toString(), QUrl(object.value(QStringLiteral("browser_download_url")).toString()));
+    }
+    emit updateFound(offer);
   });
 }

@@ -64,6 +64,8 @@ QScrollBar:vertical { background: transparent; width: 12px; margin: 0; }
 QScrollBar::handle:vertical { background: @border@; border-radius: 4px; min-height: 32px; margin: 2px; }
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
 QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: transparent; }
+QProgressBar { background: @raised@; border: 1px solid @border@; border-radius: 4px; min-height: 12px; max-height: 12px; }
+QProgressBar::chunk { background: @accent@; border-radius: 3px; }
 QToolTip { background: @raised@; color: @text@; border: 1px solid @border@; padding: 4px 8px; }
 QDialog { background: @base@; }
 )");

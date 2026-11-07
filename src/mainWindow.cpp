@@ -283,13 +283,11 @@ MainWindow::MainWindow()
   connect(updateChecker, &UpdateChecker::failed, this, [this](const QString& message) {
     settingsPage->setUpdateStatus(QStringLiteral("Could not check for updates: %1").arg(message));
   });
-  connect(updateChecker, &UpdateChecker::updateFound, this, [this](const QString& version, const QString& notes, const QUrl& page) {
-    pendingVersion = version;
-    pendingNotes = notes;
-    pendingPage = page;
-    windowControls->updateButton()->setToolTip(QStringLiteral("Update available: %1").arg(version));
+  connect(updateChecker, &UpdateChecker::updateFound, this, [this](const UpdateOffer& offer) {
+    pendingOffer = offer;
+    windowControls->updateButton()->setToolTip(QStringLiteral("Update available: %1").arg(offer.version));
     windowControls->updateButton()->setVisible(true);
-    settingsPage->setUpdateStatus(QStringLiteral("Update available: %1").arg(version));
+    settingsPage->setUpdateStatus(QStringLiteral("Update available: %1").arg(offer.version));
   });
   connect(windowControls->updateButton(), &QAbstractButton::clicked, this, &MainWindow::openUpdateSheet);
 
@@ -356,7 +354,7 @@ void MainWindow::placeWindowControls()
 
 void MainWindow::openUpdateSheet()
 {
-  UpdateSheet sheet(pendingVersion, pendingNotes, pendingPage, this);
+  UpdateSheet sheet(pendingOffer, QString::fromLatin1(appVersion), this);
   sheet.exec();
 }
 

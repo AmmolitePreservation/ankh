@@ -22,8 +22,8 @@ The tag carries no zone letter, so the time is UTC by rule: the workflow compute
    - `CMakeLists.txt`, `cmake/`, and the packaging scripts
 
    A merge that touches only `docs/`, workflows, or other repo files makes no release.
-3. The workflow tags the merge commit with the current UTC version and builds with `windeployqt`, bundling the Qt DLLs beside `ankh.exe`. Qt's LGPL text ships in the application's Attributions page.
-4. It stamps the version into the exe resource, wraps the folder in the installer, and attaches the installer and its SHA-256 to a GitHub release.
+3. The workflow (`.github/workflows/release.yml`) takes the current UTC version, builds and packages with `package.ps1` (Qt installed with a pinned aqtinstall, Inno Setup installed from a pinned, hash-checked download), runs the signature tests, signs the manifest with `tools/signRelease.ps1`, then creates the tag and the release. Qt's LGPL text ships in the application's Attributions page.
+4. The release carries the installer, its SHA-256 file, `manifest.json` and `manifest.json.sig`.
 5. Release notes are generated from the commits since the previous tag. The repo keeps no changelog file.
 
 ## Installer

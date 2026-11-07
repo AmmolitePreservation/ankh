@@ -1,0 +1,61 @@
+name: release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - src/**
+      - assets/**
+      - installer/**
+      - licenses/**
+      - tests/**
+      - CMakeLists.txt
+      - build.ps1
+      - package.ps1
+      - test.ps1
+      - release.ps1
+      - tools/signRelease.ps1
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: windows-2022
+    defaults:
+      run:
+        shell: powershell
+    steps:
+      - uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: Install Qt
+        run: |
+          python -m pip install aqtinstall==3.3.0
+          python -m aqt install-qt windows desktop 6.10.3 win64_msvc2022_64 -O C:\Qt
+          if ($LASTEXITCODE -ne 0) { throw "aqt failed with exit code $LASTEXITCODE" }
+
+      - name: Install Inno Setup
+        run: |
+          $installer = Join-Path $env:RUNNER_TEMP 'innosetup-6.7.3.exe'
+          Invoke-WebRequest -Uri 'https://github.com/jrsoftware/issrc/releases/download/is-6_7_3/innosetup-6.7.3.exe' -OutFile $installer
+          $hash = (Get-FileHash -Algorithm SHA256 $installer).Hash.ToLower()
+          if ($hash -ne '9c73c3bae7ed48d44112a0f48e66742c00090bdb5bef71d9d3c056c66e97b732') { throw "Unexpected Inno Setup installer hash $hash" }
+          $process = Start-Process -FilePath $installer -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART' -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw "Inno Setup installer failed with exit code $($process.ExitCode)" }
+
+      - name: Release
+        env:
+          ANKH_QT_ROOT: C:\Qt\6.10.3\msvc2022_64
+          ANKH_ISCC: C:\Program Files (x86)\Inno Setup 6\ISCC.exe
+          ANKH_SIGNING_KEY: ${{ secrets.ANKH_SIGNING_KEY }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          .\release.ps1 -target $env:GITHUB_SHA
+          if (-not $?) { throw 'Release failed.' }
