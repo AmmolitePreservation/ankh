@@ -28,10 +28,12 @@ The tag carries no zone letter, so the time is UTC by rule: the workflow compute
 
 ## Installer
 
-Ankh builds its own installer; no third-party installer framework is used. The installer's pages are the same Qt code as the application, so the look, the skins and the libraries are shared.
+Inno Setup builds the installer. Its look is brought close to the application's skin with the wizard images, colors and fonts; the installer does not use Qt.
 
-- `ankhSetup-<version>-win64.exe` is a small Win32 stub that carries the application folder (`ankh.exe`, the Qt DLLs, the license texts) as a compressed payload. It extracts the payload to a temporary folder and starts the extracted `ankh.exe` in install mode, which shows the install pages and copies the files.
-- The install path is editable. The default is `%LOCALAPPDATA%\Programs\Ankh`, which needs no elevation; the installer elevates only when the chosen folder requires it.
-- Installing writes one per-user registry entry, the uninstall entry for Apps and features, and creates a Start menu shortcut. Nothing else is written outside the install folder.
-- Uninstall is `ankh.exe` in uninstall mode, started from that entry. It removes the files and the entry, and leaves games, accounts and profiles alone unless the user chooses otherwise.
+- `ankhSetup-<version>-win64.exe` is produced by the release workflow, which stages the application folder (`ankh.exe`, the Qt DLLs, the license texts) and runs the Inno compiler on one script.
+- The wizard asks for **all users** (default `C:\Program Files\Ankh`, elevates) or **this user** (default `%LOCALAPPDATA%\Programs\Ankh`, no elevation). The folder is editable in either case.
+- Install writes the uninstall entry for Apps and features (machine-wide or per-user to match the scope) and a Start menu shortcut. Nothing else is written outside the install folder.
+- Silent installs take Inno's standard flags: `/SILENT`, `/VERYSILENT`, `/SUPPRESSMSGBOXES`, `/DIR=`, `/ALLUSERS`, `/CURRENTUSER`, `/NORESTART`, `/LOG=`, `/TASKS=`, `/LOADINF=` and `/SAVEINF=`. Custom flags are read from the script when needed.
+- Uninstall is Inno's `unins000.exe`, with the same silent flags. It leaves games, accounts and profiles alone unless the user chooses otherwise.
 - Qt is linked dynamically and ships beside `ankh.exe`; nothing is installed separately.
+- Inno Setup and Qt are credited on the in-application Attributions page.

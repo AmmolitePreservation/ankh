@@ -546,6 +546,8 @@ Use specific recoverable states: Build mismatch, Required component missing, Too
 
 **About:** original game metadata, preserved edition/build, local notes, source references, and adapter/manifest versions. Keep operational setup elsewhere.
 
+**Attributions:** a Help page inside the application, opened from **Settings → About Ankh → Attributions** and from the Help item of the profile menu. It lists every third-party component in the running build: name, version, what Ankh uses it for, license name, copyright line, a source link, and the full license text in an expandable row. Qt's entry states that it is used under the LGPL, linked dynamically, and that its libraries sit beside the executable and can be replaced. The installer's tool is listed too. The page reads a manifest generated at build time from the same dependency list the build uses, bundled with the application, so it is correct offline and cannot drift from what ships. It is plain text in the application's own components, searchable, with no web view. Attribution is given even where a license does not require it.
+
 **Settings:** household profile, storage, features, defaults, accessibility, credentials, package sources, and advanced diagnostics. Curator settings are visually separate from everyday launch preferences.
 
 **Activity:** persistent jobs with progress and cancel/retry at safe boundaries; filters by game/session; readable logs with redaction. Downloads can continue while browsing another game.
@@ -670,6 +672,7 @@ Create a polished, believable desktop application screenshot, straight-on and un
 - Test with seven games, hundreds of releases, long edition names, no installed games, and no search results.
 - Keyboard-only navigation, high scaling, reduced motion, and screen-reader labels are implemented.
 - Main actions stay visible at the minimum size; tables scroll instead of shrinking into illegibility.
+- The Attributions page lists every third-party component of the installed build with its license text, works offline, and is generated from the build's dependency list.
 - Both skins use the same components and behaviors. Texture never reduces readability.
 
 ## 17. Delivery sequence
