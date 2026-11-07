@@ -35,6 +35,7 @@ qt_add_executable(ankh WIN32
   src/captionButton.cpp
   src/windowControls.cpp
   src/icons.cpp
+  src/edgeGrain.cpp
   src/palette.cpp
   src/gameCatalog.cpp
   src/libraryPane.cpp
@@ -52,17 +53,18 @@ target_include_directories(ankh PRIVATE src ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(ankh PRIVATE Qt6::Widgets Qt6::Svg Qt6::SvgWidgets Qt6::Network dwmapi)
 target_compile_definitions(ankh PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN)
 
-set_source_files_properties(assets/ankhWordmark.svg PROPERTIES QT_RESOURCE_ALIAS ankhWordmark.svg)
-set_source_files_properties(assets/ankh.ico PROPERTIES QT_RESOURCE_ALIAS ankh.ico)
-set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/thirdParty.json PROPERTIES QT_RESOURCE_ALIAS thirdParty.json)
-foreach(licenseName lgpl-3.0 gpl-3.0 innoSetup)
-  set_source_files_properties(licenses/${licenseName}.txt PROPERTIES QT_RESOURCE_ALIAS licenses/${licenseName}.txt)
+file(GLOB glyphFiles CONFIGURE_DEPENDS assets/glyphs/*.svg)
+file(GLOB textureFiles CONFIGURE_DEPENDS assets/textures/*.png)
+set(resourceFiles assets/ankhWordmarkGold.svg assets/ankh.ico ${glyphFiles} ${textureFiles} licenses/lgpl-3.0.txt licenses/gpl-3.0.txt licenses/innoSetup.txt)
+foreach(resourceFile IN LISTS resourceFiles)
+  get_filename_component(resourceName "${resourceFile}" NAME)
+  get_filename_component(resourceFolder "${resourceFile}" DIRECTORY)
+  get_filename_component(resourceFolder "${resourceFolder}" NAME)
+  if(resourceFolder STREQUAL "glyphs" OR resourceFolder STREQUAL "textures" OR resourceFolder STREQUAL "licenses")
+    set_source_files_properties(${resourceFile} PROPERTIES QT_RESOURCE_ALIAS ${resourceFolder}/${resourceName})
+  else()
+    set_source_files_properties(${resourceFile} PROPERTIES QT_RESOURCE_ALIAS ${resourceName})
+  endif()
 endforeach()
-qt_add_resources(ankh resources PREFIX "/" FILES
-  assets/ankhWordmark.svg
-  assets/ankh.ico
-  ${CMAKE_CURRENT_BINARY_DIR}/thirdParty.json
-  licenses/lgpl-3.0.txt
-  licenses/gpl-3.0.txt
-  licenses/innoSetup.txt
-)
+set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/thirdParty.json PROPERTIES QT_RESOURCE_ALIAS thirdParty.json)
+qt_add_resources(ankh resources PREFIX "/" FILES ${resourceFiles} ${CMAKE_CURRENT_BINARY_DIR}/thirdParty.json)

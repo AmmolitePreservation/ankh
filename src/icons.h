@@ -11,9 +11,15 @@ enum class IconKind {
   settings,
   activity,
   user,
-  check,
-  dot,
+  star,
+  starFilled,
+  checkBadge,
+  statusDot,
   play,
+  windowMinimize,
+  windowMaximize,
+  windowRestore,
+  windowClose,
 };
 
 QPixmap iconPixmap(IconKind kind, int size, const QColor& color, qreal ratio);

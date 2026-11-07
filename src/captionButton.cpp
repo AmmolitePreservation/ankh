@@ -1,6 +1,24 @@
 #include "captionButton.h"
 
+#include "fatal.h"
+#include "icons.h"
+
 #include <QPainter>
+
+namespace {
+
+IconKind glyphFor(CaptionButton::Kind kind)
+{
+  switch (kind) {
+  case CaptionButton::Kind::minimize: return IconKind::windowMinimize;
+  case CaptionButton::Kind::maximize: return IconKind::windowMaximize;
+  case CaptionButton::Kind::restore: return IconKind::windowRestore;
+  case CaptionButton::Kind::close: return IconKind::windowClose;
+  }
+  fatal(QStringLiteral("Unknown caption button kind"));
+}
+
+}
 
 CaptionButton::CaptionButton(Kind kind, QWidget* parent)
   : QAbstractButton(parent), kind(kind)
@@ -50,30 +68,5 @@ void CaptionButton::paintEvent(QPaintEvent*)
       glyph = QColor("#FFFFFF");
     }
   }
-  if (hasFocus()) {
-    painter.setPen(QPen(glyphColor, 1, Qt::DotLine));
-    painter.drawRect(rect().adjusted(3, 3, -4, -4));
-  }
-  painter.setPen(QPen(glyph, 1));
-  const int centerX = width() / 2;
-  const int centerY = height() / 2;
-  switch (kind) {
-  case Kind::minimize:
-    painter.drawLine(centerX - 5, centerY, centerX + 4, centerY);
-    break;
-  case Kind::maximize:
-    painter.drawRect(centerX - 5, centerY - 5, 9, 9);
-    break;
-  case Kind::restore:
-    painter.drawRect(centerX - 5, centerY - 2, 7, 7);
-    painter.drawLine(centerX - 3, centerY - 4, centerX + 4, centerY - 4);
-    painter.drawLine(centerX + 4, centerY - 4, centerX + 4, centerY + 2);
-    painter.drawLine(centerX + 3, centerY + 2, centerX + 2, centerY + 2);
-    break;
-  case Kind::close:
-    painter.setRenderHint(QPainter::Antialiasing, true);
-    painter.drawLine(centerX - 5, centerY - 5, centerX + 5, centerY + 5);
-    painter.drawLine(centerX - 5, centerY + 5, centerX + 5, centerY - 5);
-    break;
-  }
+  painter.drawPixmap(QRect(width() / 2 - 8, height() / 2 - 8, 16, 16), iconPixmap(glyphFor(kind), 16, glyph, devicePixelRatioF()));
 }

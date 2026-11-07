@@ -37,7 +37,11 @@ void paintGameIcon(QPainter& painter, const QRect& area, const QString& initials
   painter.setRenderHint(QPainter::Antialiasing, true);
   painter.setPen(Qt::NoPen);
   painter.setBrush(tint.darker(210));
-  painter.drawRoundedRect(area, 8, 8);
+  const int radius = qMax(6, area.height() / 9);
+  painter.drawRoundedRect(area, radius, radius);
+  painter.setPen(QPen(QColor(255, 255, 255, 46), 1));
+  painter.setBrush(Qt::NoBrush);
+  painter.drawRoundedRect(QRectF(area).adjusted(0.5, 0.5, -0.5, -0.5), radius, radius);
   painter.setPen(tint.lighter(120));
   QFont font = painter.font();
   font.setBold(true);

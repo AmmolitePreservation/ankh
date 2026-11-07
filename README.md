@@ -27,6 +27,10 @@ Visual Studio 2022 with the C++ workload is also required.
 
 Both take `-version YYYY.MM.DD.HHMM`; without it they use the current UTC time.
 
+## Assets
+
+Vector first. Glyphs live in `assets/glyphs` as SVG with `currentColor` and are recolored at load. The header uses `assets/ankhWordmarkGold.svg` (gradient mark); `assets/ankhWordmark.svg` is the flat original. The edge grain is two transparent PNGs in `assets/textures` built by `tools/makeEdgeGrain.py` and layered over the window. The icon pack and installer images come from `tools/makeInstallerImages.py`.
+
 ## Layers
 
 1. Play: catalog, download, import, required setup, update, launch, accounts.

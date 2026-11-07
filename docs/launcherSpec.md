@@ -571,19 +571,23 @@ Use specific recoverable states: Build mismatch, Required component missing, Too
 
 ### Color tokens
 
+These values are sampled from the approved mockup.
+
 | Token | Value |
 | --- | --- |
-| Brand | ANKH with small monoline ankh |
-| Base | Cool charcoal #181B1C |
-| Raised surface | #202526 |
-| Text | Warm ivory #E9E5DA |
-| Secondary | #A4AAA7 |
-| Accent | Muted antique gold #C4A565 |
-| Border | #373D3C |
-| Texture | Extremely fine stone/papyrus at outer edges |
-| Decoration | Tiny incised line detail and ankh mark |
+| Brand | Gradient ankh mark (light gold #F6DC8E to amber #C99A3E) with ivory ANKH lettering |
+| Base | Cool charcoal #181B1D |
+| Raised surface | #1E2224 (fields, selected row tint) |
+| Text | Warm ivory #F2EFE6 |
+| Secondary | #A9ADAE |
+| Accent | Gold #E6C46F (navigation, tab and link color, selected outlines) |
+| Primary action | Gold gradient #EAC45D to #DDAF5B, 1 px edge #C79B3F, dark text #16120A |
+| Border and dividers | #373B3C |
+| Success | Green #78D268, checks and status dots, with a soft glow |
+| Texture | Extremely fine stone/papyrus grain on the outer window edges, heaviest at the top-left corner and left edge, nearly absent elsewhere |
+| Decoration | Tiny incised line detail and the ankh mark |
 
-These are starting design tokens. Text contrast and interactive state colors require measurement in a real UI. Status colors stay semantically consistent.
+Text contrast and interactive state colors require measurement in a real UI. Status colors stay semantically consistent.
 **Ankh:** ancient Egyptian influence is limited to the mark, warm gold, proportions, and a faint edge texture. No pharaohs, pyramids, wall paintings, or ornamental hieroglyph paragraphs.
 
 ## 15. Image set: ten complete application screens

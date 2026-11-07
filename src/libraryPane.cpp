@@ -39,7 +39,7 @@ constexpr int iconSize = 56;
 
 QRect starRectFor(const QRect& row)
 {
-  return QRect(row.right() - 44, row.top() + (rowHeight - 28) / 2, 28, 28);
+  return QRect(row.right() - 46, row.top() + (rowHeight - 28) / 2, 28, 28);
 }
 
 }
@@ -111,45 +111,44 @@ public:
     const QRect row = option.rect;
     const bool isSelected = option.state & QStyle::State_Selected;
     if (isSelected) {
+      QColor fill = colors.base;
+      fill.setRgb((colors.base.red() * 9 + colors.accent.red()) / 10, (colors.base.green() * 9 + colors.accent.green()) / 10, (colors.base.blue() * 9 + colors.accent.blue()) / 10);
       painter->setPen(QPen(colors.accent, 1));
-      painter->setBrush(colors.base.lighter(125));
-      painter->drawRoundedRect(QRectF(row.adjusted(2, 3, -3, -4)).translated(0.5, 0.5), 6, 6);
+      painter->setBrush(fill);
+      painter->drawRoundedRect(QRectF(row.adjusted(0, 3, -1, -4)).translated(0.5, 0.5), 5, 5);
     } else {
       if (option.state & QStyle::State_MouseOver) {
         QColor hover = colors.border;
-        hover.setAlpha(90);
+        hover.setAlpha(80);
         painter->fillRect(row.adjusted(0, 0, 0, -1), hover);
       }
       painter->setPen(colors.border);
-      painter->drawLine(row.left() + 8, row.bottom(), row.right() - 8, row.bottom());
+      painter->drawLine(row.left() + 10, row.bottom(), row.right() - 10, row.bottom());
     }
-    const QRect iconRect(row.left() + 14, row.top() + (rowHeight - iconSize) / 2, iconSize, iconSize);
+    const QRect iconRect(row.left() + 11, row.top() + (rowHeight - iconSize) / 2, iconSize, iconSize);
     paintGameIcon(*painter, iconRect, index.data(initialsRole).toString(), index.data(tintRole).value<QColor>());
 
-    const int textLeft = iconRect.right() + 18;
+    const int textLeft = iconRect.right() + 20;
     const int textWidth = starRectFor(row).left() - textLeft - 4;
     QFont titleFont = painter->font();
-    titleFont.setPixelSize(17);
+    titleFont.setPixelSize(18);
     titleFont.setWeight(QFont::DemiBold);
     painter->setFont(titleFont);
     painter->setPen(colors.text);
-    painter->drawText(QRect(textLeft, row.top() + 15, textWidth, 24), Qt::AlignVCenter | Qt::AlignLeft,
+    painter->drawText(QRect(textLeft, row.top() + 14, textWidth, 26), Qt::AlignVCenter | Qt::AlignLeft,
       QFontMetrics(titleFont).elidedText(index.data(titleRole).toString(), Qt::ElideRight, textWidth));
 
     QFont editionFont = painter->font();
-    editionFont.setPixelSize(15);
+    editionFont.setPixelSize(16);
     editionFont.setWeight(QFont::Normal);
     painter->setFont(editionFont);
     painter->setPen(colors.secondary);
-    painter->drawText(QRect(textLeft, row.top() + 40, textWidth, 22), Qt::AlignVCenter | Qt::AlignLeft,
+    painter->drawText(QRect(textLeft, row.top() + 40, textWidth, 24), Qt::AlignVCenter | Qt::AlignLeft,
       QFontMetrics(editionFont).elidedText(index.data(editionRole).toString(), Qt::ElideRight, textWidth));
 
     const bool isFavorite = index.data(favoriteRole).toBool();
-    QFont starFont = painter->font();
-    starFont.setPixelSize(22);
-    painter->setFont(starFont);
-    painter->setPen(isFavorite ? colors.accent : colors.secondary);
-    painter->drawText(starRectFor(row), Qt::AlignCenter, QString(QChar(isFavorite ? 0x2605 : 0x2606)));
+    const QRect star = starRectFor(row);
+    painter->drawPixmap(star.adjusted(2, 2, -2, -2), iconPixmap(isFavorite ? IconKind::starFilled : IconKind::star, 24, isFavorite ? colors.accent : colors.text, painter->device()->devicePixelRatioF()));
     painter->restore();
   }
 
@@ -235,6 +234,7 @@ LibraryPane::LibraryPane(QSettings& settings, QWidget* parent)
     chip->setProperty("chip", true);
     chip->setCheckable(true);
     chip->setCursor(Qt::PointingHandCursor);
+    chip->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
   }
   allChip->setChecked(true);
 
@@ -256,17 +256,22 @@ LibraryPane::LibraryPane(QSettings& settings, QWidget* parent)
 
   auto* chips = new QHBoxLayout;
   chips->setSpacing(8);
-  chips->addWidget(allChip);
-  chips->addWidget(favoritesChip);
-  chips->addWidget(nameChip);
-  chips->addStretch(1);
+  chips->addWidget(allChip, allChip->sizeHint().width());
+  chips->addWidget(favoritesChip, favoritesChip->sizeHint().width());
+  chips->addWidget(nameChip, nameChip->sizeHint().width());
+
+  auto* top = new QWidget(this);
+  auto* topLayout = new QVBoxLayout(top);
+  topLayout->setContentsMargins(10, 0, 10, 0);
+  topLayout->setSpacing(14);
+  topLayout->addLayout(headingRow);
+  topLayout->addWidget(search);
+  topLayout->addLayout(chips);
 
   auto* layout = new QVBoxLayout(this);
-  layout->setContentsMargins(24, 20, 24, 8);
-  layout->setSpacing(12);
-  layout->addLayout(headingRow);
-  layout->addWidget(search);
-  layout->addLayout(chips);
+  layout->setContentsMargins(14, 22, 14, 8);
+  layout->setSpacing(10);
+  layout->addWidget(top);
   layout->addWidget(list, 1);
   layout->addWidget(emptyLabel, 1);
 
@@ -306,8 +311,8 @@ LibraryPane::LibraryPane(QSettings& settings, QWidget* parent)
 void LibraryPane::applyPalette(const Palette& colors)
 {
   delegate->setColors(colors);
-  searchAction->setIcon(makeIcon(IconKind::search, 18, colors.secondary));
-  filterMenuAction->setIcon(makeIcon(IconKind::chevronDown, 18, colors.secondary));
+  searchAction->setIcon(makeIcon(IconKind::search, 20, colors.text));
+  filterMenuAction->setIcon(makeIcon(IconKind::chevronDown, 18, colors.text));
   list->viewport()->update();
 }
 

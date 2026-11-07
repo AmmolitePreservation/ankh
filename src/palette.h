@@ -10,6 +10,7 @@ struct Palette {
   QColor secondary;
   QColor accent;
   QColor border;
+  QColor success;
 };
 
 const Palette& ankhPalette();

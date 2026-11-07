@@ -2,6 +2,7 @@
 
 #include "appVersion.h"
 #include "captionButton.h"
+#include "edgeGrain.h"
 #include "fatal.h"
 #include "gameCatalog.h"
 #include "gamePage.h"
@@ -14,6 +15,7 @@
 #include "windowControls.h"
 
 #include <QAbstractScrollArea>
+#include <QFrame>
 #include <QApplication>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -52,8 +54,8 @@ public:
     setAccessibleName(QStringLiteral("%1 menu").arg(name));
     setFixedHeight(48);
     QFont measured = font();
-    measured.setPixelSize(17);
-    setFixedWidth(56 + QFontMetrics(measured).horizontalAdvance(name) + 40);
+    measured.setPixelSize(18);
+    setFixedWidth(54 + QFontMetrics(measured).horizontalAdvance(name) + 46);
   }
 
   void setColors(const QColor& text, const QColor& secondary, const QColor& border)
@@ -70,13 +72,16 @@ protected:
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing, true);
     const qreal ratio = devicePixelRatioF();
-    painter.drawPixmap(QRect(0, 4, 40, 40), iconPixmap(IconKind::user, 40, secondaryColor, ratio));
+    painter.setPen(QPen(QColor("#4A4E50"), 1));
+    painter.setBrush(Qt::NoBrush);
+    painter.drawEllipse(QRectF(0.5, 4.5, 39, 39));
+    painter.drawPixmap(QRect(9, 13, 22, 22), iconPixmap(IconKind::user, 22, textColor, ratio));
     painter.setPen(textColor);
     QFont textFont = font();
-    textFont.setPixelSize(17);
+    textFont.setPixelSize(18);
     painter.setFont(textFont);
-    painter.drawText(QRect(52, 0, width() - 52 - 32, height()), Qt::AlignVCenter | Qt::AlignLeft, userName);
-    painter.drawPixmap(QRect(width() - 24, 15, 18, 18), iconPixmap(IconKind::chevronDown, 18, secondaryColor, ratio));
+    painter.drawText(QRect(54, 0, width() - 54 - 34, height()), Qt::AlignVCenter | Qt::AlignLeft, userName);
+    painter.drawPixmap(QRect(width() - 26, 15, 18, 18), iconPixmap(IconKind::chevronDown, 18, textColor, ratio));
     if (hasFocus()) {
       painter.setPen(QPen(borderColor, 1, Qt::DotLine));
       painter.drawRect(rect().adjusted(0, 0, -1, -1));
@@ -89,7 +94,6 @@ private:
   QColor secondaryColor;
   QColor borderColor;
 };
-
 SplitHandle::SplitHandle(QWidget* parent)
   : QWidget(parent)
 {
@@ -120,9 +124,10 @@ void SplitHandle::mouseMoveEvent(QMouseEvent* event)
 MainWindow::MainWindow()
   : settings(QSettings::IniFormat, QSettings::UserScope, QStringLiteral("AmmolitePreservation"), QStringLiteral("Ankh")),
     windowControls(new WindowControls(this)),
+    edgeGrain(new EdgeGrain(this)),
     sidebar(new QWidget(this)),
     handle(new SplitHandle(this)),
-    wordmarkImage(new QSvgWidget(QStringLiteral(":/ankhWordmark.svg"), this)),
+    wordmarkImage(new QSvgWidget(QStringLiteral(":/ankhWordmarkGold.svg"), this)),
     leftStack(new QStackedWidget(this)),
     mainStack(new QStackedWidget(this)),
     libraryPane(new LibraryPane(settings, this)),
@@ -151,7 +156,7 @@ MainWindow::MainWindow()
   auto* sidebarHeader = new QWidget(sidebar);
   sidebarHeader->setObjectName(QStringLiteral("sidebarHeader"));
   sidebarHeader->setFixedHeight(headerHeight);
-  wordmarkImage->setFixedSize(176, 45);
+  wordmarkImage->setFixedSize(198, 51);
   wordmarkImage->setAccessibleName(QStringLiteral("Ankh"));
   auto* sidebarHeaderLayout = new QHBoxLayout(sidebarHeader);
   sidebarHeaderLayout->setContentsMargins(26, 0, 20, 0);
@@ -170,13 +175,24 @@ MainWindow::MainWindow()
   activityButton->setToolTip(QStringLiteral("Activity is not built yet."));
   auto* foot = new QWidget(sidebar);
   foot->setObjectName(QStringLiteral("sidebarFoot"));
-  foot->setFixedHeight(76);
-  auto* footLayout = new QHBoxLayout(foot);
-  footLayout->setContentsMargins(24, 0, 24, 0);
-  footLayout->addWidget(settingsButton);
-  footLayout->addStretch(1);
-  footLayout->addWidget(activityButton);
-  footLayout->addStretch(1);
+  foot->setFixedHeight(100);
+  auto* footDivider = new QFrame(foot);
+  footDivider->setObjectName(QStringLiteral("divider"));
+  footDivider->setFixedHeight(1);
+  auto* footLine = new QHBoxLayout;
+  footLine->setContentsMargins(24, 0, 24, 0);
+  footLine->addWidget(footDivider);
+  auto* footRow = new QHBoxLayout;
+  footRow->setContentsMargins(26, 0, 24, 0);
+  footRow->setSpacing(56);
+  footRow->addWidget(settingsButton);
+  footRow->addWidget(activityButton);
+  footRow->addStretch(1);
+  auto* footLayout = new QVBoxLayout(foot);
+  footLayout->setContentsMargins(0, 0, 0, 0);
+  footLayout->setSpacing(0);
+  footLayout->addLayout(footLine);
+  footLayout->addLayout(footRow, 1);
 
   auto* sidebarLayout = new QVBoxLayout(sidebar);
   sidebarLayout->setContentsMargins(0, 0, 0, 0);
@@ -193,7 +209,7 @@ MainWindow::MainWindow()
   mainHeader->setObjectName(QStringLiteral("header"));
   mainHeader->setFixedHeight(headerHeight);
   auto* mainHeaderLayout = new QHBoxLayout(mainHeader);
-  mainHeaderLayout->setContentsMargins(28, 16, 36, 0);
+  mainHeaderLayout->setContentsMargins(22, 10, 36, 6);
   mainHeaderLayout->setSpacing(8);
   mainHeaderLayout->addWidget(libraryNavigation);
   mainHeaderLayout->addStretch(1);
@@ -296,13 +312,13 @@ void MainWindow::applyPalette()
   applicationPalette.setColor(QPalette::LinkVisited, colors.accent);
   qApp->setPalette(applicationPalette);
   qApp->setStyleSheet(buildStyleSheet(colors));
-  handle->setLineColor(colors.border);
+  handle->setLineColor(colors.border.lighter(130));
   windowControls->applyPalette(colors);
   libraryPane->applyPalette(colors);
   gamePage->applyPalette(colors);
   userMenuButton->setColors(colors.text, colors.secondary, colors.border);
-  settingsButton->setIcon(makeIcon(IconKind::settings, 22, colors.text));
-  activityButton->setIcon(makeIcon(IconKind::activity, 22, colors.secondary));
+  settingsButton->setIcon(makeIcon(IconKind::settings, 24, colors.text));
+  activityButton->setIcon(makeIcon(IconKind::activity, 24, colors.text));
   QPalette handlePalette = handle->palette();
   handlePalette.setColor(QPalette::Window, colors.base);
   handle->setPalette(handlePalette);
@@ -332,6 +348,8 @@ void MainWindow::setSidebarWidth(int width)
 
 void MainWindow::placeWindowControls()
 {
+  edgeGrain->setGeometry(rect());
+  edgeGrain->raise();
   windowControls->move(width() - windowControls->width(), 0);
   windowControls->raise();
 }

@@ -7,6 +7,7 @@
 #include <QUrl>
 #include <QWidget>
 
+class EdgeGrain;
 class GamePage;
 class LibraryPane;
 class QPushButton;
@@ -61,6 +62,7 @@ private:
 
   QSettings settings;
   WindowControls* windowControls;
+  EdgeGrain* edgeGrain;
   QWidget* sidebar;
   SplitHandle* handle;
   QSvgWidget* wordmarkImage;
