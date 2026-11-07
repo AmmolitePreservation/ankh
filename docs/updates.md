@@ -17,8 +17,8 @@ When a verified update is waiting, a green download button appears in the title 
 1. The client downloads `ankhSetup-<version>-win64.exe`, `manifest.json` and `manifest.json.sig` into a private temporary folder.
 2. It verifies the manifest signature, then the installer's size and SHA-256 against the manifest. Any mismatch deletes the files and reports the failure.
 3. It waits until no install, launch or other job is active. If something is running, the sheet names what it is waiting for.
-4. It starts the installer silently with the flags of its own scope: `/VERYSILENT /SUPPRESSMSGBOXES /CURRENTUSER /CLOSEAPPLICATIONS /RESTARTAPPLICATIONS` for a per-user install, `/ALLUSERS` instead of `/CURRENTUSER` for an all-users install. The all-users case raises one UAC prompt.
-5. The installer replaces the files and restarts Ankh. Running games are never closed.
+4. It starts the installer silently with the flags of its own scope: `/VERYSILENT /SUPPRESSMSGBOXES /CURRENTUSER /CLOSEAPPLICATIONS /RELAUNCH=1` for a per-user install, `/ALLUSERS` instead of `/CURRENTUSER` for an all-users install. The all-users case raises one UAC prompt.
+5. The installer closes Ankh, replaces the files, and starts the new Ankh because of `/RELAUNCH=1`. Running games are never closed.
 
 ## Manifest and signature
 

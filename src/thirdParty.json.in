@@ -1,0 +1,31 @@
+[
+  {
+    "name": "Qt",
+    "version": "@Qt6_VERSION@",
+    "use": "Application framework: windows, controls, networking, SVG",
+    "license": "GNU Lesser General Public License v3",
+    "copyright": "The Qt Company Ltd. and other contributors",
+    "source": "https://www.qt.io/",
+    "licenseFiles": ["licenses/lgpl-3.0.txt", "licenses/gpl-3.0.txt"],
+    "note": "Used under the LGPL v3. Qt is linked dynamically: its libraries sit beside ankh.exe and can be replaced with another build of the same version. Qt includes third-party components with their own notices: https://doc.qt.io/qt-6/licenses-used-in-qt.html"
+  },
+  {
+    "name": "Inno Setup",
+    "version": "@ANKH_INNO_VERSION@",
+    "use": "Builds the installer and uninstaller",
+    "license": "Inno Setup License",
+    "copyright": "Copyright (C) 1997-2026 Jordan Russell. Portions Copyright (C) 2000-2026 Martijn Laan.",
+    "source": "https://jrsoftware.org/isinfo.php",
+    "licenseFiles": ["licenses/innoSetup.txt"],
+    "note": "Credited although the license does not require it."
+  },
+  {
+    "name": "Microsoft Visual C++ runtime",
+    "use": "C++ runtime libraries Ankh and Qt run on",
+    "license": "Microsoft redistributable terms",
+    "copyright": "Microsoft Corporation",
+    "source": "https://learn.microsoft.com/cpp/windows/redistributing-visual-cpp-files",
+    "licenseFiles": [],
+    "note": "Installed system-wide by Ankh's installer when the machine lacks it or has an older one, under the terms Microsoft publishes for the Visual C++ redistributable."
+  }
+]

@@ -22,7 +22,7 @@ The tag carries no zone letter, so the time is UTC by rule: the workflow compute
    - `CMakeLists.txt`, `cmake/`, and the packaging scripts
 
    A merge that touches only `docs/`, workflows, or other repo files makes no release.
-3. The workflow tags the merge commit with the current UTC version and builds with `windeployqt`, bundling the Qt DLLs beside `ankh.exe` together with Qt's LGPL license text.
+3. The workflow tags the merge commit with the current UTC version and builds with `windeployqt`, bundling the Qt DLLs beside `ankh.exe`. Qt's LGPL text ships in the application's Attributions page.
 4. It stamps the version into the exe resource, wraps the folder in the installer, and attaches the installer and its SHA-256 to a GitHub release.
 5. Release notes are generated from the commits since the previous tag. The repo keeps no changelog file.
 
@@ -35,5 +35,7 @@ Inno Setup builds the installer. Its look is brought close to the application's 
 - Install writes the uninstall entry for Apps and features (machine-wide or per-user to match the scope) and a Start menu shortcut. Nothing else is written outside the install folder.
 - Silent installs take Inno's standard flags: `/SILENT`, `/VERYSILENT`, `/SUPPRESSMSGBOXES`, `/DIR=`, `/ALLUSERS`, `/CURRENTUSER`, `/NORESTART`, `/LOG=`, `/TASKS=`, `/LOADINF=` and `/SAVEINF=`. Custom flags are read from the script when needed.
 - Uninstall is Inno's `unins000.exe`, with the same silent flags. It leaves games, accounts and profiles alone unless the user chooses otherwise.
-- Qt is linked dynamically and ships beside `ankh.exe`; nothing is installed separately.
+- Qt is linked dynamically and ships beside `ankh.exe`.
+- The installer carries Microsoft's Visual C++ redistributable and runs it only when the machine lacks it or has an older one. It is the one shared system component: a single runtime for Ankh and Qt, with a UAC prompt on first install.
+- `/RELAUNCH=1` starts the new Ankh after a silent install; the updater passes it.
 - Inno Setup and Qt are credited on the in-application Attributions page.
