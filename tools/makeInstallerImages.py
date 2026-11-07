@@ -4,7 +4,7 @@ from PIL import Image
 
 root = Path(__file__).resolve().parent.parent
 assets = root / "assets"
-base = (0x18, 0x1B, 0x1C)
+base = (0x18, 0x1B, 0x1D)
 icon = Image.open(assets / "ankhIcon.png").convert("RGBA")
 
 
