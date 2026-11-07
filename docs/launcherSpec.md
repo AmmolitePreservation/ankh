@@ -2,7 +2,7 @@
 
 Version 0.3 · 30 October 2026 · Proposed application design
 
-**Ankh** and **MMOnomicon** are two skins for the same application. They share information architecture, behavior, terminology, accessibility, and feature availability. This specification describes a desktop launcher for a private household collection of preserved games. It is a design proposal, not an implementation or an audit of Scarab.
+**Ankh** and **MMOnomicon** are two skins for the same application. They share information architecture, behavior, terminology, accessibility, and feature availability. This specification describes a desktop launcher for a private collection of preserved games. It is a design proposal, not an implementation or an audit of Scarab.
 
 The product starts with **download and play**. It can grow into a local workspace for client maintenance, characters, mixed-game sessions, window and input management, scripting, server-side character bots, and MCP access. A person who only wants to play one game never needs to configure the advanced workspace.
 
@@ -17,15 +17,15 @@ The product starts with **download and play**. It can grow into a local workspac
 | Server bots and client sessions are separate runtimes. | A character can run as a server-side bot without opening a game window. EQ and WoW bots share one management workspace while retaining their own worlds, groups, and rules. |
 | Game integration has explicit capabilities. | Window management does not imply access to character state, gameplay commands, or automatic login. Unsupported features are explained. |
 | One control plane serves every interface. | The GUI, scripts, and MCP call the same validated operations and report the same jobs, results, and errors. |
-| The collection remains private and useful offline. | No public discovery, store, social feed, mandatory cloud account, or online activation. Network access is for configured household services and approved package sources. |
+| The collection remains private and useful offline. | No public discovery, store, social feed, mandatory cloud account, or online activation. Network access is for configured services and approved package sources. |
 | Character viewing is useful without live game access. | Show a timestamped server or client snapshot when available, and a clear unavailable state otherwise. |
 | Presentation is restrained. | Two main columns, compact rows, familiar controls, no hero image. Textures and small game icons carry the identity. |
 
 ### Assumptions
 
 - First implementation targets Windows desktop because the collection and requested tooling center on legacy Windows clients. Other platforms are later adapter and packaging work.
-- Initial orchestration runs on one PC. A household catalog or server can supply manifests and character data; controlling clients on other PCs is a later explicit extension.
-- Household members have separate local launcher profiles. They can share downloaded game content without sharing account credentials or optional tool settings.
+- Initial orchestration runs on one PC. A catalog or server can supply manifests and character data; controlling clients on other PCs is a later explicit extension.
+- Each person has a separate local launcher profile, named by their Windows login. They can share downloaded game content without sharing account credentials or optional tool settings.
 - The owner curates game releases, realms, required packages, and compatible optional tools. Ordinary players select from those releases.
 - Existing tools can be integrated through adapters. ISBoxer and MacroQuest are reference models; the product does not assume their code, licenses, APIs, or compatibility can be reused unchanged.
 - Names, realms, characters, package versions, status indicators, and integrations in mockups are illustrative. The screenshots do not establish that any adapter already exists.
@@ -53,7 +53,7 @@ Dependencies are operational, not arbitrary: a script that arranges windows need
 
 ## 3. Primary tasks
 
-1. A household member selects a game, presses **Install**, and then **Play**. Required fixes arrive with the install.
+1. A person selects a game, presses **Install**, and then **Play**. Required fixes arrive with the install.
 2. A player imports an existing client. The launcher identifies the build, explains any mismatch, and offers a managed copy or an explicit managed import.
 3. A player enables a borderless tool for one launch profile without changing everyone else's client configuration.
 4. A player views a character snapshot, selects the corresponding realm and account, and starts the game. Automatic character selection only appears when supported.
@@ -72,7 +72,7 @@ Dependencies are operational, not arbitrary: a script that arranges windows need
 - **Divider alignment is a shell invariant:** the wordmark area and the context pane have exactly the same width. Use one continuous vertical divider from the top edge through the header to the bottom edge. There is no separately sized brand box. Top navigation starts inside the main pane with a normal content gutter. Apply this to both Ankh and MMOnomicon, on every page.
 - Define sidebar width once in the shared layout component and reuse it for the wordmark and context pane. Resizing or changing skins must update both together; do not calculate their widths independently.
 - Exactly **two primary columns**: context list and selected detail. Top navigation is horizontal, not a third vertical rail. Editors may have internal panels or a temporary drawer.
-- Header: small brand mark and wordmark at left; **Library / Sessions / Bots / Automation / Connections** across the top when enabled; compact household profile menu at right.
+- Header: small brand mark and wordmark at left; **Library / Sessions / Bots / Automation / Connections** across the top when enabled; compact user menu at right showing the user's Windows login name.
 - Left pane changes with destination: game library, saved sessions, script list, or connection list. Settings and Activity remain at its foot.
 - The main pane owns its scroll position. The context list scrolls independently. Selection, search, sort, filters, and scroll position survive navigation.
 - A contextual bottom action bar stays within the main pane. It shows status and the primary action for that page; it never covers the final row of content.
@@ -330,7 +330,7 @@ Grant script capabilities when enabling or changing a script, with a review of n
 
 **Purpose:** let an external assistant use the same application operations that the GUI and scripts use.
 
-MCP is an interface to the local control plane, not a separate automation engine. A library-only connection works without enabling scripts. A connection cannot obtain capabilities unavailable to the signed-in household profile or selected game adapter.
+MCP is an interface to the local control plane, not a separate automation engine. A library-only connection works without enabling scripts. A connection cannot obtain capabilities unavailable to the signed-in user profile or selected game adapter.
 
 ### Connection UX
 
@@ -361,7 +361,7 @@ Expose read-only resources for game manifests, capability descriptions, snapshot
 
 ### Grants and control
 
-Provide presets **Inspect only**, **Manage launches**, and **Custom**. A grant records client identity/credential, household profile, allowed operations, target games/sessions, expiry, and whether an action needs review. A display name alone is not authentication. For stdio, pair the bridge to the broker with a locally protected per-client credential; for HTTP, use the selected MCP transport's current authorization requirements.
+Provide presets **Inspect only**, **Manage launches**, and **Custom**. A grant records client identity/credential, user profile, allowed operations, target games/sessions, expiry, and whether an action needs review. A display name alone is not authentication. For stdio, pair the bridge to the broker with a locally protected per-client credential; for HTTP, use the selected MCP transport's current authorization requirements.
 
 Read-only inspection and allowed actions on existing presets can run without repeated prompts. Installation/removal, new script powers, or ungranted game commands request a concrete plan review. The owner can change this policy deliberately. This policy is part of the proposed product, not a request for approval to create these mockups.
 
@@ -499,7 +499,7 @@ Separate grants for **Observe bots**, **Control bots & missions**, and **Move it
 | Release | Edition, exact client build/hash, required packages, compatible realms |
 | Install | Managed path, installed release, health, package receipts, storage use |
 | Realm | Endpoint, release requirements, connection method, optional character source |
-| HouseholdProfile | Local preferences, enabled features, account visibility, grants |
+| UserProfile | Local preferences, enabled features, account visibility, grants |
 | AccountRef | Game/realm identity and credential-store reference; no password in presets |
 | CharacterSnapshot | Source identity, timestamp, field freshness, game-specific data |
 | LaunchProfile | Display/config options, optional tool set, instance isolation defaults |
@@ -517,7 +517,7 @@ Separate grants for **Observe bots**, **Control bots & missions**, and **Move it
 ### Components
 
 1. **Desktop UI:** renders records and jobs, manages selections and forms, never patches files directly.
-2. **Local broker:** owns catalog state, validation, permissions, jobs, launch orchestration, and activity. Runs within the household user's session; no always-elevated service by default.
+2. **Local broker:** owns catalog state, validation, permissions, jobs, launch orchestration, and activity. Runs within the user's session; no always-elevated service by default.
 3. **Package worker:** downloads, verifies, stages, installs, journals, repairs, and restores releases and tools.
 4. **Process/window worker:** launches slots, observes lifecycle, discovers windows, applies validated layouts, and manages focus/input routing.
 5. **Game adapters:** declare build matching, login/launch behavior, supported capabilities, configuration isolation, and optional bridge integration.
@@ -551,7 +551,7 @@ Use specific recoverable states: Build mismatch, Required component missing, Too
 
 **About Ankh:** version, install scope and folder, Check for updates, and the Attributions page, under Settings.
 
-**Settings:** household profile, storage, features, defaults, accessibility, credentials, package sources, and advanced diagnostics. Curator settings are visually separate from everyday launch preferences.
+**Settings:** user profile, storage, features, defaults, accessibility, credentials, package sources, and advanced diagnostics. Curator settings are visually separate from everyday launch preferences.
 
 **Activity:** persistent jobs with progress and cancel/retry at safe boundaries; filters by game/session; readable logs with redaction. Downloads can continue while browsing another game.
 
@@ -607,13 +607,13 @@ Each of ten screens is rendered once in Ankh and once in MMOnomicon. Match layou
 
 ### Exact mockup data
 
-- Profile: **Household**. WoW Classic realm: **Arcanite**. Account: **Main account**. Build: **1.12.1**.
+- User: the Windows login name. WoW Classic realm: **Arcanite**. Account: **Main account**. Build: **1.12.1**.
 - Character sample: Merrin — 60 — Human Priest — Ironforge; Brannoc — 42 — Dwarf Hunter — Loch Modan; Thistle — 28 — Night Elf Druid — Ashenvale. Source line: **Realm snapshot · Updated 2 min ago**.
 - Character equipment example: Benediction, Robes of the Exalted, Devout Sandals. These are illustrative item names, not a verified character inventory.
 - EQ tools sample: **Required for this client · 3 ready**. Connection setup, Legacy runtime, Client compatibility. Optional tool labels are descriptive placeholders, not claims about specific released packages.
 - Session: **Mixed worlds**. Summary: **12 EverQuest · 1 WoW · 1 Motor City Online**. Layout: **Main + auxiliaries**. EQ group: **EQ party · 12 targets · Input off**.
 - Automation script: **Arrange on launch**. Session target: **Mixed worlds**. Output example: **Validated 14 targets**; **Layout applied to 14 windows**. Capability badges: **EQ · live bridge** and **MCO · windows only**.
-- MCP client sample: **Household assistant**, connected, grant **Manage launches**; **Local inspector**, disconnected, **Inspect only**. Recent calls: library.list, session.preflight, windows.apply_layout. States and activity are mock data.
+- MCP client sample: **Local assistant**, connected, grant **Manage launches**; **Local inspector**, disconnected, **Inspect only**. Recent calls: library.list, session.preflight, windows.apply_layout. States and activity are mock data.
 - Bot sample: EQ realm **Norrath**, WoW Classic realm **Arcanite**. EQ: Aelric, Seren, Tovin active and Dorrin offline. WoW: Brannoc, Thistle, Merrin active and Rook offline. Total **6 active · 2 offline · 2 worlds**. These examples assume a future capable EQ server agent, not stock feature parity.
 - Missions: **Silk supplies** — EQ/Norrath — Aelric + Seren — 18/40; **Copper route** — WoW/Arcanite — Brannoc + Thistle — 24/40; **Profession work** — WoW/Arcanite — Merrin — 3/10. Tovin is awaiting assignment.
 - Bot map: **Loch Modan · Schematic preview**. Brannoc: Mining Copper Vein. Thistle: Following Brannoc. Last telemetry: **Updated 1 sec ago**. This is concept data.
@@ -634,7 +634,7 @@ Create a polished, believable desktop application screenshot, straight-on and un
 
 ### Optional tools
 
-- Different household profiles can use different optional tools where the adapter supports isolation; shared-file limitations are stated.
+- Different user profiles can use different optional tools where the adapter supports isolation; shared-file limitations are stated.
 - Dependency/conflict resolution is previewable. Disabling a tool restores its configuration or switches to an unmodified managed variant.
 - Exact build and package versions are recorded. A pending tool update cannot mutate files under running clients.
 
@@ -650,7 +650,7 @@ Create a polished, believable desktop application screenshot, straight-on and un
 - Layout saves, previews, and restores all fourteen assignments. Removing a monitor produces a recoverable mapping problem.
 - One failed slot can retry without restarting other clients. Closing the launcher UI does not silently close games.
 - EQ input targets never include WoW/MCO unless explicitly configured. Master pause works without the main window focused.
-- Performance checks include a representative long-running fourteen-client session on target household hardware, not just an empty-window demo. Resource estimates are calibrated from observed builds.
+- Performance checks include a representative long-running fourteen-client session on target hardware, not just an empty-window demo. Resource estimates are calibrated from observed builds.
 
 ### Automation and MCP
 

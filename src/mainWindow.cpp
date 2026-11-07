@@ -2,6 +2,7 @@
 
 #include "appVersion.h"
 #include "captionButton.h"
+#include "fatal.h"
 #include "gameCatalog.h"
 #include "gamePage.h"
 #include "libraryPane.h"
@@ -124,7 +125,11 @@ MainWindow::MainWindow()
   libraryNavigation->setProperty("navigation", true);
   libraryNavigation->setCheckable(true);
   libraryNavigation->setChecked(true);
-  auto* profile = new QLabel(QStringLiteral("Household"), this);
+  const QString userName = qEnvironmentVariable("USERNAME");
+  if (userName.isEmpty()) {
+    fatal(QStringLiteral("The USERNAME environment variable is not set."));
+  }
+  auto* profile = new QLabel(userName, this);
   profile->setProperty("secondary", true);
   auto* mainHeader = new QWidget(this);
   mainHeader->setFixedHeight(headerHeight);
