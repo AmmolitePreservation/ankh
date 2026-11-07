@@ -80,11 +80,11 @@ CaptionButton* WindowControls::maximizeButton() const
   return maximize;
 }
 
-void WindowControls::applySkin(const Skin& skin)
+void WindowControls::applyPalette(const Palette& colors)
 {
-  minimize->setColors(skin.text, skin.border);
-  maximize->setColors(skin.text, skin.border);
-  close->setColors(skin.text, skin.border);
+  minimize->setColors(colors.text, colors.border);
+  maximize->setColors(colors.text, colors.border);
+  close->setColors(colors.text, colors.border);
 }
 
 void WindowControls::setMaximized(bool isMaximized)

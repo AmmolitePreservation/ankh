@@ -35,7 +35,7 @@ qt_add_executable(ankh WIN32
   src/captionButton.cpp
   src/windowControls.cpp
   src/icons.cpp
-  src/skin.cpp
+  src/palette.cpp
   src/gameCatalog.cpp
   src/libraryPane.cpp
   src/gamePage.cpp

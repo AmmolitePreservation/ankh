@@ -1,7 +1,7 @@
 #pragma once
 
 #include "gameCatalog.h"
-#include "skin.h"
+#include "palette.h"
 
 #include <QWidget>
 
@@ -18,13 +18,13 @@ public:
   explicit GamePage(QWidget* parent = nullptr);
 
   void showGame(const Game& game);
-  void applySkin(const Skin& skin);
+  void applyPalette(const Palette& newColors);
 
 private:
   void refreshIcons();
   void updateStatus();
 
-  Skin skin;
+  Palette colors;
   Game game;
   QLabel* iconLabel;
   QLabel* titleLabel;

@@ -12,7 +12,7 @@ SettingsPane::SettingsPane(QWidget* parent)
   layout->setContentsMargins(24, 20, 24, 8);
   layout->setSpacing(4);
   group->setExclusive(true);
-  const QStringList sections = {QStringLiteral("Appearance"), QStringLiteral("About Ankh"), QStringLiteral("Attributions")};
+  const QStringList sections = {QStringLiteral("About Ankh"), QStringLiteral("Attributions")};
   for (int index = 0; index < sections.size(); ++index) {
     auto* button = new QPushButton(sections.at(index), this);
     button->setCheckable(true);

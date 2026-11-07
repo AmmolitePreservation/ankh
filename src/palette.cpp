@@ -1,42 +1,11 @@
-#include "skin.h"
+#include "palette.h"
 
-#include "fatal.h"
-
-#include <QList>
-
-namespace {
-
-const QList<Skin>& skins()
+const Palette& ankhPalette()
 {
-  static const QList<Skin> all = {
-    {QStringLiteral("Ankh"), QColor("#181B1C"), QColor("#202526"), QColor("#E9E5DA"), QColor("#A4AAA7"), QColor("#C4A565"), QColor("#373D3C"), true},
-    {QStringLiteral("MMOnomicon"), QColor("#211F1B"), QColor("#2A2822"), QColor("#E7E0CF"), QColor("#ADA79B"), QColor("#91AAA0"), QColor("#454239"), false},
-  };
-  return all;
+  static const Palette colors = {QColor("#181B1C"), QColor("#202526"), QColor("#E9E5DA"), QColor("#A4AAA7"), QColor("#C4A565"), QColor("#373D3C")};
+  return colors;
 }
-
-}
-
-const Skin& skinNamed(const QString& name)
-{
-  for (const Skin& skin : skins()) {
-    if (skin.name == name) {
-      return skin;
-    }
-  }
-  fatal(QStringLiteral("Unknown skin: %1").arg(name));
-}
-
-QStringList skinNames()
-{
-  QStringList names;
-  for (const Skin& skin : skins()) {
-    names.append(skin.name);
-  }
-  return names;
-}
-
-QString buildStyleSheet(const Skin& skin)
+QString buildStyleSheet(const Palette& colors)
 {
   QString sheet = QStringLiteral(R"(
 * { font-family: "Segoe UI"; font-size: 15px; color: @text@; }
@@ -96,11 +65,11 @@ QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: trans
 QToolTip { background: @raised@; color: @text@; border: 1px solid @border@; padding: 4px 8px; }
 QDialog { background: @base@; }
 )");
-  sheet.replace(QStringLiteral("@base@"), skin.base.name());
-  sheet.replace(QStringLiteral("@raised@"), skin.raised.name());
-  sheet.replace(QStringLiteral("@text@"), skin.text.name());
-  sheet.replace(QStringLiteral("@secondary@"), skin.secondary.name());
-  sheet.replace(QStringLiteral("@accent@"), skin.accent.name());
-  sheet.replace(QStringLiteral("@border@"), skin.border.name());
+  sheet.replace(QStringLiteral("@base@"), colors.base.name());
+  sheet.replace(QStringLiteral("@raised@"), colors.raised.name());
+  sheet.replace(QStringLiteral("@text@"), colors.text.name());
+  sheet.replace(QStringLiteral("@secondary@"), colors.secondary.name());
+  sheet.replace(QStringLiteral("@accent@"), colors.accent.name());
+  sheet.replace(QStringLiteral("@border@"), colors.border.name());
   return sheet;
 }

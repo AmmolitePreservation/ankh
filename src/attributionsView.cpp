@@ -1,6 +1,7 @@
 #include "attributionsView.h"
 
 #include "fatal.h"
+#include "palette.h"
 
 #include <QFile>
 #include <QJsonArray>
@@ -81,7 +82,7 @@ AttributionsView::AttributionsView(QWidget* parent)
     if (!note.isEmpty()) {
       cardLayout->addWidget(secondaryLabel(note, card));
     }
-    auto* source = new QLabel(QStringLiteral("<a href=\"%1\">%1</a>").arg(entry.value(QStringLiteral("source")).toString()), card);
+    auto* source = new QLabel(QStringLiteral("<a href=\"%1\" style=\"color:%2\">%1</a>").arg(entry.value(QStringLiteral("source")).toString(), ankhPalette().accent.name()), card);
     source->setOpenExternalLinks(true);
     source->setTextInteractionFlags(Qt::TextBrowserInteraction);
     cardLayout->addWidget(source);

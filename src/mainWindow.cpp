@@ -119,18 +119,16 @@ void SplitHandle::mouseMoveEvent(QMouseEvent* event)
 
 MainWindow::MainWindow()
   : settings(QSettings::IniFormat, QSettings::UserScope, QStringLiteral("AmmolitePreservation"), QStringLiteral("Ankh")),
-    skin(&skinNamed(settings.value(QStringLiteral("appearance/skin"), QStringLiteral("Ankh")).toString())),
     windowControls(new WindowControls(this)),
     sidebar(new QWidget(this)),
     handle(new SplitHandle(this)),
     wordmarkImage(new QSvgWidget(QStringLiteral(":/ankhWordmark.svg"), this)),
-    wordmarkText(new QLabel(QStringLiteral("MMOnomicon"), this)),
     leftStack(new QStackedWidget(this)),
     mainStack(new QStackedWidget(this)),
     libraryPane(new LibraryPane(settings, this)),
     settingsPane(new SettingsPane(this)),
     gamePage(new GamePage(this)),
-    settingsPage(new SettingsPage(skin->name, this)),
+    settingsPage(new SettingsPage(this)),
     libraryNavigation(new QPushButton(QStringLiteral("Library"), this)),
     settingsButton(new QPushButton(QStringLiteral("Settings"), this)),
     activityButton(new QPushButton(QStringLiteral("Activity"), this)),
@@ -155,12 +153,9 @@ MainWindow::MainWindow()
   sidebarHeader->setFixedHeight(headerHeight);
   wordmarkImage->setFixedSize(176, 45);
   wordmarkImage->setAccessibleName(QStringLiteral("Ankh"));
-  wordmarkText->setFont(QFont(QStringLiteral("Georgia"), 19));
-  wordmarkText->setAccessibleName(QStringLiteral("MMOnomicon"));
   auto* sidebarHeaderLayout = new QHBoxLayout(sidebarHeader);
   sidebarHeaderLayout->setContentsMargins(26, 0, 20, 0);
   sidebarHeaderLayout->addWidget(wordmarkImage);
-  sidebarHeaderLayout->addWidget(wordmarkText);
   sidebarHeaderLayout->addStretch(1);
 
   leftStack->addWidget(libraryPane);
@@ -225,12 +220,12 @@ MainWindow::MainWindow()
   layout->addLayout(mainColumn, 1);
 
   setSidebarWidth(settings.value(QStringLiteral("window/sidebarWidth"), defaultSidebarWidth).toInt());
-  applySkin(skin->name);
+  applyPalette();
   placeWindowControls();
 
   auto* userMenu = new QMenu(userMenuButton);
   connect(userMenu->addAction(QStringLiteral("Settings")), &QAction::triggered, this, [this] { showSettings(0); });
-  connect(userMenu->addAction(QStringLiteral("Attributions")), &QAction::triggered, this, [this] { showSettings(2); });
+  connect(userMenu->addAction(QStringLiteral("Attributions")), &QAction::triggered, this, [this] { showSettings(1); });
   connect(userMenuButton, &QPushButton::clicked, this, [this, userMenu] {
     userMenu->exec(userMenuButton->mapToGlobal(QPoint(userMenuButton->width() - userMenu->sizeHint().width(), userMenuButton->height())));
   });
@@ -251,7 +246,6 @@ MainWindow::MainWindow()
   connect(libraryNavigation, &QPushButton::clicked, this, &MainWindow::showLibrary);
   connect(settingsButton, &QPushButton::clicked, this, [this] { showSettings(0); });
   connect(settingsPane, &SettingsPane::sectionSelected, settingsPage, &SettingsPage::showSection);
-  connect(settingsPage, &SettingsPage::skinChosen, this, &MainWindow::applySkin);
   connect(settingsPage, &SettingsPage::updateCheckRequested, updateChecker, &UpdateChecker::check);
   connect(libraryPane, &LibraryPane::gameSelected, this, [this](const QString& id) {
     gamePage->showGame(gameWithId(id));
@@ -294,29 +288,25 @@ MainWindow::MainWindow()
   }
 }
 
-void MainWindow::applySkin(const QString& name)
+void MainWindow::applyPalette()
 {
-  skin = &skinNamed(name);
-  settings.setValue(QStringLiteral("appearance/skin"), name);
+  const Palette& colors = ankhPalette();
   QPalette applicationPalette = qApp->palette();
-  applicationPalette.setColor(QPalette::Link, skin->accent);
-  applicationPalette.setColor(QPalette::LinkVisited, skin->accent);
+  applicationPalette.setColor(QPalette::Link, colors.accent);
+  applicationPalette.setColor(QPalette::LinkVisited, colors.accent);
   qApp->setPalette(applicationPalette);
-  qApp->setStyleSheet(buildStyleSheet(*skin));
-  wordmarkImage->setVisible(skin->usesWordmarkImage);
-  wordmarkText->setVisible(!skin->usesWordmarkImage);
-  handle->setLineColor(skin->border);
-  windowControls->applySkin(*skin);
-  libraryPane->applySkin(*skin);
-  gamePage->applySkin(*skin);
-  userMenuButton->setColors(skin->text, skin->secondary, skin->border);
-  settingsButton->setIcon(makeIcon(IconKind::settings, 22, skin->text));
-  activityButton->setIcon(makeIcon(IconKind::activity, 22, skin->secondary));
+  qApp->setStyleSheet(buildStyleSheet(colors));
+  handle->setLineColor(colors.border);
+  windowControls->applyPalette(colors);
+  libraryPane->applyPalette(colors);
+  gamePage->applyPalette(colors);
+  userMenuButton->setColors(colors.text, colors.secondary, colors.border);
+  settingsButton->setIcon(makeIcon(IconKind::settings, 22, colors.text));
+  activityButton->setIcon(makeIcon(IconKind::activity, 22, colors.secondary));
   QPalette handlePalette = handle->palette();
-  handlePalette.setColor(QPalette::Window, skin->base);
+  handlePalette.setColor(QPalette::Window, colors.base);
   handle->setPalette(handlePalette);
 }
-
 void MainWindow::showLibrary()
 {
   libraryNavigation->setChecked(true);

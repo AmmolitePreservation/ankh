@@ -46,7 +46,7 @@ QLabel* makeFixedLabel(int size, QWidget* parent)
 
 GamePage::GamePage(QWidget* parent)
   : QWidget(parent),
-    skin(skinNamed(QStringLiteral("Ankh"))),
+    colors(ankhPalette()),
     game(),
     iconLabel(makeFixedLabel(64, this)),
     titleLabel(makeLabel(QString(), "heading", this)),
@@ -252,9 +252,9 @@ GamePage::GamePage(QWidget* parent)
   refreshIcons();
 }
 
-void GamePage::applySkin(const Skin& newSkin)
+void GamePage::applyPalette(const Palette& newColors)
 {
-  skin = newSkin;
+  colors = newColors;
   refreshIcons();
 }
 
@@ -264,13 +264,13 @@ void GamePage::refreshIcons()
   const QColor green("#3FA66B");
   upToDateIcon->setPixmap(iconPixmap(IconKind::check, 26, green, ratio));
   compatibilityIcon->setPixmap(iconPixmap(IconKind::check, 26, green, ratio));
-  optionalToolsIcon->setPixmap(iconPixmap(IconKind::settings, 26, skin.secondary, ratio));
-  statusDot->setPixmap(iconPixmap(IconKind::dot, 20, game.isInstalled ? green : skin.secondary, ratio));
-  gameOptions->setIcon(makeIcon(IconKind::chevronDown, 18, skin.secondary));
-  checkForUpdates->setIcon(makeIcon(IconKind::chevronDown, 18, skin.secondary));
-  clientToolsLink->setIcon(makeIcon(IconKind::chevronRight, 18, skin.accent));
-  launchSettingsToggle->setIcon(makeIcon(launchSettingsToggle->isChecked() ? IconKind::chevronDown : IconKind::chevronRight, 18, skin.secondary));
-  primaryButton->setIcon(game.isInstalled ? makeIcon(IconKind::play, 22, skin.base) : QIcon());
+  optionalToolsIcon->setPixmap(iconPixmap(IconKind::settings, 26, colors.secondary, ratio));
+  statusDot->setPixmap(iconPixmap(IconKind::dot, 20, game.isInstalled ? green : colors.secondary, ratio));
+  gameOptions->setIcon(makeIcon(IconKind::chevronDown, 18, colors.secondary));
+  checkForUpdates->setIcon(makeIcon(IconKind::chevronDown, 18, colors.secondary));
+  clientToolsLink->setIcon(makeIcon(IconKind::chevronRight, 18, colors.accent));
+  launchSettingsToggle->setIcon(makeIcon(launchSettingsToggle->isChecked() ? IconKind::chevronDown : IconKind::chevronRight, 18, colors.secondary));
+  primaryButton->setIcon(game.isInstalled ? makeIcon(IconKind::play, 22, colors.base) : QIcon());
   primaryButton->setIconSize(QSize(22, 22));
 
   QPixmap portrait(QSize(60, 60) * ratio);
@@ -279,9 +279,9 @@ void GamePage::refreshIcons()
   QPainter painter(&portrait);
   painter.setRenderHint(QPainter::Antialiasing, true);
   painter.setPen(Qt::NoPen);
-  painter.setBrush(skin.raised);
+  painter.setBrush(colors.raised);
   painter.drawEllipse(QRectF(0.5, 0.5, 59, 59));
-  painter.drawPixmap(QRect(14, 14, 32, 32), iconPixmap(IconKind::user, 32, skin.secondary, ratio));
+  painter.drawPixmap(QRect(14, 14, 32, 32), iconPixmap(IconKind::user, 32, colors.secondary, ratio));
   painter.end();
   portraitLabel->setPixmap(portrait);
 

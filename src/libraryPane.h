@@ -1,6 +1,6 @@
 #pragma once
 
-#include "skin.h"
+#include "palette.h"
 
 #include <QWidget>
 
@@ -24,7 +24,7 @@ public:
 
   explicit LibraryPane(QSettings& settings, QWidget* parent = nullptr);
 
-  void applySkin(const Skin& skin);
+  void applyPalette(const Palette& colors);
   void selectGame(const QString& id);
 
 signals:

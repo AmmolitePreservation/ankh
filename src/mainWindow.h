@@ -1,6 +1,6 @@
 #pragma once
 
-#include "skin.h"
+#include "palette.h"
 
 #include <QSettings>
 #include <QTimer>
@@ -9,7 +9,6 @@
 
 class GamePage;
 class LibraryPane;
-class QLabel;
 class QPushButton;
 class QStackedWidget;
 class QSvgWidget;
@@ -52,7 +51,7 @@ protected:
   void closeEvent(QCloseEvent* event) override;
 
 private:
-  void applySkin(const QString& name);
+  void applyPalette();
   void showLibrary();
   void showSettings(int section);
   void setSidebarWidth(int width);
@@ -61,12 +60,10 @@ private:
   long hitTest(const QPoint& position) const;
 
   QSettings settings;
-  const Skin* skin;
   WindowControls* windowControls;
   QWidget* sidebar;
   SplitHandle* handle;
   QSvgWidget* wordmarkImage;
-  QLabel* wordmarkText;
   QStackedWidget* leftStack;
   QStackedWidget* mainStack;
   LibraryPane* libraryPane;

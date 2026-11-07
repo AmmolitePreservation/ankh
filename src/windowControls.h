@@ -1,6 +1,6 @@
 #pragma once
 
-#include "skin.h"
+#include "palette.h"
 
 #include <QAbstractButton>
 #include <QWidget>
@@ -29,7 +29,7 @@ public:
 
   UpdateButton* updateButton() const;
   CaptionButton* maximizeButton() const;
-  void applySkin(const Skin& skin);
+  void applyPalette(const Palette& colors);
   void setMaximized(bool isMaximized);
 
 signals:

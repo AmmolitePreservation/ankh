@@ -2,9 +2,7 @@
 
 #include "appVersion.h"
 #include "attributionsView.h"
-#include "skin.h"
 
-#include <QComboBox>
 #include <QCoreApplication>
 #include <QDir>
 #include <QFormLayout>
@@ -42,25 +40,9 @@ QLabel* headingLabel(const QString& text, QWidget* parent)
 
 }
 
-SettingsPage::SettingsPage(const QString& currentSkin, QWidget* parent)
+SettingsPage::SettingsPage(QWidget* parent)
   : QWidget(parent), sections(new QStackedWidget(this)), updateStatus(new QLabel(this))
 {
-  auto* appearance = new QWidget(this);
-  auto* appearanceLayout = new QVBoxLayout(appearance);
-  appearanceLayout->setContentsMargins(32, 28, 32, 0);
-  appearanceLayout->setSpacing(16);
-  appearanceLayout->addWidget(headingLabel(QStringLiteral("Appearance"), appearance));
-  auto* appearanceForm = new QFormLayout;
-  appearanceForm->setHorizontalSpacing(16);
-  auto* skinChoice = new QComboBox(appearance);
-  skinChoice->addItems(skinNames());
-  skinChoice->setCurrentText(currentSkin);
-  skinChoice->setMinimumWidth(240);
-  skinChoice->setAccessibleName(QStringLiteral("Skin"));
-  appearanceForm->addRow(QStringLiteral("Skin"), skinChoice);
-  appearanceLayout->addLayout(appearanceForm);
-  appearanceLayout->addStretch(1);
-
   auto* about = new QWidget(this);
   auto* aboutLayout = new QVBoxLayout(about);
   aboutLayout->setContentsMargins(32, 28, 32, 0);
@@ -82,7 +64,6 @@ SettingsPage::SettingsPage(const QString& currentSkin, QWidget* parent)
   aboutLayout->addWidget(updateStatus);
   aboutLayout->addStretch(1);
 
-  sections->addWidget(appearance);
   sections->addWidget(about);
   sections->addWidget(new AttributionsView(this));
 
@@ -90,7 +71,6 @@ SettingsPage::SettingsPage(const QString& currentSkin, QWidget* parent)
   layout->setContentsMargins(0, 0, 0, 0);
   layout->addWidget(sections);
 
-  connect(skinChoice, &QComboBox::currentTextChanged, this, &SettingsPage::skinChosen);
   connect(check, &QPushButton::clicked, this, &SettingsPage::updateCheckRequested);
 }
 

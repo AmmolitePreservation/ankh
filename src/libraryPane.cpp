@@ -89,14 +89,14 @@ private:
 
 class GameDelegate : public QStyledItemDelegate {
 public:
-  explicit GameDelegate(const Skin& skin, QObject* parent)
-    : QStyledItemDelegate(parent), skin(skin)
+  explicit GameDelegate(const Palette& colors, QObject* parent)
+    : QStyledItemDelegate(parent), colors(colors)
   {
   }
 
-  void setSkin(const Skin& newSkin)
+  void setColors(const Palette& newColors)
   {
-    skin = newSkin;
+    colors = newColors;
   }
 
   QSize sizeHint(const QStyleOptionViewItem&, const QModelIndex&) const override
@@ -111,16 +111,16 @@ public:
     const QRect row = option.rect;
     const bool isSelected = option.state & QStyle::State_Selected;
     if (isSelected) {
-      painter->setPen(QPen(skin.accent, 1));
-      painter->setBrush(skin.base.lighter(125));
+      painter->setPen(QPen(colors.accent, 1));
+      painter->setBrush(colors.base.lighter(125));
       painter->drawRoundedRect(QRectF(row.adjusted(2, 3, -3, -4)).translated(0.5, 0.5), 6, 6);
     } else {
       if (option.state & QStyle::State_MouseOver) {
-        QColor hover = skin.border;
+        QColor hover = colors.border;
         hover.setAlpha(90);
         painter->fillRect(row.adjusted(0, 0, 0, -1), hover);
       }
-      painter->setPen(skin.border);
+      painter->setPen(colors.border);
       painter->drawLine(row.left() + 8, row.bottom(), row.right() - 8, row.bottom());
     }
     const QRect iconRect(row.left() + 14, row.top() + (rowHeight - iconSize) / 2, iconSize, iconSize);
@@ -132,7 +132,7 @@ public:
     titleFont.setPixelSize(17);
     titleFont.setWeight(QFont::DemiBold);
     painter->setFont(titleFont);
-    painter->setPen(skin.text);
+    painter->setPen(colors.text);
     painter->drawText(QRect(textLeft, row.top() + 15, textWidth, 24), Qt::AlignVCenter | Qt::AlignLeft,
       QFontMetrics(titleFont).elidedText(index.data(titleRole).toString(), Qt::ElideRight, textWidth));
 
@@ -140,7 +140,7 @@ public:
     editionFont.setPixelSize(15);
     editionFont.setWeight(QFont::Normal);
     painter->setFont(editionFont);
-    painter->setPen(skin.secondary);
+    painter->setPen(colors.secondary);
     painter->drawText(QRect(textLeft, row.top() + 40, textWidth, 22), Qt::AlignVCenter | Qt::AlignLeft,
       QFontMetrics(editionFont).elidedText(index.data(editionRole).toString(), Qt::ElideRight, textWidth));
 
@@ -148,7 +148,7 @@ public:
     QFont starFont = painter->font();
     starFont.setPixelSize(22);
     painter->setFont(starFont);
-    painter->setPen(isFavorite ? skin.accent : skin.secondary);
+    painter->setPen(isFavorite ? colors.accent : colors.secondary);
     painter->drawText(starRectFor(row), Qt::AlignCenter, QString(QChar(isFavorite ? 0x2605 : 0x2606)));
     painter->restore();
   }
@@ -166,7 +166,7 @@ public:
   }
 
 private:
-  Skin skin;
+  Palette colors;
 };
 
 LibraryPane::LibraryPane(QSettings& settings, QWidget* parent)
@@ -174,7 +174,7 @@ LibraryPane::LibraryPane(QSettings& settings, QWidget* parent)
     settings(settings),
     model(new QStandardItemModel(this)),
     proxy(new GameFilterProxy),
-    delegate(new GameDelegate(skinNamed(QStringLiteral("Ankh")), this)),
+    delegate(new GameDelegate(ankhPalette(), this)),
     countLabel(new QLabel(this)),
     search(new QLineEdit(this)),
     searchAction(new QAction(this)),
@@ -303,11 +303,11 @@ LibraryPane::LibraryPane(QSettings& settings, QWidget* parent)
   applyFilters();
 }
 
-void LibraryPane::applySkin(const Skin& skin)
+void LibraryPane::applyPalette(const Palette& colors)
 {
-  delegate->setSkin(skin);
-  searchAction->setIcon(makeIcon(IconKind::search, 18, skin.secondary));
-  filterMenuAction->setIcon(makeIcon(IconKind::chevronDown, 18, skin.secondary));
+  delegate->setColors(colors);
+  searchAction->setIcon(makeIcon(IconKind::search, 18, colors.secondary));
+  filterMenuAction->setIcon(makeIcon(IconKind::chevronDown, 18, colors.secondary));
   list->viewport()->update();
 }
 

@@ -2,7 +2,7 @@
 
 Version 0.3 · 30 October 2026 · Proposed application design
 
-**Ankh** and **MMOnomicon** are two skins for the same application. They share information architecture, behavior, terminology, accessibility, and feature availability. This specification describes a desktop launcher for a private collection of preserved games. It is a design proposal, not an implementation or an audit of Scarab.
+**Ankh** is a desktop launcher for a private collection of preserved games, and this specification describes it. It is a design proposal, not an implementation or an audit of Scarab.
 
 The product starts with **download and play**. It can grow into a local workspace for client maintenance, characters, mixed-game sessions, window and input management, scripting, server-side character bots, and MCP access. A person who only wants to play one game never needs to configure the advanced workspace.
 
@@ -68,9 +68,9 @@ Dependencies are operational, not arbitrary: a script that arranges windows need
 ### Layout
 
 - Reference desktop size: **1600 × 1000 logical pixels**. Comfortable minimum: **1180 × 760**. Respect system scaling rather than shrinking text.
-- There is no separate title bar. The application header, 84 px, is also the window's title bar: any empty header space drags the window, and the minimize, maximize and close buttons are drawn by the application in the skin's colors in the header's top-right corner. The window keeps the system frame behavior: edge resizing, Aero Snap and the Windows 11 snap-layout flyout on the maximize button. Left context pane: 360 px by default, resizable from 300 to 420 px. Main pane uses the remaining width.
-- **Divider alignment is a shell invariant:** the wordmark area and the context pane have exactly the same width. Use one continuous vertical divider from the top edge through the header to the bottom edge. There is no separately sized brand box. Top navigation starts inside the main pane with a normal content gutter. Apply this to both Ankh and MMOnomicon, on every page.
-- Define sidebar width once in the shared layout component and reuse it for the wordmark and context pane. Resizing or changing skins must update both together; do not calculate their widths independently.
+- There is no separate title bar. The application header, 84 px, is also the window's title bar: any empty header space drags the window, and the minimize, maximize and close buttons are drawn by the application in its own colors in the header's top-right corner. The window keeps the system frame behavior: edge resizing, Aero Snap and the Windows 11 snap-layout flyout on the maximize button. Left context pane: 360 px by default, resizable from 300 to 420 px. Main pane uses the remaining width.
+- **Divider alignment is a shell invariant:** the wordmark area and the context pane have exactly the same width. Use one continuous vertical divider from the top edge through the header to the bottom edge. There is no separately sized brand box. Top navigation starts inside the main pane with a normal content gutter. Apply this on every page.
+- Define sidebar width once in the shared layout component and reuse it for the wordmark and context pane. Resizing must update both together; do not calculate their widths independently.
 - Exactly **two primary columns**: context list and selected detail. Top navigation is horizontal, not a third vertical rail. Editors may have internal panels or a temporary drawer.
 - Header: brand mark and wordmark at left; **Library / Sessions / Bots / Automation / Connections** across the top when enabled, the selected destination underlined in the accent color; at right a compact user menu with a user glyph, the user's Windows login name and a chevron, opening Settings and Attributions. The window controls sit above it in the corner.
 - Left pane changes with destination: game library, saved sessions, script list, or connection list. Settings and Activity remain at its foot.
@@ -561,7 +561,7 @@ Use specific recoverable states: Build mismatch, Required component missing, Too
 ### Shared geometry and components
 
 - 8 px spacing grid; content gutters 28–32 px; section spacing 24 px.
-- Modern sans-serif UI text, approximately 14–16 px body and 12–13 px secondary text at the reference size. Serif typography is reserved for brand and selected large headings in MMOnomicon.
+- Modern sans-serif UI text, approximately 14–16 px body and 12–13 px secondary text at the reference size.
 - 36–40 px inputs/buttons, 44 px primary launch action, 44–52 px table rows. Compact library rows are 64 px because they contain edition labels.
 - One quiet filled primary action per local task. Secondary buttons have a one-pixel border. Text links serve tertiary actions.
 - No duplicate ellipsis and dropdown for the same game menu. No decorative separators that resemble scrollbars or controls.
@@ -569,29 +569,26 @@ Use specific recoverable states: Build mismatch, Required component missing, Too
 - Main detail areas are nearly flat under text. Texture is subtle at 100% scale. No muddy gradients, luminous edges, thick fantasy frames, or distressed input controls.
 - Native-like window chrome and complete application boundaries appear in every image. No device mockup or presentation caption around the app.
 
-### Skin tokens
+### Color tokens
 
-| Token | Ankh | MMOnomicon |
-| --- | --- | --- |
-| Brand | ANKH with small monoline ankh | MMOnomicon with tiny closed-book resurrection-loop mark |
-| Base | Cool charcoal #181B1C | Warm charcoal #211F1B |
-| Raised surface | #202526 | Dark taupe #2A2822 |
-| Text | Warm ivory #E9E5DA | Bone ivory #E7E0CF |
-| Secondary | #A4AAA7 | Ash #ADA79B |
-| Accent | Muted antique gold #C4A565 | Muted verdigris #91AAA0 |
-| Border | #373D3C | #454239 |
-| Texture | Extremely fine stone/papyrus at outer edges | Fine cured-hide/vellum pores, most visible on shell edges |
-| Decoration | Tiny incised line detail and ankh mark | Fine binding seam and dry matte grain |
+| Token | Value |
+| --- | --- |
+| Brand | ANKH with small monoline ankh |
+| Base | Cool charcoal #181B1C |
+| Raised surface | #202526 |
+| Text | Warm ivory #E9E5DA |
+| Secondary | #A4AAA7 |
+| Accent | Muted antique gold #C4A565 |
+| Border | #373D3C |
+| Texture | Extremely fine stone/papyrus at outer edges |
+| Decoration | Tiny incised line detail and ankh mark |
 
-These are starting design tokens. Text contrast and interactive state colors require measurement in a real UI. Status colors remain semantically consistent across skins.
-
+These are starting design tokens. Text contrast and interactive state colors require measurement in a real UI. Status colors stay semantically consistent.
 **Ankh:** ancient Egyptian influence is limited to the mark, warm gold, proportions, and a faint edge texture. No pharaohs, pyramids, wall paintings, or ornamental hieroglyph paragraphs.
 
-**MMOnomicon:** a lightly skin-bound grimoire of resurrection. Understated, dry, tactile, and well appointed. No gore, faces in leather, eyeballs, stitched flesh, skull decorations, claws, or exaggerated book hardware. The left border is a clean matte one-pixel edge with a faint inward shadow. Spell the wordmark exactly **MMOnomicon**.
+## 15. Image set: ten complete application screens
 
-## 15. Image set: twenty complete application screens
-
-Each of ten screens is rendered once in Ankh and once in MMOnomicon. Match layout and sample data between skins so the viewer can compare the actual product. These are visual concepts; the Markdown remains authoritative where generated text or tiny details differ.
+Each of ten screens is rendered once. These are visual concepts; the Markdown remains authoritative where generated text or tiny details differ.
 
 | Screen | Selected state | What must be visible |
 | --- | --- | --- |
@@ -620,9 +617,9 @@ Each of ten screens is rendered once in Ankh and once in MMOnomicon. Match layou
 - Bot map: **Loch Modan · Schematic preview**. Brannoc: Mining Copper Vein. Thistle: Following Brannoc. Last telemetry: **Updated 1 sec ago**. This is concept data.
 - Inventory trade: **10 Copper Ore · Brannoc → Thistle · Arcanite**. Method: **Trade · Meet at Thelsamar**. Plan state: **Ready to queue**. No cross-world transfer appears.
 
-### Rendering brief shared by all twenty images
+### Rendering brief shared by all ten images
 
-Create a polished, believable desktop application screenshot, straight-on and uncropped, wide landscape, with crisp typography, aligned controls, restrained density, and two primary columns. Use the geometry, screen contents, and skin tokens above. One full screen per image. No hero scene, promotional cards, giant character illustration, decorative fantasy frame, or floating UI fragments. Use small game-era-appropriate library icons only. Keep interface labels conventional. Every table has proper headers, every dropdown a clear label, and every action a plausible location. Avoid fake graph filler and decorative code walls. Image generation is the rendering method; this specification supplies the behavior.
+Create a polished, believable desktop application screenshot, straight-on and uncropped, wide landscape, with crisp typography, aligned controls, restrained density, and two primary columns. Use the geometry, screen contents, and color tokens above. One full screen per image. No hero scene, promotional cards, giant character illustration, decorative fantasy frame, or floating UI fragments. Use small game-era-appropriate library icons only. Keep interface labels conventional. Every table has proper headers, every dropdown a clear label, and every action a plausible location. Avoid fake graph filler and decorative code walls. Image generation is the rendering method; this specification supplies the behavior.
 
 ## 16. End-to-end behavior and acceptance criteria
 
@@ -677,7 +674,7 @@ Create a polished, believable desktop application screenshot, straight-on and un
 - Keyboard-only navigation, high scaling, reduced motion, and screen-reader labels are implemented.
 - Main actions stay visible at the minimum size; tables scroll instead of shrinking into illegibility.
 - The Attributions page lists every third-party component of the installed build with its license text, works offline, and is generated from the build's dependency list.
-- Both skins use the same components and behaviors. Texture never reduces readability.
+- Texture never reduces readability.
 
 ## 17. Delivery sequence
 

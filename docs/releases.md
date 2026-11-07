@@ -28,7 +28,7 @@ The tag carries no zone letter, so the time is UTC by rule: the workflow compute
 
 ## Installer
 
-Inno Setup builds the installer. Its look is brought close to the application's skin with the wizard images, colors and fonts; the installer does not use Qt.
+Inno Setup builds the installer. Its look is brought close to the application's look with the wizard images, colors and fonts; the installer does not use Qt.
 
 - `ankhSetup-<version>-win64.exe` is produced by the release workflow, which stages the application folder (`ankh.exe`, the Qt DLLs, the license texts) and runs the Inno compiler on one script.
 - The wizard asks for **all users** (default `C:\Program Files\Ankh`, elevates) or **this user** (default `%LOCALAPPDATA%\Programs\Ankh`, no elevation). The folder is editable in either case.

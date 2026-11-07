@@ -2,8 +2,6 @@
 
 A minimalist, robust game management application for a private collection of preserved games. It starts as a download-and-play launcher and grows, only for those who want it, into client tools, mixed-game sessions, automation, server-side bots, and MCP access.
 
-Ankh and MMOnomicon are two skins of the same application.
-
 - Product and interface specification: [docs/launcherSpec.md](docs/launcherSpec.md)
 - Release process and version format: [docs/releases.md](docs/releases.md)
 - Update flow: [docs/updates.md](docs/updates.md)
@@ -43,4 +41,4 @@ Layers 1 to 3 are the product; 4 to 7 are independently enabled features. See th
 
 ## Current state
 
-The library data is a hardcoded sample list (seven games, one marked installed) standing in for a real catalog. The shell, skins, library list, game page, settings (appearance, About Ankh, attributions), update check with the title-bar update button, and the installer exist. Installing, launching and updating games, and installing updates from inside Ankh, are not built.
+The library data is a hardcoded sample list (seven games, one marked installed) standing in for a real catalog. The shell, library list, game page, settings (About Ankh, attributions), update check with the title-bar update button, and the installer exist. Installing, launching and updating games, and installing updates from inside Ankh, are not built.
