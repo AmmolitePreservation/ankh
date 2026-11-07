@@ -7,7 +7,7 @@ param(
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Core
 
-$privateKeyText = [Environment]::GetEnvironmentVariable('ANKH_SIGNING_KEY')
+$privateKeyText = ([Environment]::GetEnvironmentVariable('ANKH_SIGNING_KEY')).Trim()
 if ([string]::IsNullOrEmpty($privateKeyText)) {
   throw 'Environment variable ANKH_SIGNING_KEY is required.'
 }
