@@ -15,14 +15,10 @@ class UpdateSheet : public QDialog {
 public:
   UpdateSheet(const UpdateOffer& offer, const QString& currentVersion, QWidget* parent = nullptr);
 
-public slots:
-  void reject() override;
-
 private:
   UpdateInstaller* installer;
   QLabel* status;
   QProgressBar* progress;
   QPushButton* updateButton;
   QPushButton* closeButton;
-  bool isInstalling = false;
 };

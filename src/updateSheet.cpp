@@ -72,22 +72,13 @@ UpdateSheet::UpdateSheet(const UpdateOffer& offer, const QString& currentVersion
     progress->setValue(static_cast<int>(received / 1024));
   });
   connect(installer, &UpdateInstaller::installerStarted, this, [this] {
-    isInstalling = true;
     progress->setRange(0, 0);
   });
   connect(installer, &UpdateInstaller::failed, this, [this](const QString& message) {
-    isInstalling = false;
     progress->setVisible(false);
     status->setText(message);
     updateButton->setText(QStringLiteral("Try again"));
     updateButton->setEnabled(true);
     closeButton->setEnabled(true);
   });
-}
-
-void UpdateSheet::reject()
-{
-  if (!isInstalling) {
-    QDialog::reject();
-  }
 }

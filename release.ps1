@@ -45,13 +45,17 @@ $distribution = Join-Path $repositoryRoot 'dist'
 $installer = Join-Path $distribution "ankhSetup-$version-win64.exe"
 & (Join-Path (Join-Path $repositoryRoot 'tools') 'signRelease.ps1') -installerPath $installer -version $version -outputDirectory $distribution
 
+git -C $repositoryRoot fetch --tags --quiet
 $previous = gh release list --limit 1 --json tagName --jq '.[0].tagName'
 if ($previous) {
   $range = "$previous..$target"
 } else {
   $range = $target
 }
-$lines = git -C $repositoryRoot log --pretty=format:'- %s' $range
+$lines = @(git -C $repositoryRoot log --pretty=format:'- %s' $range)
+if ($lines.Count -eq 0) {
+  $lines = @('- No code changes since the previous release.')
+}
 $notesPath = Join-Path $distribution 'notes.md'
 [IO.File]::WriteAllText($notesPath, ($lines -join "`n"))
 
