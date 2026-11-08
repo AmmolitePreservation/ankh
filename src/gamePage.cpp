@@ -409,7 +409,7 @@ void GamePage::showGame(const Game& newGame)
 {
   game = newGame;
   titleLabel->setText(game.title);
-  subtitleLabel->setText(libraryDescription(game));
+  subtitleLabel->setText(game.edition);
   realmChoice->clear();
   realmChoice->addItem(game.worldName);
   realmChoice->setEnabled(false);

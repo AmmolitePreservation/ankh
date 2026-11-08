@@ -25,5 +25,4 @@ struct Game {
 
 QString initialsFor(const QString& title);
 Game gameFromWorld(const World& world);
-QString libraryDescription(const Game& game);
 void paintGameIcon(QPainter& painter, const QRect& area, const QString& initials, const QColor& tint);

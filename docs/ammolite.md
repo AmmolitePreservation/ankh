@@ -19,7 +19,7 @@ Sign in and account creation are a modal over the current page, so the user stay
 
 ## What the library shows
 
-- `GET /api/v1/worlds` lists the worlds on display. Each becomes a library entry: the game's name, then the world and the edition. A world's color is the tint of its icon, and its status line comes from the world itself.
+- `GET /api/v1/worlds` lists the worlds on display. Each becomes a library entry: the game's name, then the edition (for example Classic (1.12.1)). The world's name is not shown in the list but the search finds it, and the game page shows it as the Realm. A world's color is the tint of its icon, and its status line comes from the world itself.
 - `GET /api/v1/worlds/<id>` supplies the downloads attached to the selected world, shown by category with version and size.
 - `GET /api/v1/me/gameAccounts` supplies the logins the user has in the world's account domain, offered in the Account list.
 

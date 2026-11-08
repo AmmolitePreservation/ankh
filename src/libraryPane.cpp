@@ -26,6 +26,7 @@ enum Role {
   idRole = Qt::UserRole + 1,
   titleRole,
   editionRole,
+  worldNameRole,
   initialsRole,
   tintRole,
   favoriteRole,
@@ -78,7 +79,8 @@ protected:
       return true;
     }
     return index.data(titleRole).toString().contains(searchText, Qt::CaseInsensitive)
-      || index.data(editionRole).toString().contains(searchText, Qt::CaseInsensitive);
+      || index.data(editionRole).toString().contains(searchText, Qt::CaseInsensitive)
+      || index.data(worldNameRole).toString().contains(searchText, Qt::CaseInsensitive);
   }
 
 private:
@@ -335,12 +337,13 @@ void LibraryPane::showGames(const QList<Game>& newGames)
     auto* item = new QStandardItem;
     item->setData(game.id, idRole);
     item->setData(game.title, titleRole);
-    item->setData(libraryDescription(game), editionRole);
+    item->setData(game.edition, editionRole);
+    item->setData(game.worldName, worldNameRole);
     item->setData(game.initials, initialsRole);
     item->setData(game.tint, tintRole);
     item->setData(favorites.contains(game.id), favoriteRole);
     item->setData(game.isInstalled, installedRole);
-    const QString nameKey = game.title.toLower() + QLatin1Char(' ') + libraryDescription(game).toLower();
+    const QString nameKey = (game.title + QLatin1Char(' ') + game.edition + QLatin1Char(' ') + game.worldName).toLower();
     item->setData(nameKey, nameKeyRole);
     item->setData((game.isInstalled ? QStringLiteral("0 ") : QStringLiteral("1 ")) + nameKey, installKeyRole);
     item->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);

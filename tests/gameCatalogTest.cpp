@@ -41,13 +41,6 @@ private slots:
     QCOMPARE(game.accountDomainID, std::optional<int>(2));
     QVERIFY(!game.isInstalled);
   }
-
-  void theLibraryNamesTheWorldBeforeTheEdition()
-  {
-    const World world{3, QStringLiteral("Arcanite"), QStringLiteral("World of Warcraft"), QStringLiteral("Classic"),
-      QColor("#82b556"), 2004, 2006, QString(), std::nullopt, QString()};
-    QCOMPARE(libraryDescription(gameFromWorld(world)), QStringLiteral("Arcanite %1 Classic").arg(QChar(0x00B7)));
-  }
 };
 
 QTEST_GUILESS_MAIN(GameCatalogTest)
