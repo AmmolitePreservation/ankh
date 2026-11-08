@@ -4,13 +4,11 @@
 #include "icons.h"
 
 #include <QAction>
-#include <QActionGroup>
 #include <QEvent>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
 #include <QListView>
-#include <QMenu>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPushButton>
@@ -32,11 +30,12 @@ enum Role {
   favoriteRole,
   installedRole,
   nameKeyRole,
-  installKeyRole,
 };
 
 constexpr int rowHeight = 78;
 constexpr int iconSize = 56;
+constexpr int toggleSize = 40;
+constexpr int toggleIconSize = 22;
 
 QRect starRectFor(const QRect& row)
 {
@@ -173,22 +172,14 @@ private:
 LibraryPane::LibraryPane(QSettings& settings, QWidget* parent)
   : QWidget(parent),
     settings(settings),
+    colors(ankhPalette()),
     model(new QStandardItemModel(this)),
     proxy(new GameFilterProxy),
     delegate(new GameDelegate(ankhPalette(), this)),
-    countLabel(new QLabel(this)),
     search(new QLineEdit(this)),
     searchAction(new QAction(this)),
-    filterMenuAction(new QAction(QStringLiteral("Filter and sort"), this)),
-    filterMenu(new QMenu(this)),
-    installedOnlyAction(filterMenu->addAction(QStringLiteral("Installed only"))),
-    sortGroup(new QActionGroup(this)),
-    customSortAction(nullptr),
-    nameSortAction(nullptr),
-    installSortAction(nullptr),
-    allChip(new QPushButton(QStringLiteral("All games"), this)),
-    favoritesChip(new QPushButton(QStringLiteral("Favorites"), this)),
-    nameChip(new QPushButton(QStringLiteral("Name A-Z"), this)),
+    favoritesButton(new QPushButton(this)),
+    installedButton(new QPushButton(this)),
     messageBox(new QWidget(this)),
     emptyLabel(new QLabel(this)),
     actionButton(new QPushButton(this)),
@@ -196,33 +187,25 @@ LibraryPane::LibraryPane(QSettings& settings, QWidget* parent)
 {
   proxy->setParent(this);
   proxy->setSourceModel(model);
-
-  auto* heading = new QLabel(QStringLiteral("Library"), this);
-  heading->setProperty("paneHeading", true);
-  countLabel->setProperty("secondary", true);
+  proxy->setSortRole(nameKeyRole);
+  proxy->sort(0);
 
   search->setPlaceholderText(QStringLiteral("Search games..."));
   search->setAccessibleName(QStringLiteral("Search games"));
   searchAction->setText(QStringLiteral("Search"));
   search->addAction(searchAction, QLineEdit::LeadingPosition);
-  search->addAction(filterMenuAction, QLineEdit::TrailingPosition);
 
-  installedOnlyAction->setCheckable(true);
-  filterMenu->addSeparator();
-  customSortAction = filterMenu->addAction(QStringLiteral("Sort: Custom"));
-  nameSortAction = filterMenu->addAction(QStringLiteral("Sort: Name A-Z"));
-  installSortAction = filterMenu->addAction(QStringLiteral("Sort: Installed first"));
-  for (QAction* action : {customSortAction, nameSortAction, installSortAction}) {
-    action->setCheckable(true);
-    sortGroup->addAction(action);
+  favoritesButton->setAccessibleName(QStringLiteral("Show favorites only"));
+  favoritesButton->setToolTip(QStringLiteral("Show favorites only"));
+  installedButton->setAccessibleName(QStringLiteral("Show installed only"));
+  installedButton->setToolTip(QStringLiteral("Show installed only"));
+  for (QPushButton* button : {favoritesButton, installedButton}) {
+    button->setProperty("iconToggle", true);
+    button->setCheckable(true);
+    button->setFixedSize(toggleSize, toggleSize);
+    button->setIconSize(QSize(toggleIconSize, toggleIconSize));
   }
-
-  for (QPushButton* chip : {allChip, favoritesChip, nameChip}) {
-    chip->setProperty("chip", true);
-    chip->setCheckable(true);
-    chip->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-  }
-  allChip->setChecked(true);
+  updateToggleIcons();
 
   emptyLabel->setProperty("secondary", true);
   emptyLabel->setAlignment(Qt::AlignHCenter | Qt::AlignTop);
@@ -243,54 +226,30 @@ LibraryPane::LibraryPane(QSettings& settings, QWidget* parent)
   list->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
   list->setAccessibleName(QStringLiteral("Games"));
 
-  auto* headingRow = new QHBoxLayout;
-  headingRow->addWidget(heading);
-  headingRow->addStretch(1);
-  headingRow->addWidget(countLabel, 0, Qt::AlignBottom);
-
-  auto* chips = new QHBoxLayout;
-  chips->setSpacing(8);
-  chips->addWidget(allChip, allChip->sizeHint().width());
-  chips->addWidget(favoritesChip, favoritesChip->sizeHint().width());
-  chips->addWidget(nameChip, nameChip->sizeHint().width());
-
-  auto* top = new QWidget(this);
-  auto* topLayout = new QVBoxLayout(top);
-  topLayout->setContentsMargins(10, 0, 10, 0);
-  topLayout->setSpacing(14);
-  topLayout->addLayout(headingRow);
-  topLayout->addWidget(search);
-  topLayout->addLayout(chips);
+  auto* top = new QHBoxLayout;
+  top->setContentsMargins(10, 0, 10, 0);
+  top->setSpacing(8);
+  top->addWidget(search, 1);
+  top->addWidget(favoritesButton);
+  top->addWidget(installedButton);
 
   auto* layout = new QVBoxLayout(this);
   layout->setContentsMargins(14, 22, 14, 8);
-  layout->setSpacing(10);
-  layout->addWidget(top);
+  layout->setSpacing(14);
+  layout->addLayout(top);
   layout->addWidget(list, 1);
   layout->addWidget(messageBox, 1);
 
   connect(actionButton, &QPushButton::clicked, this, &LibraryPane::actionRequested);
   connect(search, &QLineEdit::textChanged, this, [this] { applyFilters(); });
-  connect(filterMenuAction, &QAction::triggered, this, [this] {
-    filterMenu->exec(search->mapToGlobal(QPoint(search->width() - filterMenu->sizeHint().width(), search->height())));
-  });
-  connect(installedOnlyAction, &QAction::toggled, this, [this] { applyFilters(); });
-  connect(allChip, &QPushButton::clicked, this, [this] {
-    allChip->setChecked(true);
-    favoritesChip->setChecked(false);
+  connect(favoritesButton, &QPushButton::toggled, this, [this] {
+    updateToggleIcons();
     applyFilters();
   });
-  connect(favoritesChip, &QPushButton::clicked, this, [this] {
-    favoritesChip->setChecked(true);
-    allChip->setChecked(false);
+  connect(installedButton, &QPushButton::toggled, this, [this] {
+    updateToggleIcons();
     applyFilters();
   });
-  connect(nameChip, &QPushButton::clicked, this, [this](bool isChecked) {
-    setSortMode(isChecked ? SortMode::name : SortMode::custom);
-  });
-  connect(customSortAction, &QAction::triggered, this, [this] { setSortMode(SortMode::custom); });
-  connect(nameSortAction, &QAction::triggered, this, [this] { setSortMode(SortMode::name); });
-  connect(installSortAction, &QAction::triggered, this, [this] { setSortMode(SortMode::installState); });
   connect(list->selectionModel(), &QItemSelectionModel::currentChanged, this, [this](const QModelIndex& current) {
     if (current.isValid()) {
       emit gameSelected(games.value(current.data(idRole).toString()));
@@ -301,7 +260,6 @@ LibraryPane::LibraryPane(QSettings& settings, QWidget* parent)
     applyFilters();
   });
   showMessage(QString(), QString());
-  setSortMode(SortMode::name);
 }
 
 bool LibraryPane::eventFilter(QObject* watched, QEvent* event)
@@ -317,11 +275,12 @@ bool LibraryPane::eventFilter(QObject* watched, QEvent* event)
   return QWidget::eventFilter(watched, event);
 }
 
-void LibraryPane::applyPalette(const Palette& colors)
+void LibraryPane::applyPalette(const Palette& newColors)
 {
+  colors = newColors;
   delegate->setColors(colors);
   searchAction->setIcon(makeIcon(IconKind::search, 20, colors.text));
-  filterMenuAction->setIcon(makeIcon(IconKind::chevronDown, 18, colors.text));
+  updateToggleIcons();
   list->viewport()->update();
 }
 
@@ -345,7 +304,6 @@ void LibraryPane::showGames(const QList<Game>& newGames)
     item->setData(game.isInstalled, installedRole);
     const QString nameKey = (game.title + QLatin1Char(' ') + game.edition + QLatin1Char(' ') + game.worldName).toLower();
     item->setData(nameKey, nameKeyRole);
-    item->setData((game.isInstalled ? QStringLiteral("0 ") : QStringLiteral("1 ")) + nameKey, installKeyRole);
     item->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
     model->appendRow(item);
   }
@@ -379,30 +337,23 @@ void LibraryPane::selectGame(const QString& id)
 void LibraryPane::applyFilters()
 {
   proxy->setSearchText(search->text());
-  proxy->setFavoritesOnly(favoritesChip->isChecked());
-  proxy->setInstalledOnly(installedOnlyAction->isChecked());
+  proxy->setFavoritesOnly(favoritesButton->isChecked());
+  proxy->setInstalledOnly(installedButton->isChecked());
   const int shown = proxy->rowCount();
   const int total = model->rowCount();
   const bool isMessage = !message.isEmpty();
-  countLabel->setText(isMessage ? QString() : shown == total ? QStringLiteral("%1 games").arg(total) : QStringLiteral("%1 of %2 games").arg(shown).arg(total));
   list->setVisible(!isMessage && shown > 0);
   messageBox->setVisible(isMessage || shown == 0);
   emptyLabel->setText(isMessage ? message : total == 0 ? QStringLiteral("No games are on display yet.") : QStringLiteral("No games match."));
   actionButton->setVisible(isMessage && !actionButton->text().isEmpty());
 }
 
-void LibraryPane::setSortMode(SortMode mode)
+void LibraryPane::updateToggleIcons()
 {
-  nameChip->setChecked(mode == SortMode::name);
-  customSortAction->setChecked(mode == SortMode::custom);
-  nameSortAction->setChecked(mode == SortMode::name);
-  installSortAction->setChecked(mode == SortMode::installState);
-  if (mode == SortMode::custom) {
-    proxy->sort(-1);
-    return;
-  }
-  proxy->setSortRole(mode == SortMode::name ? nameKeyRole : installKeyRole);
-  proxy->sort(0);
+  const bool isFavorites = favoritesButton->isChecked();
+  favoritesButton->setIcon(makeIcon(isFavorites ? IconKind::starFilled : IconKind::star, toggleIconSize, isFavorites ? colors.accent : colors.text));
+  const bool isInstalled = installedButton->isChecked();
+  installedButton->setIcon(makeIcon(IconKind::hardDrive, toggleIconSize, isInstalled ? colors.accent : colors.text));
 }
 
 void LibraryPane::saveFavorites()

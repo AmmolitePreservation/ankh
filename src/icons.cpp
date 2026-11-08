@@ -28,6 +28,7 @@ QString glyphName(IconKind kind)
   case IconKind::windowRestore: return QStringLiteral("windowRestore");
   case IconKind::windowClose: return QStringLiteral("windowClose");
   case IconKind::download: return QStringLiteral("download");
+  case IconKind::hardDrive: return QStringLiteral("hardDrive");
   }
   fatal(QStringLiteral("Unknown icon kind"));
 }

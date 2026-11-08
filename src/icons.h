@@ -21,6 +21,7 @@ enum class IconKind {
   windowRestore,
   windowClose,
   download,
+  hardDrive,
 };
 
 QPixmap iconPixmap(IconKind kind, int size, const QColor& color, qreal ratio);
