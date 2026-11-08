@@ -99,7 +99,6 @@ AttributionsView::AttributionsView(QWidget* parent)
       auto* toggle = new QPushButton(QStringLiteral("Show license text"), card);
       toggle->setProperty("link", true);
       toggle->setCheckable(true);
-      toggle->setCursor(Qt::PointingHandCursor);
       auto* license = new QPlainTextEdit(card);
       license->setReadOnly(true);
       license->setPlainText(text);

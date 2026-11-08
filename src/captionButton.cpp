@@ -24,6 +24,7 @@ CaptionButton::CaptionButton(Kind kind, QWidget* parent)
   : QAbstractButton(parent), kind(kind)
 {
   setFocusPolicy(Qt::NoFocus);
+  setProperty("systemCursor", true);
   setFixedSize(sizeHint());
 }
 

@@ -233,7 +233,6 @@ LibraryPane::LibraryPane(QSettings& settings, QWidget* parent)
   for (QPushButton* chip : {allChip, favoritesChip, nameChip}) {
     chip->setProperty("chip", true);
     chip->setCheckable(true);
-    chip->setCursor(Qt::PointingHandCursor);
     chip->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
   }
   allChip->setChecked(true);
@@ -245,6 +244,7 @@ LibraryPane::LibraryPane(QSettings& settings, QWidget* parent)
   list->setModel(proxy);
   list->setItemDelegate(delegate);
   list->setMouseTracking(true);
+  list->viewport()->installEventFilter(this);
   list->setSelectionMode(QAbstractItemView::SingleSelection);
   list->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
   list->setAccessibleName(QStringLiteral("Games"));
@@ -306,6 +306,19 @@ LibraryPane::LibraryPane(QSettings& settings, QWidget* parent)
     applyFilters();
   });
   applyFilters();
+}
+
+bool LibraryPane::eventFilter(QObject* watched, QEvent* event)
+{
+  if (watched == list->viewport()) {
+    if (event->type() == QEvent::MouseMove) {
+      const QPoint position = static_cast<QMouseEvent*>(event)->position().toPoint();
+      list->viewport()->setCursor(list->indexAt(position).isValid() ? Qt::PointingHandCursor : Qt::ArrowCursor);
+    } else if (event->type() == QEvent::Leave) {
+      list->viewport()->unsetCursor();
+    }
+  }
+  return QWidget::eventFilter(watched, event);
 }
 
 void LibraryPane::applyPalette(const Palette& colors)

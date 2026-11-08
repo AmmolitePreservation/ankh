@@ -9,7 +9,6 @@ UpdateButton::UpdateButton(QWidget* parent)
   : QAbstractButton(parent)
 {
   setFocusPolicy(Qt::TabFocus);
-  setCursor(Qt::PointingHandCursor);
   setFixedSize(sizeHint());
 }
 

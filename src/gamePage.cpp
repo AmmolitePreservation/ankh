@@ -112,7 +112,6 @@ GamePage::GamePage(QWidget* parent)
   manageAccounts->setToolTip(QStringLiteral("Account management is not built yet."));
   launchSettingsToggle->setProperty("disclosure", true);
   launchSettingsToggle->setCheckable(true);
-  launchSettingsToggle->setCursor(Qt::PointingHandCursor);
   launchSettingsToggle->setIconSize(QSize(18, 18));
   launchSettingsNote->setVisible(false);
   installNote->setVisible(false);
@@ -122,7 +121,6 @@ GamePage::GamePage(QWidget* parent)
   checkForUpdates->setToolTip(QStringLiteral("Update checks for games are not built yet."));
   clientToolsLink->setProperty("link", true);
   clientToolsLink->setLayoutDirection(Qt::RightToLeft);
-  clientToolsLink->setCursor(Qt::PointingHandCursor);
   realmChoice->setAccessibleName(QStringLiteral("Realm"));
   accountChoice->setAccessibleName(QStringLiteral("Account"));
   realmChoice->setMinimumHeight(42);

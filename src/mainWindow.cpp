@@ -49,7 +49,6 @@ public:
   UserMenuButton(const QString& name, QWidget* parent)
     : QPushButton(parent), userName(name)
   {
-    setCursor(Qt::PointingHandCursor);
     setFlat(true);
     setAccessibleName(QStringLiteral("%1 menu").arg(name));
     setFixedHeight(48);
@@ -170,7 +169,6 @@ MainWindow::MainWindow()
   settingsButton->setProperty("footer", true);
   settingsButton->setIconSize(QSize(22, 22));
   activityButton->setIconSize(QSize(22, 22));
-  settingsButton->setCursor(Qt::PointingHandCursor);
   activityButton->setProperty("footer", true);
   activityButton->setEnabled(false);
   activityButton->setToolTip(QStringLiteral("Activity is not built yet."));
