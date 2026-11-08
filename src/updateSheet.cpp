@@ -103,6 +103,13 @@ void UpdateSheet::showEvent(QShowEvent* event)
   QDialog::showEvent(event);
 }
 
+void UpdateSheet::holdFor(const QString& activity)
+{
+  status->setText(QStringLiteral("%1 is still running. Updating Ankh would close it half-way, so wait for it to finish and open this sheet again.")
+    .arg(activity));
+  updateButton->setEnabled(false);
+}
+
 void UpdateSheet::setOffer(const UpdateOffer& offer)
 {
   if (isWorking) {

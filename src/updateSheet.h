@@ -17,6 +17,7 @@ public:
   UpdateSheet(const UpdateOffer& offer, const QString& currentVersion, QWidget* parent = nullptr);
 
   void setOffer(const UpdateOffer& offer);
+  void holdFor(const QString& activity);
 
 protected:
   void showEvent(QShowEvent* event) override;

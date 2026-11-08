@@ -216,9 +216,14 @@ QUrl AmmoliteClient::baseUrl() const
   return base;
 }
 
+QString AmmoliteClient::token() const
+{
+  return apiToken;
+}
+
 void AmmoliteClient::setToken(const QString& newToken)
 {
-  token = newToken;
+  apiToken = newToken;
 }
 
 QNetworkRequest AmmoliteClient::requestFor(const QString& path, bool isAuthorized) const
@@ -230,7 +235,7 @@ QNetworkRequest AmmoliteClient::requestFor(const QString& path, bool isAuthorize
   request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("Ankh/%1").arg(appVersion));
   request.setTransferTimeout(20000);
   if (isAuthorized) {
-    request.setRawHeader("Authorization", "Bearer " + token.toUtf8());
+    request.setRawHeader("Authorization", "Bearer " + apiToken.toUtf8());
   }
   return request;
 }
@@ -318,7 +323,7 @@ void AmmoliteClient::startSignIn(const QString& username, const QString& passwor
     [this](const QJsonObject& answer) {
       const SignedInUser user = parseUser(requiredValue(answer, "user").toObject());
       const QString newToken = requiredString(answer, "token");
-      token = newToken;
+      apiToken = newToken;
       emit signedIn(user, newToken);
     },
     onFailure);
@@ -328,11 +333,11 @@ void AmmoliteClient::signOut()
 {
   send("DELETE", QStringLiteral("/api/v1/auth/token"), QJsonObject(), true,
     [this](const QJsonObject&) {
-      token.clear();
+      apiToken.clear();
       emit signedOut(QString());
     },
     [this](const QString& message) {
-      token.clear();
+      apiToken.clear();
       emit signedOut(QStringLiteral("The sign-in could not be revoked on the server: %1").arg(message));
     });
 }
@@ -346,7 +351,7 @@ void AmmoliteClient::loadMe()
 
 void AmmoliteClient::loadManifest(const QByteArray& etag)
 {
-  const bool isAuthorized = !token.isEmpty();
+  const bool isAuthorized = !apiToken.isEmpty();
   QNetworkRequest request = requestFor(QStringLiteral("/api/v1/manifest"), isAuthorized);
   if (!etag.isEmpty()) {
     request.setRawHeader("If-None-Match", etag);

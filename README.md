@@ -5,6 +5,7 @@ A minimalist, robust game management application for a private collection of pre
 - Product and interface specification: [docs/launcherSpec.md](docs/launcherSpec.md)
 - Release process and version format: [docs/releases.md](docs/releases.md)
 - Update flow: [docs/updates.md](docs/updates.md)
+- Installing games: [docs/install.md](docs/install.md)
 - Ammolite backend, sign-in and the library's data: [docs/ammolite.md](docs/ammolite.md)
 - Wordmark: [assets/ankhWordmark.svg](assets/ankhWordmark.svg)
 
@@ -46,10 +47,10 @@ Layers 1 to 3 are the product; 4 to 7 are independently enabled features. See th
 
 ## Current state
 
-Built and tested: the shell, library list, game page, settings (About Ankh, attributions), the installer (per-user or all-users, silent flags), and in-app updating (signed manifest check, verified download, silent install, relaunch). Releases are made by `release.ps1`, run locally or by `.github/workflows/release.yml` once the `ANKH_SIGNING_KEY` repository secret exists.
+Built and tested: the shell, Ammolite sign-in and the manifest-driven library, the game page with its edition's packages, game installs (client plus required tools, verified, resumable, receipted), settings (Account, Games, About Ankh, attributions), the installer (per-user or all-users, silent flags), and in-app updating (signed manifest check, verified download, silent install, relaunch). Releases are made by `release.ps1`, run locally or by `.github/workflows/release.yml`.
 
-The library data is a hardcoded sample list (seven games, one marked installed) standing in for a real catalog. Installing, launching and updating games are not built.
+Launching, updating and repairing games, and optional tools, are not built.
 
 ## Tests
 
-`.\test.ps1` runs the signature tests (needs a build first).
+`.\test.ps1` runs every test target through ctest (needs a build first). The install tests drive the job against a local HTTP server and real zip fixtures in `tests/fixtures/install`.

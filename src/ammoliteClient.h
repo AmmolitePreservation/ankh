@@ -98,6 +98,7 @@ public:
   AmmoliteClient(const QUrl& baseUrl, const QString& appVersion, QObject* parent = nullptr);
 
   QUrl baseUrl() const;
+  QString token() const;
   void setToken(const QString& token);
   void signIn(const QString& username, const QString& password, const QString& tokenLabel);
   void registerAccount(const QString& inviteCode, const QString& username, const QString& password,
@@ -131,6 +132,6 @@ private:
 
   QUrl base;
   QString appVersion;
-  QString token;
+  QString apiToken;
   QNetworkAccessManager* network;
 };

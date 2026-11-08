@@ -2,9 +2,13 @@
 
 #include "ammoliteClient.h"
 #include "credentialStore.h"
+#include "gameCatalog.h"
+#include "installJob.h"
+#include "installLibrary.h"
 #include "palette.h"
 #include "updateOffer.h"
 
+#include <QMap>
 #include <QSettings>
 #include <QTimer>
 #include <QUrl>
@@ -70,6 +74,14 @@ private:
   void setSidebarWidth(int width);
   void placeWindowControls();
   void openUpdateSheet();
+  QString libraryRoot() const;
+  void rescanLibrary();
+  void rebuildGames();
+  bool isGameInstalled(const Game& game) const;
+  void refreshInstallState();
+  void startInstall(const Game& game);
+  void finishInstall(const QString& note);
+  void chooseLibraryRoot();
   long hitTest(const QPoint& position) const;
 
   enum class LibraryAction { signIn, retry };
@@ -103,7 +115,17 @@ private:
   LibraryAction libraryAction = LibraryAction::signIn;
   bool hasSelectedGame = false;
   bool hasCollection = false;
-  QString shownGameId;
+  QList<World> worlds;
+  QList<Package> packages;
+  LibraryScan libraryScan;
+  Game shownGame{};
+  InstallJob* installJob = nullptr;
+  QString installingGameId;
+  QString installingLabel;
+  QString installStepText;
+  qint64 installDone = 0;
+  qint64 installTotal = 0;
+  QMap<QString, QString> installNotes;
   QSize desiredSize;
   bool isSizeApplied = false;
   bool isMaximizePressed = false;

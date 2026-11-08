@@ -55,6 +55,9 @@ qt_add_executable(ankh WIN32
   src/attributionsView.cpp
   src/updateOffer.cpp
   src/updateSheet.cpp
+  src/installLibrary.cpp
+  src/installJob.cpp
+  src/installSheet.cpp
   src/mainWindow.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/ankh.rc
 )
@@ -124,6 +127,17 @@ target_include_directories(userMenuButtonTest PRIVATE src)
 target_link_libraries(userMenuButtonTest PRIVATE Qt6::Test Qt6::Widgets Qt6::Svg)
 add_test(NAME userMenuButton COMMAND userMenuButtonTest)
 set_tests_properties(userMenuButton PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+qt_add_executable(installLibraryTest tests/installLibraryTest.cpp src/installLibrary.cpp src/installInfo.cpp src/ammoliteClient.cpp src/fatal.cpp)
+target_include_directories(installLibraryTest PRIVATE src)
+target_link_libraries(installLibraryTest PRIVATE Qt6::Test Qt6::Network Qt6::Widgets)
+add_test(NAME installLibrary COMMAND installLibraryTest)
+
+qt_add_executable(installJobTest tests/installJobTest.cpp src/installJob.cpp src/installLibrary.cpp src/installInfo.cpp src/gameCatalog.cpp src/ammoliteClient.cpp src/fatal.cpp)
+target_include_directories(installJobTest PRIVATE src)
+target_link_libraries(installJobTest PRIVATE Qt6::Test Qt6::Network Qt6::Widgets)
+target_compile_definitions(installJobTest PRIVATE "ANKH_FIXTURE_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures\"")
+add_test(NAME installJob COMMAND installJobTest)
 
 qt_add_executable(libraryPaneTest tests/libraryPaneTest.cpp src/libraryPane.cpp src/palette.cpp src/gameCatalog.cpp src/ammoliteClient.cpp src/icons.cpp src/fatal.cpp)
 qt_add_resources(libraryPaneTest libraryPaneGlyphs PREFIX "/" FILES ${glyphFiles})

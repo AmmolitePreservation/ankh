@@ -8,10 +8,13 @@
 
 class QComboBox;
 class QLabel;
+class QProgressBar;
 class QPushButton;
 class QStackedWidget;
 class QTabBar;
 class QVBoxLayout;
+
+enum class InstallState { notInstalled, unavailable, installing, installed, busyElsewhere };
 
 class GamePage : public QWidget {
   Q_OBJECT
@@ -22,9 +25,15 @@ public:
   void showGame(const Game& game);
   void refreshGame(const Game& game);
   void setPackages(const QList<Package>& packages);
+  void setInstallState(InstallState state, const QString& detail);
+  void showInstallProgress(const QString& text, qint64 done, qint64 total);
   void setGameAccounts(const QList<AccountDomain>& domains);
   void setGameAccountsFailed(const QString& message);
   void applyPalette(const Palette& newColors);
+
+signals:
+  void installRequested(const Game& game);
+  void cancelRequested();
 
 private:
   void refreshIcons();
@@ -58,7 +67,10 @@ private:
   QLabel* statusDot;
   QLabel* statusTitle;
   QLabel* statusDetail;
+  QProgressBar* progress;
   QPushButton* primaryButton;
   QList<AccountDomain> accountDomains;
   QString accountsProblem;
+  InstallState installState = InstallState::notInstalled;
+  QString installDetail;
 };
