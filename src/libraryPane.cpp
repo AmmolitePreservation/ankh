@@ -216,7 +216,6 @@ LibraryPane::LibraryPane(QSettings& settings, QWidget* parent)
     action->setCheckable(true);
     sortGroup->addAction(action);
   }
-  customSortAction->setChecked(true);
 
   for (QPushButton* chip : {allChip, favoritesChip, nameChip}) {
     chip->setProperty("chip", true);
@@ -302,6 +301,7 @@ LibraryPane::LibraryPane(QSettings& settings, QWidget* parent)
     applyFilters();
   });
   showMessage(QString(), QString());
+  setSortMode(SortMode::name);
 }
 
 bool LibraryPane::eventFilter(QObject* watched, QEvent* event)
