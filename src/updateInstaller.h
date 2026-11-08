@@ -18,6 +18,7 @@ class UpdateInstaller : public QObject {
 public:
   UpdateInstaller(const UpdateOffer& offer, const QString& currentVersion, QObject* parent = nullptr);
 
+  void setOffer(const UpdateOffer& newOffer);
   void start();
 
 signals:

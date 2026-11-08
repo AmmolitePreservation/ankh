@@ -11,23 +11,33 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 
+namespace {
+
+QString notesText(const UpdateOffer& offer)
+{
+  return offer.notes.isEmpty() ? QStringLiteral("No release notes.") : offer.notes;
+}
+
+}
+
 UpdateSheet::UpdateSheet(const UpdateOffer& offer, const QString& currentVersion, QWidget* parent)
   : QDialog(parent),
     installer(new UpdateInstaller(offer, currentVersion, this)),
+    heading(new QLabel(QStringLiteral("Update to %1").arg(offer.version), this)),
+    notes(new QPlainTextEdit(this)),
     status(new QLabel(this)),
     progress(new QProgressBar(this)),
     updateButton(new QPushButton(QStringLiteral("Update"), this)),
-    closeButton(new QPushButton(QStringLiteral("Close"), this))
+    closeButton(new QPushButton(QStringLiteral("Close"), this)),
+    page(offer.page)
 {
   setWindowTitle(QStringLiteral("Update Ankh"));
   setMinimumSize(560, 420);
 
-  auto* heading = new QLabel(QStringLiteral("Update to %1").arg(offer.version), this);
   heading->setProperty("heading", true);
-  auto* notesView = new QPlainTextEdit(this);
-  notesView->setReadOnly(true);
-  notesView->setPlainText(offer.notes.isEmpty() ? QStringLiteral("No release notes.") : offer.notes);
-  notesView->setAccessibleName(QStringLiteral("Release notes"));
+  notes->setReadOnly(true);
+  notes->setPlainText(notesText(offer));
+  notes->setAccessibleName(QStringLiteral("Release notes"));
   status->setProperty("secondary", true);
   status->setWordWrap(true);
   progress->setVisible(false);
@@ -52,14 +62,15 @@ UpdateSheet::UpdateSheet(const UpdateOffer& offer, const QString& currentVersion
   layout->setContentsMargins(24, 24, 24, 24);
   layout->setSpacing(12);
   layout->addWidget(heading);
-  layout->addWidget(notesView, 1);
+  layout->addWidget(notes, 1);
   layout->addWidget(progress);
   layout->addWidget(status);
   layout->addLayout(buttons);
 
-  connect(openPage, &QPushButton::clicked, this, [page = offer.page] { QDesktopServices::openUrl(page); });
+  connect(openPage, &QPushButton::clicked, this, [this] { QDesktopServices::openUrl(page); });
   connect(closeButton, &QPushButton::clicked, this, &QDialog::reject);
   connect(updateButton, &QPushButton::clicked, this, [this] {
+    isWorking = true;
     updateButton->setEnabled(false);
     closeButton->setEnabled(false);
     progress->setRange(0, 0);
@@ -75,10 +86,22 @@ UpdateSheet::UpdateSheet(const UpdateOffer& offer, const QString& currentVersion
     progress->setRange(0, 0);
   });
   connect(installer, &UpdateInstaller::failed, this, [this](const QString& message) {
+    isWorking = false;
     progress->setVisible(false);
     status->setText(message);
     updateButton->setText(QStringLiteral("Try again"));
     updateButton->setEnabled(true);
     closeButton->setEnabled(true);
   });
+}
+
+void UpdateSheet::setOffer(const UpdateOffer& offer)
+{
+  if (isWorking) {
+    return;
+  }
+  installer->setOffer(offer);
+  heading->setText(QStringLiteral("Update to %1").arg(offer.version));
+  notes->setPlainText(notesText(offer));
+  page = offer.page;
 }

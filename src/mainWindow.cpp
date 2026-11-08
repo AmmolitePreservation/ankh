@@ -284,13 +284,16 @@ MainWindow::MainWindow()
   });
   connect(updateChecker, &UpdateChecker::updateFound, this, [this](const UpdateOffer& offer) {
     pendingOffer = offer;
+    if (openSheet != nullptr) {
+      openSheet->setOffer(offer);
+    }
     windowControls->updateButton()->setToolTip(QStringLiteral("Update available: %1").arg(offer.version));
     windowControls->updateButton()->setVisible(true);
     settingsPage->setUpdateStatus(QStringLiteral("Update available: %1").arg(offer.version));
   });
   connect(windowControls->updateButton(), &QAbstractButton::clicked, this, &MainWindow::openUpdateSheet);
 
-  updateTimer.setInterval(24 * 60 * 60 * 1000);
+  updateTimer.setInterval(15 * 60 * 1000);
   connect(&updateTimer, &QTimer::timeout, updateChecker, &UpdateChecker::check);
   updateTimer.start();
   QTimer::singleShot(0, updateChecker, &UpdateChecker::check);
@@ -354,7 +357,9 @@ void MainWindow::placeWindowControls()
 void MainWindow::openUpdateSheet()
 {
   UpdateSheet sheet(pendingOffer, QString::fromLatin1(appVersion), this);
+  openSheet = &sheet;
   sheet.exec();
+  openSheet = nullptr;
 }
 
 long MainWindow::hitTest(const QPoint& position) const
