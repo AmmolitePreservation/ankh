@@ -187,26 +187,12 @@ LibraryPane::LibraryPane(QSettings& settings, QWidget* parent)
     allChip(new QPushButton(QStringLiteral("All games"), this)),
     favoritesChip(new QPushButton(QStringLiteral("Favorites"), this)),
     nameChip(new QPushButton(QStringLiteral("Name A-Z"), this)),
-    emptyLabel(new QLabel(QStringLiteral("No games match."), this)),
+    messageBox(new QWidget(this)),
+    emptyLabel(new QLabel(this)),
+    actionButton(new QPushButton(this)),
     list(new QListView(this))
 {
   proxy->setParent(this);
-  const QStringList favorites = settings.value(QStringLiteral("library/favorites")).toStringList();
-  for (const Game& game : gameCatalog()) {
-    auto* item = new QStandardItem;
-    item->setData(game.id, idRole);
-    item->setData(game.title, titleRole);
-    item->setData(game.edition, editionRole);
-    item->setData(game.initials, initialsRole);
-    item->setData(game.tint, tintRole);
-    item->setData(favorites.contains(game.id), favoriteRole);
-    item->setData(game.isInstalled, installedRole);
-    const QString nameKey = game.title.toLower() + QLatin1Char(' ') + game.edition.toLower();
-    item->setData(nameKey, nameKeyRole);
-    item->setData((game.isInstalled ? QStringLiteral("0 ") : QStringLiteral("1 ")) + nameKey, installKeyRole);
-    item->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
-    model->appendRow(item);
-  }
   proxy->setSourceModel(model);
 
   auto* heading = new QLabel(QStringLiteral("Library"), this);
@@ -239,7 +225,14 @@ LibraryPane::LibraryPane(QSettings& settings, QWidget* parent)
 
   emptyLabel->setProperty("secondary", true);
   emptyLabel->setAlignment(Qt::AlignHCenter | Qt::AlignTop);
+  emptyLabel->setWordWrap(true);
   emptyLabel->setContentsMargins(0, 24, 0, 0);
+  auto* messageLayout = new QVBoxLayout(messageBox);
+  messageLayout->setContentsMargins(0, 0, 0, 0);
+  messageLayout->setSpacing(14);
+  messageLayout->addWidget(emptyLabel);
+  messageLayout->addWidget(actionButton, 0, Qt::AlignHCenter);
+  messageLayout->addStretch(1);
 
   list->setModel(proxy);
   list->setItemDelegate(delegate);
@@ -273,8 +266,9 @@ LibraryPane::LibraryPane(QSettings& settings, QWidget* parent)
   layout->setSpacing(10);
   layout->addWidget(top);
   layout->addWidget(list, 1);
-  layout->addWidget(emptyLabel, 1);
+  layout->addWidget(messageBox, 1);
 
+  connect(actionButton, &QPushButton::clicked, this, &LibraryPane::actionRequested);
   connect(search, &QLineEdit::textChanged, this, [this] { applyFilters(); });
   connect(filterMenuAction, &QAction::triggered, this, [this] {
     filterMenu->exec(search->mapToGlobal(QPoint(search->width() - filterMenu->sizeHint().width(), search->height())));
@@ -298,14 +292,14 @@ LibraryPane::LibraryPane(QSettings& settings, QWidget* parent)
   connect(installSortAction, &QAction::triggered, this, [this] { setSortMode(SortMode::installState); });
   connect(list->selectionModel(), &QItemSelectionModel::currentChanged, this, [this](const QModelIndex& current) {
     if (current.isValid()) {
-      emit gameSelected(current.data(idRole).toString());
+      emit gameSelected(games.value(current.data(idRole).toString()));
     }
   });
   connect(model, &QStandardItemModel::dataChanged, this, [this] {
     saveFavorites();
     applyFilters();
   });
-  applyFilters();
+  showMessage(QString(), QString());
 }
 
 bool LibraryPane::eventFilter(QObject* watched, QEvent* event)
@@ -329,6 +323,45 @@ void LibraryPane::applyPalette(const Palette& colors)
   list->viewport()->update();
 }
 
+void LibraryPane::showGames(const QList<Game>& newGames)
+{
+  const QModelIndex previous = list->currentIndex();
+  const QString previousId = previous.isValid() ? previous.data(idRole).toString() : QString();
+  const QStringList favorites = settings.value(QStringLiteral("library/favorites")).toStringList();
+  model->clear();
+  games.clear();
+  for (const Game& game : newGames) {
+    games.insert(game.id, game);
+    auto* item = new QStandardItem;
+    item->setData(game.id, idRole);
+    item->setData(game.title, titleRole);
+    item->setData(libraryDescription(game), editionRole);
+    item->setData(game.initials, initialsRole);
+    item->setData(game.tint, tintRole);
+    item->setData(favorites.contains(game.id), favoriteRole);
+    item->setData(game.isInstalled, installedRole);
+    const QString nameKey = game.title.toLower() + QLatin1Char(' ') + libraryDescription(game).toLower();
+    item->setData(nameKey, nameKeyRole);
+    item->setData((game.isInstalled ? QStringLiteral("0 ") : QStringLiteral("1 ")) + nameKey, installKeyRole);
+    item->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+    model->appendRow(item);
+  }
+  message.clear();
+  applyFilters();
+  if (!previousId.isEmpty()) {
+    selectGame(previousId);
+  }
+}
+
+void LibraryPane::showMessage(const QString& text, const QString& actionText)
+{
+  model->clear();
+  games.clear();
+  message = text;
+  actionButton->setText(actionText);
+  applyFilters();
+}
+
 void LibraryPane::selectGame(const QString& id)
 {
   for (int row = 0; row < proxy->rowCount(); ++row) {
@@ -347,9 +380,12 @@ void LibraryPane::applyFilters()
   proxy->setInstalledOnly(installedOnlyAction->isChecked());
   const int shown = proxy->rowCount();
   const int total = model->rowCount();
-  countLabel->setText(shown == total ? QStringLiteral("%1 games").arg(total) : QStringLiteral("%1 of %2 games").arg(shown).arg(total));
-  list->setVisible(shown > 0);
-  emptyLabel->setVisible(shown == 0);
+  const bool isMessage = !message.isEmpty();
+  countLabel->setText(isMessage ? QString() : shown == total ? QStringLiteral("%1 games").arg(total) : QStringLiteral("%1 of %2 games").arg(shown).arg(total));
+  list->setVisible(!isMessage && shown > 0);
+  messageBox->setVisible(isMessage || shown == 0);
+  emptyLabel->setText(isMessage ? message : total == 0 ? QStringLiteral("No games are on display yet.") : QStringLiteral("No games match."));
+  actionButton->setVisible(isMessage && !actionButton->text().isEmpty());
 }
 
 void LibraryPane::setSortMode(SortMode mode)
@@ -368,7 +404,10 @@ void LibraryPane::setSortMode(SortMode mode)
 
 void LibraryPane::saveFavorites()
 {
-  QStringList favorites;
+  QStringList favorites = settings.value(QStringLiteral("library/favorites")).toStringList();
+  for (int row = 0; row < model->rowCount(); ++row) {
+    favorites.removeAll(model->index(row, 0).data(idRole).toString());
+  }
   for (int row = 0; row < model->rowCount(); ++row) {
     const QModelIndex index = model->index(row, 0);
     if (index.data(favoriteRole).toBool()) {

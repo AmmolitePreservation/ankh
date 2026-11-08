@@ -1,0 +1,3 @@
+{"domains":[
+      {"accountDomainID":2,"name":"Arcanite Logins","game":"World of Warcraft","capabilities":["createAccount","changePassword"],
+       "serverNames":["Arcanite"],"logins":[{"gameAccountID":11,"gameUsername":"thrall","createdAt":"2026-10-01T00:00:00Z"}]}]}

@@ -1,0 +1,7 @@
+{"worlds":[
+  {"serverID":3,"name":"Arcanite","game":"World of Warcraft","variant":"classic","version":"Classic (1.12.1)",
+   "eraStart":2004,"eraEnd":2006,"color":"#82b556","emulator":"cmangos","status":"Online, 12 playing",
+   "playerCount":12,"accountDomainID":2,"accountDomain":"Arcanite Logins","hasInstructions":true},
+  {"serverID":8,"name":"Carbonite","game":"Star Wars Galaxies","variant":"preCU","version":"Pre-CU",
+   "eraStart":2003,"eraEnd":2005,"color":"#ffd166","emulator":"swgemu","status":null,
+   "playerCount":null,"accountDomainID":null,"accountDomain":null,"hasInstructions":false}]}

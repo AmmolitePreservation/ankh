@@ -1,5 +1,6 @@
 #include "mainWindow.h"
 
+#include "accountView.h"
 #include "appVersion.h"
 #include "captionButton.h"
 #include "edgeGrain.h"
@@ -10,6 +11,7 @@
 #include "libraryPane.h"
 #include "settingsPage.h"
 #include "settingsPane.h"
+#include "signInDialog.h"
 #include "updateChecker.h"
 #include "updateSheet.h"
 #include "windowControls.h"
@@ -26,6 +28,7 @@
 #include <QPushButton>
 #include <QStackedWidget>
 #include <QSvgWidget>
+#include <QSysInfo>
 #include <QVBoxLayout>
 #include <QWindow>
 
@@ -41,6 +44,12 @@ constexpr int maximumSidebarWidth = 420;
 constexpr int defaultSidebarWidth = 360;
 constexpr int headerHeight = 84;
 constexpr int resizeBorder = 6;
+constexpr const char* defaultServiceAddress = "https://ammolite.unseencolor.com:1996";
+
+QUrl serviceUrl(const QSettings& settings)
+{
+  return validatedServiceUrl(settings.value(QStringLiteral("ammolite/url"), QString::fromLatin1(defaultServiceAddress)).toString());
+}
 
 }
 
@@ -122,6 +131,9 @@ void SplitHandle::mouseMoveEvent(QMouseEvent* event)
 
 MainWindow::MainWindow()
   : settings(QSettings::IniFormat, QSettings::UserScope, QStringLiteral("AmmolitePreservation"), QStringLiteral("Ankh")),
+    client(new AmmoliteClient(serviceUrl(settings), QString::fromLatin1(appVersion), this)),
+    tokenStore(QStringLiteral("Ankh/AmmolitePreservation/apiToken")),
+    signInDialog(new SignInDialog(this)),
     windowControls(new WindowControls(this)),
     edgeGrain(new EdgeGrain(this)),
     sidebar(new QWidget(this)),
@@ -132,7 +144,7 @@ MainWindow::MainWindow()
     libraryPane(new LibraryPane(settings, this)),
     settingsPane(new SettingsPane(this)),
     gamePage(new GamePage(this)),
-    settingsPage(new SettingsPage(this)),
+    settingsPage(new SettingsPage(serviceUrl(settings).toString(), this)),
     libraryNavigation(new QPushButton(QStringLiteral("Library"), this)),
     settingsButton(new QPushButton(QStringLiteral("Settings"), this)),
     activityButton(new QPushButton(QStringLiteral("Activity"), this)),
@@ -240,7 +252,7 @@ MainWindow::MainWindow()
 
   auto* userMenu = new QMenu(userMenuButton);
   connect(userMenu->addAction(QStringLiteral("Settings")), &QAction::triggered, this, [this] { showSettings(0); });
-  connect(userMenu->addAction(QStringLiteral("Attributions")), &QAction::triggered, this, [this] { showSettings(1); });
+  connect(userMenu->addAction(QStringLiteral("Attributions")), &QAction::triggered, this, [this] { showSettings(2); });
   connect(userMenuButton, &QPushButton::clicked, this, [this, userMenu] {
     userMenu->exec(userMenuButton->mapToGlobal(QPoint(userMenuButton->width() - userMenu->sizeHint().width(), userMenuButton->height())));
   });
@@ -262,10 +274,71 @@ MainWindow::MainWindow()
   connect(settingsButton, &QPushButton::clicked, this, [this] { showSettings(0); });
   connect(settingsPane, &SettingsPane::sectionSelected, settingsPage, &SettingsPage::showSection);
   connect(settingsPage, &SettingsPage::updateCheckRequested, updateChecker, &UpdateChecker::check);
-  connect(libraryPane, &LibraryPane::gameSelected, this, [this](const QString& id) {
-    gamePage->showGame(gameWithId(id));
-    settings.setValue(QStringLiteral("library/selected"), id);
-    showLibrary();
+  connect(libraryPane, &LibraryPane::gameSelected, this, [this](const Game& game) {
+    hasSelectedGame = true;
+    gamePage->showGame(game);
+    settings.setValue(QStringLiteral("library/selected"), game.id);
+    client->loadWorld(game.serverID);
+    if (leftStack->currentWidget() == libraryPane) {
+      showLibrary();
+    }
+  });
+  connect(libraryPane, &LibraryPane::actionRequested, this, [this] {
+    if (libraryAction == LibraryAction::signIn) {
+      openSignIn(QString(), false);
+    } else {
+      libraryPane->showMessage(QStringLiteral("Loading the collection..."), QString());
+      client->loadMe();
+    }
+  });
+
+  AccountView* accountView = settingsPage->accountView();
+  connect(accountView, &AccountView::signInRequested, this, [this] { openSignIn(QString(), false); });
+  connect(accountView, &AccountView::createAccountRequested, this, [this] { openSignIn(QString(), true); });
+  connect(accountView, &AccountView::signOutRequested, client, &AmmoliteClient::signOut);
+  connect(signInDialog, &SignInDialog::signInRequested, this, [this](const QString& username, const QString& password) {
+    client->signIn(username, password, QStringLiteral("Ankh on %1").arg(QSysInfo::machineHostName()));
+  });
+  connect(signInDialog, &SignInDialog::createAccountRequested, this,
+    [this](const QString& inviteCode, const QString& username, const QString& password, const QString& confirmation) {
+      client->registerAccount(inviteCode, username, password, confirmation, QStringLiteral("Ankh on %1").arg(QSysInfo::machineHostName()));
+    });
+  connect(client, &AmmoliteClient::signedIn, this, [this](const SignedInUser& user, const QString& token) {
+    tokenStore.save(token);
+    signInDialog->reset();
+    signInDialog->accept();
+    enterSignedInState(user);
+  });
+  connect(client, &AmmoliteClient::signInFailed, signInDialog, &SignInDialog::showFailure);
+  connect(client, &AmmoliteClient::registerFailed, signInDialog, &SignInDialog::showFailure);
+  connect(client, &AmmoliteClient::signedOut, this, [this](const QString& warning) {
+    tokenStore.remove();
+    enterSignedOutState(warning);
+  });
+  connect(client, &AmmoliteClient::sessionExpired, this, [this] {
+    tokenStore.remove();
+    const QString note = QStringLiteral("Your sign-in has ended. Sign in again.");
+    enterSignedOutState(note);
+    openSignIn(note, false);
+  });
+  connect(client, &AmmoliteClient::meLoaded, this, &MainWindow::enterSignedInState);
+  connect(client, &AmmoliteClient::worldsLoaded, this, [this](const QList<World>& worlds) {
+    QList<Game> games;
+    for (const World& world : worlds) {
+      games.append(gameFromWorld(world));
+    }
+    libraryPane->showGames(games);
+    libraryPane->selectGame(settings.value(QStringLiteral("library/selected")).toString());
+  });
+  connect(client, &AmmoliteClient::worldLoaded, gamePage, &GamePage::setDownloads);
+  connect(client, &AmmoliteClient::worldFailed, gamePage, &GamePage::setDownloadsFailed);
+  connect(client, &AmmoliteClient::gameAccountsLoaded, gamePage, &GamePage::setGameAccounts);
+  connect(client, &AmmoliteClient::requestFailed, this, [this](const QString& what, const QString& message) {
+    if (what == QStringLiteral("game accounts")) {
+      gamePage->setGameAccountsFailed(message);
+      return;
+    }
+    showCollectionProblem(QStringLiteral("Could not load the collection: %1").arg(message));
   });
 
   connect(updateChecker, &UpdateChecker::checking, this, [this] {
@@ -298,9 +371,56 @@ MainWindow::MainWindow()
   updateTimer.start();
   QTimer::singleShot(0, updateChecker, &UpdateChecker::check);
 
-  const QString selected = settings.value(QStringLiteral("library/selected")).toString();
-  if (!selected.isEmpty()) {
-    libraryPane->selectGame(selected);
+  const std::optional<QString> token = tokenStore.load();
+  if (token) {
+    client->setToken(*token);
+    libraryPane->showMessage(QStringLiteral("Signing in..."), QString());
+    client->loadMe();
+  } else {
+    enterSignedOutState(QString());
+    QTimer::singleShot(0, this, [this] { openSignIn(QString(), false); });
+  }
+}
+
+void MainWindow::openSignIn(const QString& note, bool isCreatingAccount)
+{
+  if (signInDialog->isVisible()) {
+    return;
+  }
+  if (isCreatingAccount) {
+    signInDialog->showCreateAccount();
+  } else {
+    signInDialog->showSignIn(note);
+  }
+  signInDialog->open();
+}
+
+void MainWindow::enterSignedInState(const SignedInUser& user)
+{
+  settingsPage->accountView()->showSignedIn(user);
+  libraryPane->showMessage(QStringLiteral("Loading the collection..."), QString());
+  client->loadWorlds();
+  client->loadGameAccounts();
+}
+
+void MainWindow::enterSignedOutState(const QString& note)
+{
+  settingsPage->accountView()->showSignedOut(note);
+  hasSelectedGame = false;
+  libraryAction = LibraryAction::signIn;
+  libraryPane->showMessage(note.isEmpty() ? QStringLiteral("Sign in to see the collection.") : note, QStringLiteral("Sign in"));
+  if (leftStack->currentWidget() == libraryPane) {
+    showLibrary();
+  }
+}
+
+void MainWindow::showCollectionProblem(const QString& message)
+{
+  hasSelectedGame = false;
+  libraryAction = LibraryAction::retry;
+  libraryPane->showMessage(message, QStringLiteral("Retry"));
+  if (leftStack->currentWidget() == libraryPane) {
+    showLibrary();
   }
 }
 
@@ -327,7 +447,7 @@ void MainWindow::showLibrary()
 {
   libraryNavigation->setChecked(true);
   leftStack->setCurrentWidget(libraryPane);
-  mainStack->setCurrentIndex(settings.contains(QStringLiteral("library/selected")) ? 1 : 0);
+  mainStack->setCurrentIndex(hasSelectedGame ? 1 : 0);
 }
 
 void MainWindow::showSettings(int section)

@@ -5,6 +5,7 @@ A minimalist, robust game management application for a private collection of pre
 - Product and interface specification: [docs/launcherSpec.md](docs/launcherSpec.md)
 - Release process and version format: [docs/releases.md](docs/releases.md)
 - Update flow: [docs/updates.md](docs/updates.md)
+- Ammolite backend, sign-in and the library's data: [docs/ammolite.md](docs/ammolite.md)
 - Wordmark: [assets/ankhWordmark.svg](assets/ankhWordmark.svg)
 
 ## Stack
