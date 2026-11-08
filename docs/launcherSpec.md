@@ -74,7 +74,7 @@ Dependencies are operational, not arbitrary: a script that arranges windows need
 - Exactly **two primary columns**: context list and selected detail. Top navigation is horizontal, not a third vertical rail. Editors may have internal panels or a temporary drawer.
 - Header: brand mark and wordmark at left; **Library / Sessions / Bots / Automation / Connections** across the top when enabled, the selected destination underlined in the accent color; at right a compact user menu with a user glyph, the signed-in Ammolite username (or "Sign in" when signed out) and a chevron, opening Sign in or Sign out, Settings and Attributions. The window controls sit above it in the corner.
 - Left pane changes with destination: game library, saved sessions, script list, or connection list. Settings and Activity remain at its foot.
-- The main pane owns its scroll position. The context list scrolls independently. Selection, search, sort, filters, and scroll position survive navigation.
+- The main pane owns its scroll position. The context list scrolls independently. Selection, search, filters, and scroll position survive navigation.
 - A contextual bottom action bar stays within the main pane. It shows status and the primary action for that page; it never covers the final row of content.
 - **Update button:** when a verified update is waiting, a green download button appears in the header's top-right corner, immediately left of the window controls, with the new version in its tooltip. It is absent otherwise. Clicking it shows the version and release notes and installs on confirmation. Updates are click-only. See `docs/updates.md`.
 - Background jobs appear in a small global Activity indicator. Opening it produces a drawer with downloads, patching, preflight, scripts, and connection activity.
@@ -83,7 +83,7 @@ Dependencies are operational, not arbitrary: a script that arranges windows need
 
 | Destination | Left pane | Main pane |
 | --- | --- | --- |
-| Library | Searchable, sortable game releases | Play / Characters / Client tools / Media / About |
+| Library | Searchable game releases | Play / Characters / Client tools / Media / About |
 | Sessions | Saved session presets, running sessions | Overview / Layout / Input / Runtime |
 | Bots | All worlds, realm filters, and saved bot collections | Roster / Map / Missions / Inventory / Activity |
 | Automation | Searchable scripts and GUI control panels | Editor / Controls / Runs / API browser |
@@ -94,9 +94,9 @@ The simple default exposes Library and Settings. Screens in this concept set del
 ### Library rows
 
 - 78 px row height with a hairline divider between rows, 56 px game icon, title and edition on separate lines, favorite star, and a small status icon when attention is needed. The selected row has an accent outline.
-- The pane starts with a **Library** heading and a count ("7 games" or "3 of 7 games" when filtered). The search field has a search glyph and a chevron that opens a filter and sort menu.
-- Search covers title, edition, tags, and configured realm aliases. Chips below the search: **All games**, **Favorites**, and **Name A-Z**, a sort toggle that is on at start, so the list opens alphabetical; turning it off shows Custom order (the order the site lists the worlds). The filter menu adds Installed only and the sorts Custom, Name A-Z and Installed first; Recently played joins it once play history exists.
-- Virtualize long lists; there is no fixed game limit in the UI. Filter counts, empty results, keyboard movement, and a visible scrollbar are required.
+- The pane starts with one row: the search field (a search glyph and the placeholder "Search games..."), then two icon toggles of the same height, a star for **favorites only** and a hard drive for **installed only**. There is no heading and no count. Each toggle shows its accent color and a filled star when on, and each has a tooltip. With both on, the list shows installed favorites; search combines with both.
+- The list is always alphabetical by game, then edition, then world; there is no sort control. Search covers title, edition, tags, and configured realm aliases. When nothing matches the list gives way to "No games match."
+- Virtualize long lists; there is no fixed game limit in the UI. Empty results, keyboard movement, and a visible scrollbar are required.
 - A game release is selectable independently of other releases of the same game. WoW Classic, TBC, and WotLK are distinct entries.
 
 Illustrative initial rows:

@@ -121,6 +121,7 @@ add_test(NAME userMenuButton COMMAND userMenuButtonTest)
 set_tests_properties(userMenuButton PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 qt_add_executable(libraryPaneTest tests/libraryPaneTest.cpp src/libraryPane.cpp src/palette.cpp src/gameCatalog.cpp src/ammoliteClient.cpp src/icons.cpp src/fatal.cpp)
+qt_add_resources(libraryPaneTest libraryPaneGlyphs PREFIX "/" FILES ${glyphFiles})
 target_include_directories(libraryPaneTest PRIVATE src)
 target_link_libraries(libraryPaneTest PRIVATE Qt6::Test Qt6::Network Qt6::Widgets Qt6::Svg)
 add_test(NAME libraryPane COMMAND libraryPaneTest)
