@@ -42,6 +42,30 @@ bool isWritable(const QString& folder)
   return QFileInfo(probe.absolutePath()).isWritable();
 }
 
+QString roleNote(const Package& package)
+{
+  if (package.role == QLatin1String("requiredTool")) {
+    return QStringLiteral(" (required tool)");
+  }
+  if (package.role == QLatin1String("optionalTool")) {
+    return QStringLiteral(" (optional tool)");
+  }
+  return QString();
+}
+
+QString installedVersion(const InstallPlan& plan, const Package& package)
+{
+  if (package.name == plan.existing->client.name) {
+    return plan.existing->client.version;
+  }
+  for (const InstalledPackage& tool : plan.existing->tools) {
+    if (tool.name == package.name) {
+      return tool.version;
+    }
+  }
+  return QString();
+}
+
 }
 
 InstallSheet::InstallSheet(const Game& game, const InstallPlan& plan, const QString& libraryRoot, QWidget* parent)
@@ -50,11 +74,12 @@ InstallSheet::InstallSheet(const Game& game, const InstallPlan& plan, const QStr
     folderLabel(new QLabel(this)),
     spaceLabel(new QLabel(this)),
     warning(new QLabel(this)),
-    installButton(new QPushButton(QStringLiteral("Install"), this))
+    installButton(new QPushButton(plan.isUpdate() ? QStringLiteral("Update") : QStringLiteral("Install"), this))
 {
-  setWindowTitle(QStringLiteral("Install %1").arg(game.title));
+  const QString verb = plan.isUpdate() ? QStringLiteral("Update") : QStringLiteral("Install");
+  setWindowTitle(QStringLiteral("%1 %2").arg(verb, game.title));
   setMinimumWidth(620);
-  auto* heading = makeLabel(QStringLiteral("Install %1 %2").arg(game.title, game.edition), "heading", this);
+  auto* heading = makeLabel(QStringLiteral("%1 %2 %3").arg(verb, game.title, game.edition), "heading", this);
   rows->setSpacing(6);
   folderLabel->setWordWrap(true);
   folderLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
@@ -64,6 +89,7 @@ InstallSheet::InstallSheet(const Game& game, const InstallPlan& plan, const QStr
   warning->setWordWrap(true);
   installButton->setObjectName(QStringLiteral("primary"));
   auto* changeFolder = new QPushButton(QStringLiteral("Change library folder..."), this);
+  changeFolder->setVisible(!plan.isUpdate());
   auto* cancelButton = new QPushButton(QStringLiteral("Cancel"), this);
 
   auto* buttons = new QHBoxLayout;
@@ -78,9 +104,13 @@ InstallSheet::InstallSheet(const Game& game, const InstallPlan& plan, const QStr
   layout->setSpacing(14);
   layout->addWidget(heading);
   layout->addLayout(rows);
-  layout->addWidget(makeLabel(QStringLiteral("Into"), "fieldLabel", this));
+  layout->addWidget(makeLabel(plan.isUpdate() ? QStringLiteral("In") : QStringLiteral("Into"), "fieldLabel", this));
   layout->addWidget(folderLabel);
   layout->addWidget(spaceLabel);
+  if (plan.isUpdate()) {
+    layout->addWidget(makeLabel(QStringLiteral("Files that changed in a package are replaced and files it dropped are removed. "
+      "Files a package marks write-once are never overwritten, and anything you added yourself is left alone."), "secondary", this));
+  }
   layout->addWidget(warning);
   layout->addStretch(1);
   layout->addLayout(buttons);
@@ -102,30 +132,43 @@ void InstallSheet::showPlan(const InstallPlan& plan, const QString& libraryRoot)
     delete item->widget();
     delete item;
   }
-  for (const Package& package : plan.packages()) {
+  auto addRow = [this](const QString& text, const QString& detailText) {
     auto* row = new QWidget(this);
     auto* rowLayout = new QHBoxLayout(row);
     rowLayout->setContentsMargins(0, 0, 0, 0);
-    rowLayout->addWidget(makeLabel(QStringLiteral("%1 %2").arg(package.label, package.role == QLatin1String("client")
-      ? QString() : QStringLiteral("(required tool)")).trimmed(), nullptr, row), 1);
-    QLabel* detail = makeLabel(QStringLiteral("%1, %2 download").arg(package.latest->version, sizeText(package.latest->byteSize)),
-      "bodySecondary", row);
+    rowLayout->addWidget(makeLabel(text, nullptr, row), 1);
+    QLabel* detail = makeLabel(detailText, "bodySecondary", row);
     detail->setWordWrap(false);
     rowLayout->addWidget(detail);
     rows->addWidget(row);
+  };
+  for (const Package& package : plan.fetch) {
+    QString versionText = package.latest->version;
+    if (plan.isUpdate()) {
+      const QString previous = installedVersion(plan, package);
+      versionText = previous.isEmpty() ? QStringLiteral("added, %1").arg(package.latest->version)
+        : QStringLiteral("%1 %2 %3").arg(previous, QString(QChar(0x2192)), package.latest->version);
+    }
+    addRow(package.label + roleNote(package), QStringLiteral("%1, %2 download").arg(versionText, sizeText(package.latest->byteSize)));
+  }
+  for (const QString& name : plan.removed) {
+    addRow(name, QStringLiteral("no longer part of this edition, removed"));
   }
   folderLabel->setText(plan.folder);
-  const QStorageInfo storage(QDir(libraryRoot).exists() ? libraryRoot : QFileInfo(libraryRoot).absolutePath());
+  const QString probeFolder = plan.isUpdate() ? plan.folder : libraryRoot;
+  const QStorageInfo storage(QDir(probeFolder).exists() ? probeFolder : QFileInfo(probeFolder).absolutePath());
   const qint64 needed = bytesStillNeeded(plan, libraryRoot);
   const bool hasRoom = storage.isValid() && storage.bytesAvailable() >= needed;
-  spaceLabel->setText(QStringLiteral("%1 to download, %2 once installed; %3 needed now, %4 free on %5.")
+  spaceLabel->setText(QStringLiteral("%1 to download, %2 once extracted; %3 needed now, %4 free on %5.")
     .arg(sizeText(plan.downloadBytes()), sizeText(plan.extractedBytes()), sizeText(needed),
       storage.isValid() ? sizeText(storage.bytesAvailable()) : QStringLiteral("unknown space"),
       QDir::toNativeSeparators(storage.rootPath())));
-  const bool writable = isWritable(libraryRoot);
-  if (!writable) {
+  const bool writable = isWritable(probeFolder);
+  if (!writable && !plan.isUpdate()) {
     warning->setText(QStringLiteral("%1 cannot be written by this account (Ankh is installed for all users under Program Files). "
       "Choose a library folder before installing; Ankh keeps the choice.").arg(libraryRoot));
+  } else if (!writable) {
+    warning->setText(QStringLiteral("%1 cannot be written by this account.").arg(plan.folder));
   } else if (!hasRoom) {
     warning->setText(QStringLiteral("Not enough free space. Free some, or choose a library folder on another drive."));
   } else {

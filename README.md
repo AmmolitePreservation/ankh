@@ -5,7 +5,7 @@ A minimalist, robust game management application for a private collection of pre
 - Product and interface specification: [docs/launcherSpec.md](docs/launcherSpec.md)
 - Release process and version format: [docs/releases.md](docs/releases.md)
 - Update flow: [docs/updates.md](docs/updates.md)
-- Installing games: [docs/install.md](docs/install.md)
+- Installing and updating games: [docs/install.md](docs/install.md)
 - Ammolite backend, sign-in and the library's data: [docs/ammolite.md](docs/ammolite.md)
 - Wordmark: [assets/ankhWordmark.svg](assets/ankhWordmark.svg)
 
@@ -47,9 +47,9 @@ Layers 1 to 3 are the product; 4 to 7 are independently enabled features. See th
 
 ## Current state
 
-Built and tested: the shell, Ammolite sign-in and the manifest-driven library, the game page with its edition's packages, game installs (client plus required tools, verified, resumable, receipted), settings (Account, Games, About Ankh, attributions), the installer (per-user or all-users, silent flags), and in-app updating (signed manifest check, verified download, silent install, relaunch). Releases are made by `release.ps1`, run locally or by `.github/workflows/release.yml`.
+Built and tested: the shell, Ammolite sign-in and the manifest-driven library, the game page with its edition's packages, game installs and updates (client plus required tools, verified, resumable, receipted; updates diff the receipt against the new listings and honor write-once files), settings (Account, Games, About Ankh, attributions), the installer (per-user or all-users, silent flags), and in-app updating (signed manifest check, verified download, silent install, relaunch). Releases are made by `release.ps1`, run locally or by `.github/workflows/release.yml`.
 
-Launching, updating and repairing games, and optional tools, are not built.
+Launching and repairing games, and optional tools, are not built.
 
 ## Tests
 

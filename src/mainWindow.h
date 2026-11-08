@@ -77,9 +77,11 @@ private:
   QString libraryRoot() const;
   void rescanLibrary();
   void rebuildGames();
-  bool isGameInstalled(const Game& game) const;
+  const Receipt* receiptFor(const Game& game) const;
   void refreshInstallState();
   void startInstall(const Game& game);
+  void startUpdate(const Game& game);
+  void runPlan(const Game& game, const InstallPlan& plan);
   void finishInstall(const QString& note);
   void chooseLibraryRoot();
   long hitTest(const QPoint& position) const;

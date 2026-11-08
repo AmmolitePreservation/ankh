@@ -26,6 +26,25 @@ QString sha256Of(const QByteArray& bytes)
   return QString::fromLatin1(QCryptographicHash::hash(bytes, QCryptographicHash::Sha256).toHex());
 }
 
+QByteArray contentOf(const QString& path)
+{
+  QFile file(path);
+  if (!file.open(QIODevice::ReadOnly)) {
+    return QByteArray();
+  }
+  return file.readAll();
+}
+
+void writeFile(const QString& path, const QByteArray& content)
+{
+  QDir().mkpath(QFileInfo(path).absolutePath());
+  QFile file(path);
+  if (!file.open(QIODevice::WriteOnly)) {
+    qFatal("Could not write %s", qPrintable(path));
+  }
+  file.write(content);
+}
+
 }
 
 // Serves canned bodies over HTTP, honoring Range unless told to ignore it, and can hold a download open after a
@@ -128,10 +147,19 @@ class InstallJobTest : public QObject {
   Q_OBJECT
 
   const QByteArray clientZip = fixture("client.zip");
+  const QByteArray client2Zip = fixture("client2.zip");
   const QByteArray toolZip = fixture("tool.zip");
-  const QByteArray clientListing = "{\"files\":[{\"path\":\"Game.exe\",\"byteSize\":200,\"crc32\":111},"
-    "{\"path\":\"Data/world.dat\",\"byteSize\":2400,\"crc32\":222},{\"path\":\"readme.txt\",\"byteSize\":13,\"crc32\":333}]}";
-  const QByteArray toolListing = "{\"files\":[{\"path\":\"tools/directConnect.dll\",\"byteSize\":1100,\"crc32\":444}]}";
+  const QByteArray clientListing = "{\"files\":["
+    "{\"path\":\"Game.exe\",\"byteSize\":200,\"crc32\":111,\"writeOnce\":false},"
+    "{\"path\":\"Data/world.dat\",\"byteSize\":2400,\"crc32\":222,\"writeOnce\":false},"
+    "{\"path\":\"readme.txt\",\"byteSize\":13,\"crc32\":333,\"writeOnce\":false},"
+    "{\"path\":\"settings.ini\",\"byteSize\":20,\"crc32\":444,\"writeOnce\":true}]}";
+  const QByteArray client2Listing = "{\"files\":["
+    "{\"path\":\"Game.exe\",\"byteSize\":300,\"crc32\":555,\"writeOnce\":false},"
+    "{\"path\":\"Data/world.dat\",\"byteSize\":2400,\"crc32\":222,\"writeOnce\":false},"
+    "{\"path\":\"Data/extra.dat\",\"byteSize\":500,\"crc32\":666,\"writeOnce\":false},"
+    "{\"path\":\"settings.ini\",\"byteSize\":30,\"crc32\":777,\"writeOnce\":true}]}";
+  const QByteArray toolListing = "{\"files\":[{\"path\":\"tools/directConnect.dll\",\"byteSize\":1100,\"crc32\":888,\"writeOnce\":false}]}";
 
   struct Outcome {
     QStringList statuses;
@@ -141,6 +169,7 @@ class InstallJobTest : public QObject {
     bool isCancelled = false;
     QString failure;
     Receipt receipt;
+    ApplySummary summary;
   };
 
   Game alpha() const
@@ -154,7 +183,15 @@ class InstallJobTest : public QObject {
     return {QStringLiteral("alpha-client"), QStringLiteral("Alpha client"), QStringLiteral("client"),
       {{QStringLiteral("Alpha"), QStringLiteral("classic"), QStringLiteral("Classic")}},
       PackageVersion{QStringLiteral("2026.11.01"), QStringLiteral("alphaClient.zip"), clientZip.size(), sha256Of(clientZip),
-        QStringLiteral("2026-11-01T00:00:00Z"), 3, 2613, QUrl(server.url().toString() + QStringLiteral("/files/client.zip"))}};
+        QStringLiteral("2026-11-01T00:00:00Z"), 4, 2633, QUrl(server.url().toString() + QStringLiteral("/files/client.zip"))}};
+  }
+
+  Package client2Package(const FakeFileServer& server) const
+  {
+    Package package = clientPackage(server);
+    package.latest = PackageVersion{QStringLiteral("2026.11.09"), QStringLiteral("alphaClient2.zip"), client2Zip.size(), sha256Of(client2Zip),
+      QStringLiteral("2026-11-09T00:00:00Z"), 4, 3230, QUrl(server.url().toString() + QStringLiteral("/files/client2.zip"))};
+    return package;
   }
 
   Package toolPackage(const FakeFileServer& server) const
@@ -174,8 +211,10 @@ class InstallJobTest : public QObject {
   void serveEverything(FakeFileServer& server)
   {
     server.answer(QStringLiteral("/api/v1/packages/alpha-client/versions/2026.11.01/files"), 200, clientListing, "application/json");
+    server.answer(QStringLiteral("/api/v1/packages/alpha-client/versions/2026.11.09/files"), 200, client2Listing, "application/json");
     server.answer(QStringLiteral("/api/v1/packages/alpha-tools/versions/2026.11.02-abc1234/files"), 200, toolListing, "application/json");
     server.answer(QStringLiteral("/files/client.zip"), 200, clientZip, "application/octet-stream");
+    server.answer(QStringLiteral("/files/client2.zip"), 200, client2Zip, "application/octet-stream");
     server.answer(QStringLiteral("/files/tool.zip"), 200, toolZip, "application/octet-stream");
   }
 
@@ -193,8 +232,9 @@ class InstallJobTest : public QObject {
   {
     connect(&job, &InstallJob::statusChanged, this, [&outcome](const QString& text) { outcome.statuses.append(text); });
     connect(&job, &InstallJob::progressChanged, this, [&outcome](qint64 done, qint64 total) { outcome.progress.append({done, total}); });
-    connect(&job, &InstallJob::finished, this, [&outcome](const Receipt& receipt) {
+    connect(&job, &InstallJob::finished, this, [&outcome](const Receipt& receipt, const ApplySummary& summary) {
       outcome.receipt = receipt;
+      outcome.summary = summary;
       outcome.isDone = true;
     });
     connect(&job, &InstallJob::failed, this, [&outcome](const QString& message) {
@@ -209,18 +249,31 @@ class InstallJobTest : public QObject {
     QTRY_VERIFY_WITH_TIMEOUT(outcome.isDone || outcome.isFailed || outcome.isCancelled, 20000);
   }
 
+  Receipt installFirstVersion(FakeFileServer& server, const QString& libraryRoot)
+  {
+    InstallJob job(planFor(server, libraryRoot), libraryRoot, server.url(), QStringLiteral("t"), QStringLiteral("2026.11.08.1200"));
+    Outcome outcome;
+    run(job, outcome);
+    if (!outcome.isDone) {
+      qFatal("The first install failed: %s", qPrintable(outcome.failure));
+    }
+    return outcome.receipt;
+  }
+
 private slots:
   void aPlanTakesTheClientAndRequiredToolsAndNamesTheFolder()
   {
     FakeFileServer server;
     const InstallPlan plan = planFor(server, QStringLiteral("D:/Games/clients"));
+    QVERIFY(!plan.isUpdate());
     QCOMPARE(plan.client.name, QStringLiteral("alpha-client"));
     QCOMPARE(plan.tools.size(), 1);
     QCOMPARE(plan.tools.first().name, QStringLiteral("alpha-tools"));
+    QCOMPARE(plan.fetch.size(), 2);
     QCOMPARE(plan.folder, QStringLiteral("D:\\Games\\clients\\Alpha - Classic"));
     QCOMPARE(plan.downloadBytes(), qint64(clientZip.size() + toolZip.size()));
-    QCOMPARE(plan.extractedBytes(), qint64(3713));
-    QCOMPARE(plan.fileCount(), 4);
+    QCOMPARE(plan.extractedBytes(), qint64(3733));
+    QCOMPARE(plan.fileCount(), 5);
     QCOMPARE(stagedZipPath(QStringLiteral("D:/Games/clients"), plan.client), QStringLiteral("D:\\Games\\clients\\.staging\\alpha-client-2026.11.01.zip"));
   }
 
@@ -254,6 +307,7 @@ private slots:
     QCOMPARE(QFileInfo(folder.filePath(QStringLiteral("Game.exe"))).size(), qint64(200));
     QCOMPARE(QFileInfo(folder.filePath(QStringLiteral("Data/world.dat"))).size(), qint64(2400));
     QCOMPARE(QFileInfo(folder.filePath(QStringLiteral("readme.txt"))).size(), qint64(13));
+    QCOMPARE(QFileInfo(folder.filePath(QStringLiteral("settings.ini"))).size(), qint64(20));
     QCOMPARE(QFileInfo(folder.filePath(QStringLiteral("tools/directConnect.dll"))).size(), qint64(1100));
 
     QString problem;
@@ -264,11 +318,14 @@ private slots:
     QCOMPARE(receipt->client.sha256, sha256Of(clientZip));
     QCOMPARE(receipt->tools.size(), 1);
     QCOMPARE(receipt->tools.first().version, QStringLiteral("2026.11.02-abc1234"));
-    QCOMPARE(receipt->files.size(), 4);
+    QCOMPARE(receipt->files.size(), 5);
     QCOMPARE(receipt->files.value(QStringLiteral("Data/world.dat")).package, QStringLiteral("alpha-client"));
     QCOMPARE(receipt->files.value(QStringLiteral("Data/world.dat")).crc32, 222u);
+    QCOMPARE(receipt->files.value(QStringLiteral("settings.ini")).isWriteOnce, true);
     QCOMPARE(receipt->files.value(QStringLiteral("tools/directConnect.dll")).package, QStringLiteral("alpha-tools"));
     QCOMPARE(outcome.receipt.folder, QDir::toNativeSeparators(folder.absolutePath()));
+    QCOMPARE(outcome.summary.written, 5);
+    QCOMPARE(outcome.summary.deleted, 0);
 
     const QDir staging(stagingFolderFor(library.path()));
     QVERIFY(staging.exists());
@@ -295,10 +352,7 @@ private slots:
     QTemporaryDir library;
     const InstallPlan plan = planFor(server, library.path());
     QVERIFY(QDir().mkpath(stagingFolderFor(library.path())));
-    QFile part(stagedZipPath(library.path(), plan.client) + QStringLiteral(".part"));
-    QVERIFY(part.open(QIODevice::WriteOnly));
-    part.write(clientZip.left(300));
-    part.close();
+    writeFile(stagedZipPath(library.path(), plan.client) + QStringLiteral(".part"), clientZip.left(300));
     InstallJob job(plan, library.path(), server.url(), QStringLiteral("t"), QStringLiteral("2026.11.08.1200"));
     Outcome outcome;
     run(job, outcome);
@@ -317,10 +371,7 @@ private slots:
     QTemporaryDir library;
     const InstallPlan plan = planFor(server, library.path());
     QVERIFY(QDir().mkpath(stagingFolderFor(library.path())));
-    QFile part(stagedZipPath(library.path(), plan.client) + QStringLiteral(".part"));
-    QVERIFY(part.open(QIODevice::WriteOnly));
-    part.write(QByteArray(300, 'x'));
-    part.close();
+    writeFile(stagedZipPath(library.path(), plan.client) + QStringLiteral(".part"), QByteArray(300, 'x'));
     InstallJob job(plan, library.path(), server.url(), QStringLiteral("t"), QStringLiteral("2026.11.08.1200"));
     Outcome outcome;
     run(job, outcome);
@@ -343,6 +394,7 @@ private slots:
     QTemporaryDir library;
     InstallPlan plan = planFor(server, library.path());
     plan.client.latest->sha256 = QString(64, QLatin1Char('0'));
+    plan.fetch.first().latest->sha256 = plan.client.latest->sha256;
     InstallJob job(plan, library.path(), server.url(), QStringLiteral("t"), QStringLiteral("2026.11.08.1200"));
     Outcome outcome;
     run(job, outcome);
@@ -365,6 +417,20 @@ private slots:
     QVERIFY(outcome.isFailed);
     QVERIFY2(outcome.failure.startsWith(QStringLiteral("Could not read the file list of Alpha tools: ")), qPrintable(outcome.failure));
     QCOMPARE(server.requests.size(), 2);
+  }
+
+  void aListingWithoutTheWriteOnceFlagIsRefused()
+  {
+    FakeFileServer server;
+    serveEverything(server);
+    server.answer(QStringLiteral("/api/v1/packages/alpha-client/versions/2026.11.01/files"), 200,
+      "{\"files\":[{\"path\":\"Game.exe\",\"byteSize\":200,\"crc32\":111}]}", "application/json");
+    QTemporaryDir library;
+    InstallJob job(planFor(server, library.path()), library.path(), server.url(), QStringLiteral("t"), QStringLiteral("2026.11.08.1200"));
+    Outcome outcome;
+    run(job, outcome);
+    QVERIFY(outcome.isFailed);
+    QCOMPARE(outcome.failure, QStringLiteral("The server's answer was not understood: the file list of alpha-client has an entry that was not understood."));
   }
 
   void anExistingFolderIsNeverInstalledOver()
@@ -407,17 +473,119 @@ private slots:
     FakeFileServer server;
     QTemporaryDir library;
     const InstallPlan plan = planFor(server, library.path());
-    QCOMPARE(bytesStillNeeded(plan, library.path()), qint64(3713 + clientZip.size() + toolZip.size()));
+    QCOMPARE(bytesStillNeeded(plan, library.path()), qint64(3733 + clientZip.size() + toolZip.size()));
     QVERIFY(QDir().mkpath(stagingFolderFor(library.path())));
-    QFile staged(stagedZipPath(library.path(), plan.client));
-    QVERIFY(staged.open(QIODevice::WriteOnly));
-    staged.write(clientZip);
-    staged.close();
-    QFile part(stagedZipPath(library.path(), plan.tools.first()) + QStringLiteral(".part"));
-    QVERIFY(part.open(QIODevice::WriteOnly));
-    part.write(toolZip.left(39));
-    part.close();
-    QCOMPARE(bytesStillNeeded(plan, library.path()), qint64(3713 + toolZip.size() - 39));
+    writeFile(stagedZipPath(library.path(), plan.client), clientZip);
+    writeFile(stagedZipPath(library.path(), plan.tools.first()) + QStringLiteral(".part"), toolZip.left(39));
+    QCOMPARE(bytesStillNeeded(plan, library.path()), qint64(3733 + toolZip.size() - 39));
+  }
+
+  void anUpdatePlanIsEmptyWhenEverythingMatchesTheReceipt()
+  {
+    FakeFileServer server;
+    Receipt receipt{QStringLiteral("D:\\Games\\Alpha - Classic"), {QStringLiteral("alpha-client"), QStringLiteral("2026.11.01"), QStringLiteral("x")}, {}, {}};
+    receipt.tools.append({QStringLiteral("alpha-tools"), QStringLiteral("2026.11.02-abc1234"), QStringLiteral("y")});
+    QString problem = QStringLiteral("stale");
+    QVERIFY(!planUpdate(alpha(), {clientPackage(server), toolPackage(server), optionalPackage()}, receipt, problem));
+    QVERIFY(problem.isEmpty());
+  }
+
+  void anUpdatePlanFetchesChangedAndNewPackagesAndRemovesDetachedOnes()
+  {
+    FakeFileServer server;
+    Receipt receipt{QStringLiteral("D:\\Games\\Alpha - Classic"), {QStringLiteral("alpha-client"), QStringLiteral("2026.11.01"), QStringLiteral("x")}, {}, {}};
+    receipt.tools.append({QStringLiteral("old-tool"), QStringLiteral("1"), QStringLiteral("z")});
+    QString problem;
+    const std::optional<InstallPlan> plan = planUpdate(alpha(), {client2Package(server), toolPackage(server)}, receipt, problem);
+    QVERIFY2(plan.has_value(), qPrintable(problem));
+    QVERIFY(plan->isUpdate());
+    QCOMPARE(plan->folder, receipt.folder);
+    QCOMPARE(plan->fetch.size(), 2);
+    QCOMPARE(plan->fetch.at(0).name, QStringLiteral("alpha-client"));
+    QCOMPARE(plan->fetch.at(1).name, QStringLiteral("alpha-tools"));
+    QCOMPARE(plan->tools.size(), 1);
+    QCOMPARE(plan->removed, QStringList{QStringLiteral("old-tool")});
+    QCOMPARE(plan->downloadBytes(), qint64(client2Zip.size() + toolZip.size()));
+
+    Receipt otherClient = receipt;
+    otherClient.client.name = QStringLiteral("other-client");
+    QVERIFY(!planUpdate(alpha(), {client2Package(server), toolPackage(server)}, otherClient, problem));
+    QCOMPARE(problem, QStringLiteral("The edition's client changed from other-client to alpha-client. Remove D:\\Games\\Alpha - Classic and install again."));
+  }
+
+  void anUpdateReplacesChangedFilesLeavesUnchangedOnesDeletesDroppedOnesAndKeepsWriteOnceEdits()
+  {
+    FakeFileServer server;
+    serveEverything(server);
+    QTemporaryDir library;
+    const Receipt first = installFirstVersion(server, library.path());
+    const QDir folder(first.folder);
+    writeFile(folder.filePath(QStringLiteral("settings.ini")), "[video]\r\nwidth=1920\r\n");
+    writeFile(folder.filePath(QStringLiteral("Data/world.dat")), "edited by the player");
+    writeFile(folder.filePath(QStringLiteral("Screenshots/shot.png")), "png");
+    writeFile(folder.filePath(QStringLiteral("Game.exe")), "patched by the player");
+
+    QString problem;
+    const std::optional<InstallPlan> plan = planUpdate(alpha(), {client2Package(server), toolPackage(server), optionalPackage()}, first, problem);
+    QVERIFY2(plan.has_value(), qPrintable(problem));
+    QCOMPARE(plan->fetch.size(), 1);
+    InstallJob job(*plan, library.path(), server.url(), QStringLiteral("t"), QStringLiteral("2026.11.08.1200"));
+    Outcome outcome;
+    run(job, outcome);
+    QVERIFY2(outcome.isDone, qPrintable(outcome.failure));
+    QCOMPARE(outcome.statuses.last(), QStringLiteral("Applying the update..."));
+
+    QCOMPARE(QFileInfo(folder.filePath(QStringLiteral("Game.exe"))).size(), qint64(300));
+    QVERIFY(!QFile::exists(folder.filePath(QStringLiteral("readme.txt"))));
+    QCOMPARE(QFileInfo(folder.filePath(QStringLiteral("Data/extra.dat"))).size(), qint64(500));
+    QCOMPARE(contentOf(folder.filePath(QStringLiteral("Data/world.dat"))), QByteArray("edited by the player"));
+    QCOMPARE(contentOf(folder.filePath(QStringLiteral("settings.ini"))), QByteArray("[video]\r\nwidth=1920\r\n"));
+    QCOMPARE(contentOf(folder.filePath(QStringLiteral("Screenshots/shot.png"))), QByteArray("png"));
+    QCOMPARE(QFileInfo(folder.filePath(QStringLiteral("tools/directConnect.dll"))).size(), qint64(1100));
+    QCOMPARE(outcome.summary.written, 2);
+    QCOMPARE(outcome.summary.deleted, 1);
+    QCOMPARE(outcome.summary.kept, QStringList{QStringLiteral("settings.ini")});
+
+    QCOMPARE(outcome.receipt.client.version, QStringLiteral("2026.11.09"));
+    QCOMPARE(outcome.receipt.client.sha256, sha256Of(client2Zip));
+    QCOMPARE(outcome.receipt.tools.size(), 1);
+    QCOMPARE(outcome.receipt.tools.first().version, QStringLiteral("2026.11.02-abc1234"));
+    QCOMPARE(outcome.receipt.files.size(), 5);
+    QVERIFY(!outcome.receipt.files.contains(QStringLiteral("readme.txt")));
+    QCOMPARE(outcome.receipt.files.value(QStringLiteral("settings.ini")).crc32, 777u);
+    QCOMPARE(outcome.receipt.files.value(QStringLiteral("Data/extra.dat")).package, QStringLiteral("alpha-client"));
+    const std::optional<Receipt> stored = readReceipt(first.folder, problem);
+    QVERIFY2(stored.has_value(), qPrintable(problem));
+    QCOMPARE(stored->client.version, QStringLiteral("2026.11.09"));
+    QCOMPARE(QDir(stagingFolderFor(library.path())).entryList(QDir::AllEntries | QDir::NoDotAndDotDot), QStringList());
+    QVERIFY(!planUpdate(alpha(), {client2Package(server), toolPackage(server), optionalPackage()}, *stored, problem));
+    QVERIFY(problem.isEmpty());
+  }
+
+  void anUpdateRemovesAToolThatLeftTheEdition()
+  {
+    FakeFileServer server;
+    serveEverything(server);
+    QTemporaryDir library;
+    const Receipt first = installFirstVersion(server, library.path());
+    QString problem;
+    const std::optional<InstallPlan> plan = planUpdate(alpha(), {clientPackage(server), optionalPackage()}, first, problem);
+    QVERIFY2(plan.has_value(), qPrintable(problem));
+    QVERIFY(plan->fetch.isEmpty());
+    QCOMPARE(plan->removed, QStringList{QStringLiteral("alpha-tools")});
+    const int requestsBefore = server.requests.size();
+    InstallJob job(*plan, library.path(), server.url(), QStringLiteral("t"), QStringLiteral("2026.11.08.1200"));
+    Outcome outcome;
+    run(job, outcome);
+    QVERIFY2(outcome.isDone, qPrintable(outcome.failure));
+    QCOMPARE(server.requests.size(), requestsBefore);
+    QVERIFY(!QFile::exists(QDir(first.folder).filePath(QStringLiteral("tools/directConnect.dll"))));
+    QCOMPARE(QFileInfo(QDir(first.folder).filePath(QStringLiteral("Game.exe"))).size(), qint64(200));
+    QCOMPARE(outcome.summary.deleted, 1);
+    QCOMPARE(outcome.summary.written, 0);
+    QVERIFY(outcome.receipt.tools.isEmpty());
+    QCOMPARE(outcome.receipt.files.size(), 4);
+    QCOMPARE(outcome.receipt.client.version, QStringLiteral("2026.11.01"));
   }
 };
 

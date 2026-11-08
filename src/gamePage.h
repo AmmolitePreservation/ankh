@@ -14,7 +14,7 @@ class QStackedWidget;
 class QTabBar;
 class QVBoxLayout;
 
-enum class InstallState { notInstalled, unavailable, installing, installed, busyElsewhere };
+enum class InstallState { notInstalled, unavailable, installing, installed, updateAvailable, busyElsewhere };
 
 class GamePage : public QWidget {
   Q_OBJECT
@@ -33,6 +33,8 @@ public:
 
 signals:
   void installRequested(const Game& game);
+  void updateRequested(const Game& game);
+  void updateCheckRequested();
   void cancelRequested();
 
 private:
@@ -60,6 +62,7 @@ private:
   QWidget* downloadsBox;
   QVBoxLayout* downloadsLayout;
   QLabel* upToDateIcon;
+  QLabel* upToDateLabel;
   QLabel* compatibilityIcon;
   QLabel* optionalToolsIcon;
   QPushButton* checkForUpdates;

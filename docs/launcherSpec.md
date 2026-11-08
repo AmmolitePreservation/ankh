@@ -134,7 +134,7 @@ The default profile does not require users to understand tool bundles. More laun
 | Downloading | Cancel | The step and a progress bar sit on the status line; finished and partial downloads are kept and resumed. |
 | Verifying / applying | Progress state | Show the current step. Cancellation during extraction removes the extraction folders; moving into place cannot be cancelled. |
 | Not installable | Install, disabled | The edition has no client, or the client or a required tool has no published version; the reason is on the status line. |
-| Required update | Update | Explain which release or required component changed. |
+| Required update | Update | The status line names the packages that changed; the sheet shows old and new versions. Built: see `docs/install.md`. |
 | Optional update only | Play | Small update notice in Client tools; do not block launch. |
 | Required component broken | Repair | Explain the failing component and planned repair. |
 | Ready | Play | Starts the selected single-client launch profile. |
