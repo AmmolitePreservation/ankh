@@ -12,7 +12,7 @@ namespace {
 
 Game gameNamed(int serverID, const QString& game, const QString& version, const QString& world, bool isInstalled = false)
 {
-  Game result = gameFromWorld(World{serverID, world, game, version, QColor("#82b556"), 2004, 2006, QStringLiteral("Online"), std::nullopt, QString()});
+  Game result = gameFromWorld(World{serverID, world, game, QStringLiteral("era"), version, QColor("#82b556"), 2004, 2006, QStringLiteral("Online"), std::nullopt, QString()});
   result.isInstalled = isInstalled;
   return result;
 }

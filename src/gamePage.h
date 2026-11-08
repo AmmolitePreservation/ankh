@@ -20,8 +20,8 @@ public:
   explicit GamePage(QWidget* parent = nullptr);
 
   void showGame(const Game& game);
-  void setDownloads(int serverID, const QList<DownloadGroup>& groups);
-  void setDownloadsFailed(int serverID, const QString& message);
+  void refreshGame(const Game& game);
+  void setPackages(const QList<Package>& packages);
   void setGameAccounts(const QList<AccountDomain>& domains);
   void setGameAccountsFailed(const QString& message);
   void applyPalette(const Palette& newColors);
@@ -31,9 +31,11 @@ private:
   void refreshAccounts();
   void updateStatus();
   void clearDownloads();
+  void showDownloads();
 
   Palette colors;
   Game game;
+  QList<Package> packages;
   QLabel* iconLabel;
   QLabel* titleLabel;
   QLabel* subtitleLabel;

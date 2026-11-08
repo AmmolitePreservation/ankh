@@ -3,7 +3,7 @@
 #include "ammoliteClient.h"
 #include "credentialStore.h"
 #include "palette.h"
-#include "updateChecker.h"
+#include "updateOffer.h"
 
 #include <QSettings>
 #include <QTimer>
@@ -20,7 +20,6 @@ class QSvgWidget;
 class SettingsPage;
 class SettingsPane;
 class SignInDialog;
-class UpdateChecker;
 class UpdateSheet;
 class UserMenuButton;
 class WindowControls;
@@ -63,6 +62,9 @@ private:
   void showSettings(int section);
   void enterSignedInState(const SignedInUser& user);
   void enterSignedOutState(const QString& note);
+  void checkManifest();
+  void applyManifest(const Manifest& manifest, const QByteArray& etag);
+  void showCollection(const QList<World>& worlds, const QList<Package>& packages);
   void showCollectionProblem(const QString& message);
   void openSignIn(const QString& note, bool isCreatingAccount);
   void setSidebarWidth(int width);
@@ -93,12 +95,15 @@ private:
   UserMenuButton* userMenuButton;
   QAction* signInAction;
   QAction* signOutAction;
-  UpdateChecker* updateChecker;
   QTimer updateTimer;
+  QByteArray manifestEtag;
+  QString updateStatus;
   UpdateOffer pendingOffer;
   UpdateSheet* openSheet = nullptr;
   LibraryAction libraryAction = LibraryAction::signIn;
   bool hasSelectedGame = false;
+  bool hasCollection = false;
+  QString shownGameId;
   QSize desiredSize;
   bool isSizeApplied = false;
   bool isMaximizePressed = false;

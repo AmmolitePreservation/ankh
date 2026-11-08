@@ -84,6 +84,24 @@ SignedInUser parseUser(const QJsonObject& object)
   return {requiredInt(object, "userID"), requiredString(object, "username"), requiredString(object, "role")};
 }
 
+qint64 requiredCount(const QJsonObject& object, const char* key)
+{
+  const QJsonValue value = requiredValue(object, key);
+  if (!value.isDouble() || value.toDouble() != value.toInteger() || value.toInteger() < 0) {
+    throw ReplyError{QStringLiteral("the field \"%1\" is not a whole number").arg(QLatin1String(key))};
+  }
+  return value.toInteger();
+}
+
+QUrl requiredUrl(const QJsonObject& object, const char* key)
+{
+  const QUrl url(requiredString(object, key), QUrl::StrictMode);
+  if (!url.isValid() || url.scheme().isEmpty()) {
+    throw ReplyError{QStringLiteral("the field \"%1\" is not an address").arg(QLatin1String(key))};
+  }
+  return url;
+}
+
 World parseWorld(const QJsonObject& object)
 {
   const QColor color(requiredString(object, "color"));
@@ -91,28 +109,75 @@ World parseWorld(const QJsonObject& object)
     throw ReplyError{QStringLiteral("the color of a world is not a color")};
   }
   return {requiredInt(object, "serverID"), requiredString(object, "name"), requiredString(object, "game"),
-    requiredString(object, "version"), color, requiredInt(object, "eraStart"), requiredInt(object, "eraEnd"),
-    optionalString(object, "status"), optionalInt(object, "accountDomainID"), optionalString(object, "accountDomain")};
+    requiredString(object, "variant"), requiredString(object, "version"), color, requiredInt(object, "eraStart"),
+    requiredInt(object, "eraEnd"), optionalString(object, "status"), optionalInt(object, "accountDomainID"),
+    optionalString(object, "accountDomain")};
 }
 
-QList<DownloadGroup> parseDownloads(const QJsonArray& groups)
+Edition parseEdition(const QJsonObject& object)
 {
-  QList<DownloadGroup> result;
-  for (const QJsonValue& groupValue : groups) {
-    const QJsonObject group = objectAt(groupValue);
-    DownloadGroup parsed{requiredString(group, "category"), {}};
-    for (const QJsonValue& packageValue : requiredArray(group, "packages")) {
-      const QJsonObject package = objectAt(packageValue);
-      parsed.packages.append({requiredInt(package, "packageVersionID"), requiredString(package, "label"),
-        requiredString(package, "version"), requiredString(package, "fileName"),
-        static_cast<qint64>(requiredValue(package, "byteSize").toInteger(-1)), requiredString(package, "sha256")});
-      if (parsed.packages.last().byteSize < 0) {
-        throw ReplyError{QStringLiteral("the field \"byteSize\" is not a whole number")};
-      }
-    }
-    result.append(parsed);
+  return {requiredString(object, "game"), requiredString(object, "variant"), requiredString(object, "edition")};
+}
+
+PackageVersion parsePackageVersion(const QJsonObject& object)
+{
+  return {requiredString(object, "version"), requiredString(object, "fileName"), requiredCount(object, "byteSize"),
+    requiredString(object, "sha256"), requiredString(object, "publishedAt"),
+    static_cast<int>(requiredCount(object, "fileCount")), requiredCount(object, "extractedBytes"),
+    requiredUrl(object, "apiURL")};
+}
+
+Package parsePackage(const QJsonObject& object)
+{
+  static const QStringList roles = {QStringLiteral("client"), QStringLiteral("requiredTool"), QStringLiteral("optionalTool")};
+  Package package{requiredString(object, "name"), requiredString(object, "label"), requiredString(object, "role"), {}, std::nullopt};
+  if (!roles.contains(package.role)) {
+    throw ReplyError{QStringLiteral("the role of the package %1 is unknown: %2").arg(package.name, package.role)};
   }
-  return result;
+  for (const QJsonValue& value : requiredArray(object, "editions")) {
+    package.editions.append(parseEdition(objectAt(value)));
+  }
+  const QJsonValue latest = requiredValue(object, "latest");
+  if (!latest.isNull()) {
+    package.latest = parsePackageVersion(objectAt(latest));
+  }
+  return package;
+}
+
+AnkhRelease parseRelease(const QJsonObject& object)
+{
+  AnkhRelease release{requiredString(object, "version"), requiredString(object, "tag"), requiredString(object, "notes"),
+    requiredUrl(object, "page"), requiredString(object, "publishedAt"), {}};
+  const QJsonValue assets = requiredValue(object, "assets");
+  if (!assets.isObject()) {
+    throw ReplyError{QStringLiteral("the field \"assets\" is not an object")};
+  }
+  const QJsonObject assetObject = assets.toObject();
+  for (auto entry = assetObject.constBegin(); entry != assetObject.constEnd(); ++entry) {
+    release.assets.insert(entry.key(), requiredUrl(assetObject, entry.key().toUtf8().constData()));
+  }
+  return release;
+}
+
+Manifest parseManifest(const QJsonObject& object)
+{
+  Manifest manifest{std::nullopt, QString(), false, {}, {}};
+  const QJsonObject ankh = objectAt(requiredValue(object, "ankh"));
+  if (ankh.contains(QLatin1String("error"))) {
+    manifest.ankhProblem = requiredString(ankh, "error");
+  } else {
+    manifest.ankh = parseRelease(ankh);
+  }
+  if (object.contains(QLatin1String("worlds"))) {
+    manifest.hasCollection = true;
+    for (const QJsonValue& value : requiredArray(object, "worlds")) {
+      manifest.worlds.append(parseWorld(objectAt(value)));
+    }
+    for (const QJsonValue& value : requiredArray(object, "packages")) {
+      manifest.packages.append(parsePackage(objectAt(value)));
+    }
+  }
+  return manifest;
 }
 
 AccountDomain parseAccountDomain(const QJsonObject& object)
@@ -156,8 +221,7 @@ void AmmoliteClient::setToken(const QString& newToken)
   token = newToken;
 }
 
-void AmmoliteClient::send(const QByteArray& method, const QString& path, const QJsonObject& body, bool isAuthorized,
-  const std::function<void(const QJsonObject&)>& onSuccess, const std::function<void(const QString&)>& onFailure)
+QNetworkRequest AmmoliteClient::requestFor(const QString& path, bool isAuthorized) const
 {
   QUrl url = base;
   url.setPath(path);
@@ -168,18 +232,20 @@ void AmmoliteClient::send(const QByteArray& method, const QString& path, const Q
   if (isAuthorized) {
     request.setRawHeader("Authorization", "Bearer " + token.toUtf8());
   }
-  QNetworkReply* reply = nullptr;
-  if (method == "POST") {
-    request.setHeader(QNetworkRequest::ContentTypeHeader, QStringLiteral("application/json"));
-    reply = network->post(request, QJsonDocument(body).toJson(QJsonDocument::Compact));
-  } else if (method == "DELETE") {
-    reply = network->deleteResource(request);
-  } else {
-    reply = network->get(request);
-  }
+  return request;
+}
+
+void AmmoliteClient::finish(QNetworkReply* reply, bool isAuthorized,
+  const std::function<void(const QJsonObject&, QNetworkReply*)>& onSuccess,
+  const std::function<void(const QString&)>& onFailure)
+{
   connect(reply, &QNetworkReply::finished, this, [this, reply, isAuthorized, onSuccess, onFailure] {
     reply->deleteLater();
     const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+    if (status == 304) {
+      onSuccess(QJsonObject(), reply);
+      return;
+    }
     const QByteArray payload = reply->readAll();
     const QJsonDocument document = QJsonDocument::fromJson(payload);
     if (reply->error() != QNetworkReply::NoError) {
@@ -196,11 +262,27 @@ void AmmoliteClient::send(const QByteArray& method, const QString& path, const Q
       return;
     }
     try {
-      onSuccess(document.object());
+      onSuccess(document.object(), reply);
     } catch (const ReplyError& error) {
       onFailure(QStringLiteral("The server's answer was not understood: %1.").arg(error.message));
     }
   });
+}
+
+void AmmoliteClient::send(const QByteArray& method, const QString& path, const QJsonObject& body, bool isAuthorized,
+  const std::function<void(const QJsonObject&)>& onSuccess, const std::function<void(const QString&)>& onFailure)
+{
+  QNetworkRequest request = requestFor(path, isAuthorized);
+  QNetworkReply* reply = nullptr;
+  if (method == "POST") {
+    request.setHeader(QNetworkRequest::ContentTypeHeader, QStringLiteral("application/json"));
+    reply = network->post(request, QJsonDocument(body).toJson(QJsonDocument::Compact));
+  } else if (method == "DELETE") {
+    reply = network->deleteResource(request);
+  } else {
+    reply = network->get(request);
+  }
+  finish(reply, isAuthorized, [onSuccess](const QJsonObject& answer, QNetworkReply*) { onSuccess(answer); }, onFailure);
 }
 
 void AmmoliteClient::signIn(const QString& username, const QString& password, const QString& tokenLabel)
@@ -262,26 +344,22 @@ void AmmoliteClient::loadMe()
     [this](const QString& message) { emit requestFailed(QStringLiteral("account"), message); });
 }
 
-void AmmoliteClient::loadWorlds()
+void AmmoliteClient::loadManifest(const QByteArray& etag)
 {
-  send("GET", QStringLiteral("/api/v1/worlds"), QJsonObject(), true,
-    [this](const QJsonObject& answer) {
-      QList<World> worlds;
-      for (const QJsonValue& value : requiredArray(answer, "worlds")) {
-        worlds.append(parseWorld(objectAt(value)));
+  const bool isAuthorized = !token.isEmpty();
+  QNetworkRequest request = requestFor(QStringLiteral("/api/v1/manifest"), isAuthorized);
+  if (!etag.isEmpty()) {
+    request.setRawHeader("If-None-Match", etag);
+  }
+  finish(network->get(request), isAuthorized,
+    [this](const QJsonObject& answer, QNetworkReply* reply) {
+      if (reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt() == 304) {
+        emit manifestUnchanged();
+        return;
       }
-      emit worldsLoaded(worlds);
+      emit manifestLoaded(parseManifest(answer), reply->rawHeader("ETag"));
     },
-    [this](const QString& message) { emit requestFailed(QStringLiteral("worlds"), message); });
-}
-
-void AmmoliteClient::loadWorld(int serverID)
-{
-  send("GET", QStringLiteral("/api/v1/worlds/%1").arg(serverID), QJsonObject(), true,
-    [this, serverID](const QJsonObject& answer) {
-      emit worldLoaded(serverID, parseDownloads(requiredArray(answer, "downloads")));
-    },
-    [this, serverID](const QString& message) { emit worldFailed(serverID, message); });
+    [this](const QString& message) { emit requestFailed(QStringLiteral("manifest"), message); });
 }
 
 void AmmoliteClient::loadGameAccounts()

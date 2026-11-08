@@ -12,7 +12,7 @@
 #include "settingsPage.h"
 #include "settingsPane.h"
 #include "signInDialog.h"
-#include "updateChecker.h"
+#include "updateOffer.h"
 #include "updateSheet.h"
 #include "userMenuButton.h"
 #include "windowControls.h"
@@ -103,8 +103,7 @@ MainWindow::MainWindow()
     activityButton(new QPushButton(QStringLiteral("Activity"), this)),
     userMenuButton(new UserMenuButton(signedOutName, this)),
     signInAction(new QAction(QStringLiteral("Sign in"), this)),
-    signOutAction(new QAction(QStringLiteral("Sign out"), this)),
-    updateChecker(new UpdateChecker(QString::fromLatin1(appVersion), this))
+    signOutAction(new QAction(QStringLiteral("Sign out"), this))
 {
   setWindowTitle(QStringLiteral("Ankh"));
   setWindowIcon(QIcon(QStringLiteral(":/ankh.ico")));
@@ -228,12 +227,16 @@ MainWindow::MainWindow()
   connect(libraryNavigation, &QPushButton::clicked, this, &MainWindow::showLibrary);
   connect(settingsButton, &QPushButton::clicked, this, [this] { showSettings(0); });
   connect(settingsPane, &SettingsPane::sectionSelected, settingsPage, &SettingsPage::showSection);
-  connect(settingsPage, &SettingsPage::updateCheckRequested, updateChecker, &UpdateChecker::check);
+  connect(settingsPage, &SettingsPage::updateCheckRequested, this, &MainWindow::checkManifest);
   connect(libraryPane, &LibraryPane::gameSelected, this, [this](const Game& game) {
     hasSelectedGame = true;
-    gamePage->showGame(game);
+    if (game.id == shownGameId) {
+      gamePage->refreshGame(game);
+    } else {
+      shownGameId = game.id;
+      gamePage->showGame(game);
+    }
     settings.setValue(QStringLiteral("library/selected"), game.id);
-    client->loadWorld(game.serverID);
     if (leftStack->currentWidget() == libraryPane) {
       showLibrary();
     }
@@ -277,54 +280,28 @@ MainWindow::MainWindow()
     openSignIn(note, false);
   });
   connect(client, &AmmoliteClient::meLoaded, this, &MainWindow::enterSignedInState);
-  connect(client, &AmmoliteClient::worldsLoaded, this, [this](const QList<World>& worlds) {
-    QList<Game> games;
-    for (const World& world : worlds) {
-      games.append(gameFromWorld(world));
-    }
-    libraryPane->showGames(games);
-    libraryPane->selectGame(settings.value(QStringLiteral("library/selected")).toString());
-  });
-  connect(client, &AmmoliteClient::worldLoaded, gamePage, &GamePage::setDownloads);
-  connect(client, &AmmoliteClient::worldFailed, gamePage, &GamePage::setDownloadsFailed);
+  connect(client, &AmmoliteClient::manifestLoaded, this, &MainWindow::applyManifest);
+  connect(client, &AmmoliteClient::manifestUnchanged, this, [this] { settingsPage->setUpdateStatus(updateStatus); });
   connect(client, &AmmoliteClient::gameAccountsLoaded, gamePage, &GamePage::setGameAccounts);
   connect(client, &AmmoliteClient::requestFailed, this, [this](const QString& what, const QString& message) {
     if (what == QStringLiteral("game accounts")) {
       gamePage->setGameAccountsFailed(message);
       return;
     }
-    showCollectionProblem(QStringLiteral("Could not load the collection: %1").arg(message));
-  });
-
-  connect(updateChecker, &UpdateChecker::checking, this, [this] {
-    settingsPage->setUpdateStatus(QStringLiteral("Checking for updates..."));
-  });
-  connect(updateChecker, &UpdateChecker::upToDate, this, [this] {
-    windowControls->updateButton()->setVisible(false);
-    settingsPage->setUpdateStatus(QStringLiteral("Ankh is up to date."));
-  });
-  connect(updateChecker, &UpdateChecker::noReleases, this, [this] {
-    windowControls->updateButton()->setVisible(false);
-    settingsPage->setUpdateStatus(QStringLiteral("No releases have been published yet."));
-  });
-  connect(updateChecker, &UpdateChecker::failed, this, [this](const QString& message) {
-    settingsPage->setUpdateStatus(QStringLiteral("Could not check for updates: %1").arg(message));
-  });
-  connect(updateChecker, &UpdateChecker::updateFound, this, [this](const UpdateOffer& offer) {
-    pendingOffer = offer;
-    if (openSheet != nullptr) {
-      openSheet->setOffer(offer);
+    if (what == QStringLiteral("manifest")) {
+      updateStatus = QStringLiteral("Could not check for updates: %1").arg(message);
+      settingsPage->setUpdateStatus(updateStatus);
+      if (!signOutAction->isVisible() || hasCollection) {
+        return;
+      }
     }
-    windowControls->updateButton()->setToolTip(QStringLiteral("Update available: %1").arg(offer.version));
-    windowControls->updateButton()->setVisible(true);
-    settingsPage->setUpdateStatus(QStringLiteral("Update available: %1").arg(offer.version));
+    showCollectionProblem(QStringLiteral("Could not load the collection: %1").arg(message));
   });
   connect(windowControls->updateButton(), &QAbstractButton::clicked, this, &MainWindow::openUpdateSheet);
 
   updateTimer.setInterval(15 * 60 * 1000);
-  connect(&updateTimer, &QTimer::timeout, updateChecker, &UpdateChecker::check);
+  connect(&updateTimer, &QTimer::timeout, this, &MainWindow::checkManifest);
   updateTimer.start();
-  QTimer::singleShot(0, updateChecker, &UpdateChecker::check);
 
   const std::optional<QString> token = tokenStore.load();
   if (token) {
@@ -357,22 +334,78 @@ void MainWindow::enterSignedInState(const SignedInUser& user)
   signInAction->setVisible(false);
   signOutAction->setVisible(true);
   libraryPane->showMessage(QStringLiteral("Loading the collection..."), QString());
-  client->loadWorlds();
+  hasCollection = false;
+  manifestEtag.clear();
+  checkManifest();
   client->loadGameAccounts();
 }
 
 void MainWindow::enterSignedOutState(const QString& note)
 {
+  client->setToken(QString());
   settingsPage->accountView()->showSignedOut(note);
   userMenuButton->setUserName(signedOutName);
   signInAction->setVisible(true);
   signOutAction->setVisible(false);
   hasSelectedGame = false;
+  hasCollection = false;
+  shownGameId.clear();
+  manifestEtag.clear();
+  gamePage->setPackages({});
   libraryAction = LibraryAction::signIn;
+  QTimer::singleShot(0, this, &MainWindow::checkManifest);
   libraryPane->showMessage(note.isEmpty() ? QStringLiteral("Sign in to see the collection.") : note, QStringLiteral("Sign in"));
   if (leftStack->currentWidget() == libraryPane) {
     showLibrary();
   }
+}
+
+void MainWindow::checkManifest()
+{
+  settingsPage->setUpdateStatus(QStringLiteral("Checking for updates..."));
+  client->loadManifest(manifestEtag);
+}
+
+void MainWindow::applyManifest(const Manifest& manifest, const QByteArray& etag)
+{
+  manifestEtag = etag;
+  if (!manifest.ankh) {
+    updateStatus = QStringLiteral("Could not check for updates: %1").arg(manifest.ankhProblem);
+  } else {
+    const ReleaseCheck check = checkRelease(*manifest.ankh, QString::fromLatin1(appVersion));
+    if (!check.problem.isEmpty()) {
+      updateStatus = QStringLiteral("Could not check for updates: %1").arg(check.problem);
+    } else if (check.update) {
+      pendingOffer = *check.update;
+      if (openSheet != nullptr) {
+        openSheet->setOffer(pendingOffer);
+      }
+      windowControls->updateButton()->setToolTip(QStringLiteral("Update available: %1").arg(pendingOffer.version));
+      windowControls->updateButton()->setVisible(true);
+      updateStatus = QStringLiteral("Update available: %1").arg(pendingOffer.version);
+    } else {
+      windowControls->updateButton()->setVisible(false);
+      updateStatus = QStringLiteral("Ankh is up to date.");
+    }
+  }
+  settingsPage->setUpdateStatus(updateStatus);
+  if (manifest.hasCollection) {
+    showCollection(manifest.worlds, manifest.packages);
+  }
+}
+
+void MainWindow::showCollection(const QList<World>& worlds, const QList<Package>& packages)
+{
+  QList<Game> games;
+  for (const World& world : worlds) {
+    games.append(gameFromWorld(world));
+  }
+  gamePage->setPackages(packages);
+  libraryPane->showGames(games);
+  if (!hasCollection) {
+    libraryPane->selectGame(settings.value(QStringLiteral("library/selected")).toString());
+  }
+  hasCollection = true;
 }
 
 void MainWindow::showCollectionProblem(const QString& message)

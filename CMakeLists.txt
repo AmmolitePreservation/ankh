@@ -53,7 +53,7 @@ qt_add_executable(ankh WIN32
   src/settingsPane.cpp
   src/settingsPage.cpp
   src/attributionsView.cpp
-  src/updateChecker.cpp
+  src/updateOffer.cpp
   src/updateSheet.cpp
   src/mainWindow.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/ankh.rc
@@ -107,6 +107,11 @@ qt_add_executable(gameCatalogTest tests/gameCatalogTest.cpp src/gameCatalog.cpp 
 target_include_directories(gameCatalogTest PRIVATE src)
 target_link_libraries(gameCatalogTest PRIVATE Qt6::Test Qt6::Network Qt6::Widgets)
 add_test(NAME gameCatalog COMMAND gameCatalogTest)
+
+qt_add_executable(updateOfferTest tests/updateOfferTest.cpp src/updateOffer.cpp src/calendarVersion.cpp src/fatal.cpp)
+target_include_directories(updateOfferTest PRIVATE src)
+target_link_libraries(updateOfferTest PRIVATE Qt6::Test Qt6::Network Qt6::Widgets)
+add_test(NAME updateOffer COMMAND updateOfferTest)
 
 qt_add_executable(signInDialogTest tests/signInDialogTest.cpp src/signInDialog.cpp src/darkTitleBar.cpp)
 target_include_directories(signInDialogTest PRIVATE src)

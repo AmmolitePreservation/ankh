@@ -358,37 +358,47 @@ void GamePage::clearDownloads()
   }
 }
 
-void GamePage::setDownloads(int serverID, const QList<DownloadGroup>& groups)
+void GamePage::showDownloads()
 {
-  if (serverID != game.serverID) {
-    return;
-  }
   clearDownloads();
-  if (groups.isEmpty()) {
-    downloadsLayout->addWidget(makeLabel(QStringLiteral("Nothing is attached to this realm yet."), "secondary", downloadsBox));
+  if (game.id.isEmpty()) {
     return;
   }
-  for (const DownloadGroup& group : groups) {
-    downloadsLayout->addWidget(makeLabel(group.category, "fieldLabel", downloadsBox));
-    for (const Download& download : group.packages) {
-      auto* row = new QWidget(downloadsBox);
-      auto* rowLayout = new QHBoxLayout(row);
-      rowLayout->setContentsMargins(0, 0, 0, 0);
-      rowLayout->addWidget(makeLabel(download.label, nullptr, row), 1);
-      rowLayout->addWidget(makeLabel(QStringLiteral("%1 %2 %3").arg(download.version, QString(QChar(0x00B7)),
-        QLocale().formattedDataSize(download.byteSize, 1, QLocale::DataSizeTraditionalFormat)), "bodySecondary", row));
-      downloadsLayout->addWidget(row);
+  const QList<Package> attached = packagesFor(game, packages);
+  if (attached.isEmpty()) {
+    downloadsLayout->addWidget(makeLabel(QStringLiteral("Nothing is attached to this edition yet."), "secondary", downloadsBox));
+    return;
+  }
+  QString shownRole;
+  for (const Package& package : attached) {
+    if (package.role != shownRole) {
+      shownRole = package.role;
+      downloadsLayout->addWidget(makeLabel(roleLabel(package.role), "fieldLabel", downloadsBox));
     }
+    auto* row = new QWidget(downloadsBox);
+    auto* rowLayout = new QHBoxLayout(row);
+    rowLayout->setContentsMargins(0, 0, 0, 0);
+    rowLayout->addWidget(makeLabel(package.label, nullptr, row), 1);
+    const QString detail = package.latest
+      ? QStringLiteral("%1 %2 %3").arg(package.latest->version, QString(QChar(0x00B7)),
+          QLocale().formattedDataSize(package.latest->byteSize, 1, QLocale::DataSizeTraditionalFormat))
+      : QStringLiteral("No version published yet");
+    rowLayout->addWidget(makeLabel(detail, "bodySecondary", row));
+    downloadsLayout->addWidget(row);
   }
 }
 
-void GamePage::setDownloadsFailed(int serverID, const QString& message)
+void GamePage::setPackages(const QList<Package>& newPackages)
 {
-  if (serverID != game.serverID) {
-    return;
-  }
-  clearDownloads();
-  downloadsLayout->addWidget(makeLabel(QStringLiteral("Could not load the downloads: %1").arg(message), "secondary", downloadsBox));
+  packages = newPackages;
+  showDownloads();
+}
+
+void GamePage::refreshGame(const Game& newGame)
+{
+  game = newGame;
+  refreshIcons();
+  updateStatus();
 }
 
 void GamePage::setGameAccounts(const QList<AccountDomain>& domains)
@@ -415,8 +425,7 @@ void GamePage::showGame(const Game& newGame)
   realmChoice->setEnabled(false);
   refreshAccounts();
   installedSection->setVisible(game.isInstalled);
-  clearDownloads();
-  downloadsLayout->addWidget(makeLabel(QStringLiteral("Loading downloads..."), "secondary", downloadsBox));
+  showDownloads();
   tabs->setCurrentIndex(0);
   refreshIcons();
   updateStatus();

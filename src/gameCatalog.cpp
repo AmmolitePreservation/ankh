@@ -1,5 +1,7 @@
 #include "gameCatalog.h"
 
+#include "fatal.h"
+
 #include <QFont>
 #include <QPainter>
 
@@ -29,8 +31,36 @@ QString initialsFor(const QString& title)
 
 Game gameFromWorld(const World& world)
 {
-  return {QStringLiteral("world%1").arg(world.serverID), world.serverID, world.game, world.version, world.name,
-    initialsFor(world.game), world.color, world.status, world.accountDomainID, world.accountDomain, false};
+  return {QStringLiteral("world%1").arg(world.serverID), world.serverID, world.game, world.version, world.variant,
+    world.name, initialsFor(world.game), world.color, world.status, world.accountDomainID, world.accountDomain, false};
+}
+
+QList<Package> packagesFor(const Game& game, const QList<Package>& packages)
+{
+  QList<Package> attached;
+  for (const Package& package : packages) {
+    for (const Edition& edition : package.editions) {
+      if (edition.game == game.title && edition.variant == game.variant) {
+        attached.append(package);
+        break;
+      }
+    }
+  }
+  return attached;
+}
+
+QString roleLabel(const QString& role)
+{
+  if (role == QLatin1String("client")) {
+    return QStringLiteral("Client");
+  }
+  if (role == QLatin1String("requiredTool")) {
+    return QStringLiteral("Required tools");
+  }
+  if (role == QLatin1String("optionalTool")) {
+    return QStringLiteral("Optional tools");
+  }
+  fatal(QStringLiteral("Unknown package role: %1").arg(role));
 }
 
 void paintGameIcon(QPainter& painter, const QRect& area, const QString& initials, const QColor& tint)

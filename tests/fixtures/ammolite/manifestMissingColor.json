@@ -1,0 +1,4 @@
+{"ankh":{"error":"GitHub answered 503 for the latest release."},
+ "worlds":[{"serverID":3,"name":"Arcanite","game":"World of Warcraft","variant":"classic","version":"Classic (1.12.1)",
+            "eraStart":2004,"eraEnd":2006,"status":null,"accountDomainID":null,"accountDomain":null}],
+ "packages":[]}

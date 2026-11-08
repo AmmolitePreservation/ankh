@@ -1,6 +1,6 @@
 #pragma once
 
-#include "updateChecker.h"
+#include "updateOffer.h"
 
 #include <QCryptographicHash>
 #include <QFile>

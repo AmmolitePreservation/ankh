@@ -2,6 +2,8 @@
 
 #include <QColor>
 #include <QList>
+#include <QMap>
+#include <QNetworkRequest>
 #include <QObject>
 #include <QString>
 #include <QStringList>
@@ -11,6 +13,7 @@
 
 class QJsonObject;
 class QNetworkAccessManager;
+class QNetworkReply;
 
 struct SignedInUser {
   int userID;
@@ -22,6 +25,7 @@ struct World {
   int serverID;
   QString name;
   QString game;
+  QString variant;
   QString version;
   QColor color;
   int eraStart;
@@ -31,18 +35,46 @@ struct World {
   QString accountDomain;
 };
 
-struct Download {
-  int packageVersionID;
+struct Edition {
+  QString game;
+  QString variant;
   QString label;
+};
+
+struct PackageVersion {
   QString version;
   QString fileName;
   qint64 byteSize;
   QString sha256;
+  QString publishedAt;
+  int fileCount;
+  qint64 extractedBytes;
+  QUrl url;
 };
 
-struct DownloadGroup {
-  QString category;
-  QList<Download> packages;
+struct Package {
+  QString name;
+  QString label;
+  QString role;
+  QList<Edition> editions;
+  std::optional<PackageVersion> latest;
+};
+
+struct AnkhRelease {
+  QString version;
+  QString tag;
+  QString notes;
+  QUrl page;
+  QString publishedAt;
+  QMap<QString, QUrl> assets;
+};
+
+struct Manifest {
+  std::optional<AnkhRelease> ankh;
+  QString ankhProblem;
+  bool hasCollection;
+  QList<World> worlds;
+  QList<Package> packages;
 };
 
 struct GameLogin {
@@ -72,8 +104,7 @@ public:
     const QString& confirmation, const QString& tokenLabel);
   void signOut();
   void loadMe();
-  void loadWorlds();
-  void loadWorld(int serverID);
+  void loadManifest(const QByteArray& etag);
   void loadGameAccounts();
 
 signals:
@@ -82,15 +113,18 @@ signals:
   void registerFailed(const QString& message);
   void signedOut(const QString& warning);
   void meLoaded(const SignedInUser& user);
-  void worldsLoaded(const QList<World>& worlds);
-  void worldLoaded(int serverID, const QList<DownloadGroup>& downloads);
-  void worldFailed(int serverID, const QString& message);
+  void manifestLoaded(const Manifest& manifest, const QByteArray& etag);
+  void manifestUnchanged();
   void gameAccountsLoaded(const QList<AccountDomain>& domains);
   void sessionExpired();
   void requestFailed(const QString& what, const QString& message);
 
 private:
   void startSignIn(const QString& username, const QString& password, const QString& tokenLabel,
+    const std::function<void(const QString&)>& onFailure);
+  QNetworkRequest requestFor(const QString& path, bool isAuthorized) const;
+  void finish(QNetworkReply* reply, bool isAuthorized,
+    const std::function<void(const QJsonObject&, QNetworkReply*)>& onSuccess,
     const std::function<void(const QString&)>& onFailure);
   void send(const QByteArray& method, const QString& path, const QJsonObject& body, bool isAuthorized,
     const std::function<void(const QJsonObject&)>& onSuccess, const std::function<void(const QString&)>& onFailure);

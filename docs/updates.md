@@ -4,9 +4,9 @@ Ankh updates itself in place from its GitHub releases. Updating is click-only.
 
 ## Check
 
-- On start and every 15 minutes the client reads the repository's latest release from the GitHub Releases API. A public repository needs no token.
+- On start, after signing in or out, every 15 minutes, and from Settings -> About Ankh, the client asks Ammolite for one manifest (`GET /api/v1/manifest`, see `ammolite.md`). Ammolite reads the repository's latest GitHub release for it and keeps the answer for five minutes, so every client together costs GitHub one request. The manifest carries an ETag; an unchanged answer is a 304 and changes nothing.
 - The button always reflects the newest release found, and an update sheet that is open but not yet installing switches to a newer release when one appears. A release is newer when its calver tag compares greater than the running version. Equal or older releases are ignored, so a signed older release can never be installed over a newer one.
-- A failed check is shown in Settings -> About Ankh and in Activity. It never blocks starting or playing.
+- A failed check, or a manifest in which Ammolite could not read GitHub, is shown in Settings -> About Ankh. It never blocks starting or playing.
 
 ## Button
 

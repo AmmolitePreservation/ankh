@@ -23,7 +23,14 @@ public:
     QByteArray method;
     QByteArray path;
     QByteArray authorization;
+    QByteArray ifNoneMatch;
     QByteArray body;
+  };
+
+  struct Canned {
+    int status;
+    QByteArray body;
+    QByteArray etag;
   };
 
   FakeServer()
@@ -42,9 +49,9 @@ public:
     return QUrl(QStringLiteral("http://127.0.0.1:%1").arg(server.serverPort()));
   }
 
-  void answer(const QString& methodAndPath, int status, const QByteArray& body)
+  void answer(const QString& methodAndPath, int status, const QByteArray& body, const QByteArray& etag = QByteArray())
   {
-    responses.insert(methodAndPath, {status, body});
+    responses.insert(methodAndPath, {status, body, etag});
   }
 
   QList<Recorded> requests;
@@ -60,7 +67,7 @@ private:
     }
     const QList<QByteArray> lines = data.left(headerEnd).split('\n');
     const QList<QByteArray> requestLine = lines.first().trimmed().split(' ');
-    Recorded recorded{requestLine.at(0), requestLine.at(1), QByteArray(), QByteArray()};
+    Recorded recorded{requestLine.at(0), requestLine.at(1), QByteArray(), QByteArray(), QByteArray()};
     qsizetype contentLength = 0;
     for (const QByteArray& line : lines.mid(1)) {
       const QByteArray lower = line.trimmed().toLower();
@@ -70,21 +77,26 @@ private:
       if (lower.startsWith("authorization:")) {
         recorded.authorization = line.mid(14).trimmed();
       }
+      if (lower.startsWith("if-none-match:")) {
+        recorded.ifNoneMatch = line.mid(14).trimmed();
+      }
     }
     if (data.size() < headerEnd + 4 + contentLength) {
       return;
     }
     recorded.body = data.mid(headerEnd + 4, contentLength);
     requests.append(recorded);
-    const auto response = responses.value(QString::fromLatin1(recorded.method + ' ' + recorded.path), {404, QByteArray("{\"error\":\"not found\"}")});
-    socket->write("HTTP/1.1 " + QByteArray::number(response.first) + " Reply\r\nContent-Type: application/json\r\nContent-Length: "
-      + QByteArray::number(response.second.size()) + "\r\nConnection: close\r\n\r\n" + response.second);
+    const Canned response = responses.value(QString::fromLatin1(recorded.method + ' ' + recorded.path),
+      Canned{404, QByteArray("{\"error\":\"not found\"}"), QByteArray()});
+    const QByteArray etagHeader = response.etag.isEmpty() ? QByteArray() : "ETag: " + response.etag + "\r\n";
+    socket->write("HTTP/1.1 " + QByteArray::number(response.status) + " Reply\r\nContent-Type: application/json\r\n" + etagHeader
+      + "Content-Length: " + QByteArray::number(response.body.size()) + "\r\nConnection: close\r\n\r\n" + response.body);
     socket->disconnectFromHost();
     buffers.remove(socket);
   }
 
   QTcpServer server;
-  QMap<QString, QPair<int, QByteArray>> responses;
+  QMap<QString, Canned> responses;
   QMap<QTcpSocket*, QByteArray> buffers;
 };
 
@@ -200,85 +212,159 @@ private slots:
   void aRevokedTokenEndsTheSession()
   {
     FakeServer server;
-    server.answer(QStringLiteral("GET /api/v1/worlds"), 401, fixture("noToken.json"));
+    server.answer(QStringLiteral("GET /api/v1/manifest"), 401, fixture("noToken.json"));
     AmmoliteClient client(server.url(), QStringLiteral("2026.11.08.0100"));
     client.setToken(QStringLiteral("ammolite_old"));
     bool isSessionExpired = false;
     bool isFailed = false;
     connect(&client, &AmmoliteClient::sessionExpired, this, [&] { isSessionExpired = true; });
     connect(&client, &AmmoliteClient::requestFailed, this, [&] { isFailed = true; });
-    client.loadWorlds();
+    client.loadManifest(QByteArray());
     QTRY_VERIFY_WITH_TIMEOUT(isSessionExpired, 5000);
     QVERIFY(!isFailed);
   }
 
-  void worldsAreParsedWithTheirOptionalFields()
+  void aPublicManifestCarriesOnlyTheRelease()
   {
     FakeServer server;
-    server.answer(QStringLiteral("GET /api/v1/worlds"), 200, fixture("worlds.json"));
+    server.answer(QStringLiteral("GET /api/v1/manifest"), 200, fixture("manifestPublic.json"), "\"etag-1\"");
+    AmmoliteClient client(server.url(), QStringLiteral("2026.11.08.0100"));
+    std::optional<Manifest> manifest;
+    QByteArray etag;
+    connect(&client, &AmmoliteClient::manifestLoaded, this, [&](const Manifest& loaded, const QByteArray& tag) {
+      manifest = loaded;
+      etag = tag;
+    });
+    client.loadManifest(QByteArray());
+    QTRY_VERIFY_WITH_TIMEOUT(manifest.has_value(), 5000);
+    QCOMPARE(server.requests.first().authorization, QByteArray());
+    QCOMPARE(server.requests.first().ifNoneMatch, QByteArray());
+    QCOMPARE(etag, QByteArray("\"etag-1\""));
+    QVERIFY(!manifest->hasCollection);
+    QVERIFY(manifest->worlds.isEmpty() && manifest->packages.isEmpty());
+    QVERIFY(manifest->ankh.has_value());
+    QCOMPARE(manifest->ankh->version, QStringLiteral("2026.11.08.0514"));
+    QCOMPARE(manifest->ankh->tag, QStringLiteral("v2026.11.08.0514"));
+    QCOMPARE(manifest->ankh->notes, QStringLiteral("- Library toggles"));
+    QCOMPARE(manifest->ankh->page, QUrl(QStringLiteral("https://github.com/AmmolitePreservation/ankh/releases/tag/v2026.11.08.0514")));
+    QCOMPARE(manifest->ankh->assets.size(), 3);
+    QCOMPARE(manifest->ankh->assets.value(QStringLiteral("manifest.json.sig")),
+      QUrl(QStringLiteral("https://github.com/AmmolitePreservation/ankh/releases/download/v2026.11.08.0514/manifest.json.sig")));
+  }
+
+  void aSignedInManifestCarriesTheWorldsAndThePackagesOfTheirEditions()
+  {
+    FakeServer server;
+    server.answer(QStringLiteral("GET /api/v1/manifest"), 200, fixture("manifest.json"), "\"etag-2\"");
     AmmoliteClient client(server.url(), QStringLiteral("2026.11.08.0100"));
     client.setToken(QStringLiteral("t"));
-    QList<World> worlds;
-    connect(&client, &AmmoliteClient::worldsLoaded, this, [&](const QList<World>& loaded) { worlds = loaded; });
-    client.loadWorlds();
-    QTRY_COMPARE_WITH_TIMEOUT(worlds.size(), 2, 5000);
-    QCOMPARE(worlds.at(0).serverID, 3);
-    QCOMPARE(worlds.at(0).name, QStringLiteral("Arcanite"));
-    QCOMPARE(worlds.at(0).game, QStringLiteral("World of Warcraft"));
-    QCOMPARE(worlds.at(0).version, QStringLiteral("Classic (1.12.1)"));
-    QCOMPARE(worlds.at(0).color, QColor("#82b556"));
-    QCOMPARE(worlds.at(0).eraStart, 2004);
-    QCOMPARE(worlds.at(0).status, QStringLiteral("Online, 12 playing"));
-    QCOMPARE(worlds.at(0).accountDomainID, std::optional<int>(2));
-    QCOMPARE(worlds.at(0).accountDomain, QStringLiteral("Arcanite Logins"));
-    QCOMPARE(worlds.at(1).status, QString());
-    QCOMPARE(worlds.at(1).accountDomainID, std::optional<int>());
-    QCOMPARE(worlds.at(1).accountDomain, QString());
+    std::optional<Manifest> manifest;
+    connect(&client, &AmmoliteClient::manifestLoaded, this, [&](const Manifest& loaded, const QByteArray&) { manifest = loaded; });
+    client.loadManifest(QByteArray("\"etag-1\""));
+    QTRY_VERIFY_WITH_TIMEOUT(manifest.has_value(), 5000);
+    QCOMPARE(server.requests.first().authorization, QByteArray("Bearer t"));
+    QCOMPARE(server.requests.first().ifNoneMatch, QByteArray("\"etag-1\""));
+    QVERIFY(manifest->hasCollection);
+    QCOMPARE(manifest->worlds.size(), 2);
+    const World& arcanite = manifest->worlds.at(0);
+    QCOMPARE(arcanite.serverID, 3);
+    QCOMPARE(arcanite.name, QStringLiteral("Arcanite"));
+    QCOMPARE(arcanite.game, QStringLiteral("World of Warcraft"));
+    QCOMPARE(arcanite.variant, QStringLiteral("classic"));
+    QCOMPARE(arcanite.version, QStringLiteral("Classic (1.12.1)"));
+    QCOMPARE(arcanite.color, QColor("#82b556"));
+    QCOMPARE(arcanite.eraStart, 2004);
+    QCOMPARE(arcanite.status, QStringLiteral("Online, 12 playing"));
+    QCOMPARE(arcanite.accountDomainID, std::optional<int>(2));
+    QCOMPARE(arcanite.accountDomain, QStringLiteral("Arcanite Logins"));
+    QCOMPARE(manifest->worlds.at(1).status, QString());
+    QCOMPARE(manifest->worlds.at(1).accountDomainID, std::optional<int>());
+    QCOMPARE(manifest->worlds.at(1).accountDomain, QString());
+    QCOMPARE(manifest->packages.size(), 2);
+    const Package& wowClient = manifest->packages.at(0);
+    QCOMPARE(wowClient.name, QStringLiteral("worldofwarcraft-arcanite"));
+    QCOMPARE(wowClient.role, QStringLiteral("client"));
+    QCOMPARE(wowClient.editions.size(), 1);
+    QCOMPARE(wowClient.editions.first().game, QStringLiteral("World of Warcraft"));
+    QCOMPARE(wowClient.editions.first().variant, QStringLiteral("classic"));
+    QCOMPARE(wowClient.editions.first().label, QStringLiteral("Classic (1.12.1)"));
+    QVERIFY(wowClient.latest.has_value());
+    QCOMPARE(wowClient.latest->version, QStringLiteral("2026.10.13"));
+    QCOMPARE(wowClient.latest->fileName, QStringLiteral("WoW-1.12.1-Arcanite.zip"));
+    QCOMPARE(wowClient.latest->byteSize, qint64(5335826980));
+    QCOMPARE(wowClient.latest->sha256, QStringLiteral("d298"));
+    QCOMPARE(wowClient.latest->fileCount, 159);
+    QCOMPARE(wowClient.latest->extractedBytes, qint64(5388545392));
+    QCOMPARE(wowClient.latest->url, QUrl(QStringLiteral("https://ammolite.test/api/v1/files/15/WoW-1.12.1-Arcanite.zip")));
+    const Package& thorium = manifest->packages.at(1);
+    QCOMPARE(thorium.role, QStringLiteral("requiredTool"));
+    QCOMPARE(thorium.editions.size(), 2);
+    QVERIFY(!thorium.latest.has_value());
+  }
+
+  void anUnchangedManifestIsReportedWithoutAParse()
+  {
+    FakeServer server;
+    server.answer(QStringLiteral("GET /api/v1/manifest"), 304, QByteArray());
+    AmmoliteClient client(server.url(), QStringLiteral("2026.11.08.0100"));
+    bool isUnchanged = false;
+    bool isLoaded = false;
+    bool isFailed = false;
+    connect(&client, &AmmoliteClient::manifestUnchanged, this, [&] { isUnchanged = true; });
+    connect(&client, &AmmoliteClient::manifestLoaded, this, [&] { isLoaded = true; });
+    connect(&client, &AmmoliteClient::requestFailed, this, [&] { isFailed = true; });
+    client.loadManifest(QByteArray("\"etag-1\""));
+    QTRY_VERIFY_WITH_TIMEOUT(isUnchanged, 5000);
+    QCOMPARE(server.requests.first().ifNoneMatch, QByteArray("\"etag-1\""));
+    QVERIFY(!isLoaded && !isFailed);
+  }
+
+  void aManifestWithoutAReleaseCarriesTheReason()
+  {
+    FakeServer server;
+    server.answer(QStringLiteral("GET /api/v1/manifest"), 200, fixture("manifestAnkhError.json"));
+    AmmoliteClient client(server.url(), QStringLiteral("2026.11.08.0100"));
+    std::optional<Manifest> manifest;
+    connect(&client, &AmmoliteClient::manifestLoaded, this, [&](const Manifest& loaded, const QByteArray&) { manifest = loaded; });
+    client.loadManifest(QByteArray());
+    QTRY_VERIFY_WITH_TIMEOUT(manifest.has_value(), 5000);
+    QVERIFY(!manifest->ankh.has_value());
+    QCOMPARE(manifest->ankhProblem, QStringLiteral("GitHub answered 503 for the latest release."));
+    QVERIFY(!manifest->hasCollection);
   }
 
   void aWorldMissingAFieldIsRefusedByName()
   {
     FakeServer server;
-    server.answer(QStringLiteral("GET /api/v1/worlds"), 200, fixture("worldMissingColor.json"));
+    server.answer(QStringLiteral("GET /api/v1/manifest"), 200, fixture("manifestMissingColor.json"));
     AmmoliteClient client(server.url(), QStringLiteral("2026.11.08.0100"));
     client.setToken(QStringLiteral("t"));
     QString what;
     QString message;
     bool isLoaded = false;
-    connect(&client, &AmmoliteClient::worldsLoaded, this, [&] { isLoaded = true; });
+    connect(&client, &AmmoliteClient::manifestLoaded, this, [&] { isLoaded = true; });
     connect(&client, &AmmoliteClient::requestFailed, this, [&](const QString& failed, const QString& reason) {
       what = failed;
       message = reason;
     });
-    client.loadWorlds();
+    client.loadManifest(QByteArray());
     QTRY_VERIFY_WITH_TIMEOUT(!what.isEmpty(), 5000);
-    QCOMPARE(what, QStringLiteral("worlds"));
+    QCOMPARE(what, QStringLiteral("manifest"));
     QVERIFY2(message.contains(QStringLiteral("\"color\" is missing")), qPrintable(message));
     QVERIFY(!isLoaded);
   }
 
-  void downloadsAreParsedPerCategory()
+  void aPackageWithAnUnknownRoleIsRefusedByName()
   {
     FakeServer server;
-    server.answer(QStringLiteral("GET /api/v1/worlds/3"), 200, fixture("worldDetail.json"));
+    server.answer(QStringLiteral("GET /api/v1/manifest"), 200, fixture("manifestUnknownRole.json"));
     AmmoliteClient client(server.url(), QStringLiteral("2026.11.08.0100"));
     client.setToken(QStringLiteral("t"));
-    int serverID = 0;
-    QList<DownloadGroup> groups;
-    connect(&client, &AmmoliteClient::worldLoaded, this, [&](int id, const QList<DownloadGroup>& loaded) {
-      serverID = id;
-      groups = loaded;
-    });
-    client.loadWorld(3);
-    QTRY_COMPARE_WITH_TIMEOUT(groups.size(), 1, 5000);
-    QCOMPARE(serverID, 3);
-    QCOMPARE(groups.first().category, QStringLiteral("Client Files"));
-    QCOMPARE(groups.first().packages.size(), 1);
-    const Download& download = groups.first().packages.first();
-    QCOMPARE(download.packageVersionID, 15);
-    QCOMPARE(download.fileName, QStringLiteral("WoW-1.12.1-Arcanite.zip"));
-    QCOMPARE(download.byteSize, qint64(5335826980));
-    QCOMPARE(download.sha256, QStringLiteral("d298"));
+    QString message;
+    connect(&client, &AmmoliteClient::requestFailed, this, [&](const QString&, const QString& reason) { message = reason; });
+    client.loadManifest(QByteArray());
+    QTRY_VERIFY_WITH_TIMEOUT(!message.isEmpty(), 5000);
+    QCOMPARE(message, QStringLiteral("The server's answer was not understood: the role of the package mystery is unknown: addon."));
   }
 
   void gameAccountsAreParsedWithTheirLogins()
