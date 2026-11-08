@@ -124,7 +124,8 @@ GamePage::GamePage(QWidget* parent)
   checkForUpdates->setLayoutDirection(Qt::RightToLeft);
   checkForUpdates->setMinimumHeight(42);
   checkForUpdates->setToolTip(QStringLiteral("Ask Ammolite for the newest packages now."));
-  upToDateLabel->setWordWrap(true);
+  upToDateLabel->setWordWrap(false);
+  upToDateLabel->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
   clientToolsLink->setProperty("link", true);
   clientToolsLink->setLayoutDirection(Qt::RightToLeft);
   realmChoice->setAccessibleName(QStringLiteral("Realm"));
@@ -339,10 +340,12 @@ void GamePage::updateStatus()
   primaryButton->setEnabled(true);
   primaryButton->setToolTip(QString());
   upToDateLabel->setText(QStringLiteral("Up to date"));
+  upToDateLabel->setToolTip(QString());
   switch (installState) {
   case InstallState::installed:
     if (!installDetail.isEmpty()) {
       upToDateLabel->setText(installDetail);
+      upToDateLabel->setToolTip(installDetail);
     }
     statusDetail->setText(QStringLiteral("%1 %2 %3").arg(realmChoice->currentText(), QString(QChar(0x00B7)), accountChoice->currentText()));
     primaryButton->setText(QStringLiteral("  Play"));

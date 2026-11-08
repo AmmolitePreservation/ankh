@@ -578,10 +578,14 @@ void MainWindow::runPlan(const Game& game, const InstallPlan& startingPlan)
       finishInstall(QString());
       return;
     }
-    QString note = QStringLiteral("Updated to %1: %2 files written, %3 deleted.").arg(receipt.client.version)
+    QString note = QStringLiteral("Updated to %1: %2 written, %3 deleted").arg(receipt.client.version)
       .arg(summary.written).arg(summary.deleted);
     if (!summary.kept.isEmpty()) {
-      note += QStringLiteral(" Kept as you had them: %1.").arg(summary.kept.join(QStringLiteral(", ")));
+      QStringList named = summary.kept.mid(0, 3);
+      if (summary.kept.size() > 3) {
+        named.append(QStringLiteral("%1 more").arg(summary.kept.size() - 3));
+      }
+      note += QStringLiteral(", kept as you had them: %1").arg(named.join(QStringLiteral(", ")));
     }
     finishInstall(note);
   });
