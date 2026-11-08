@@ -49,6 +49,11 @@ UpdateInstaller::UpdateInstaller(const UpdateOffer& offer, const QString& curren
 {
 }
 
+void UpdateInstaller::setOffer(const UpdateOffer& newOffer)
+{
+  offer = newOffer;
+}
+
 void UpdateInstaller::start()
 {
   if (installScope() == InstallScope::buildFolder) {

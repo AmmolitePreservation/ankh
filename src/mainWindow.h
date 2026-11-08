@@ -17,6 +17,7 @@ class QSvgWidget;
 class SettingsPage;
 class SettingsPane;
 class UpdateChecker;
+class UpdateSheet;
 class UserMenuButton;
 class WindowControls;
 
@@ -80,6 +81,7 @@ private:
   UpdateChecker* updateChecker;
   QTimer updateTimer;
   UpdateOffer pendingOffer;
+  UpdateSheet* openSheet = nullptr;
   QSize desiredSize;
   bool isSizeApplied = false;
   bool isMaximizePressed = false;
