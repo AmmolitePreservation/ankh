@@ -208,11 +208,11 @@ MainWindow::MainWindow()
   mainHeader->setObjectName(QStringLiteral("header"));
   mainHeader->setFixedHeight(headerHeight);
   auto* mainHeaderLayout = new QHBoxLayout(mainHeader);
-  mainHeaderLayout->setContentsMargins(22, 10, 36, 6);
+  mainHeaderLayout->setContentsMargins(22, 10, 22, 6);
   mainHeaderLayout->setSpacing(8);
   mainHeaderLayout->addWidget(libraryNavigation);
   mainHeaderLayout->addStretch(1);
-  mainHeaderLayout->addWidget(userMenuButton, 0, Qt::AlignVCenter);
+  mainHeaderLayout->addWidget(userMenuButton, 0, Qt::AlignBottom);
 
   auto* emptyLibrary = new QLabel(QStringLiteral("Select a game"), this);
   emptyLibrary->setProperty("secondary", true);

@@ -27,6 +27,7 @@ QString glyphName(IconKind kind)
   case IconKind::windowMaximize: return QStringLiteral("windowMaximize");
   case IconKind::windowRestore: return QStringLiteral("windowRestore");
   case IconKind::windowClose: return QStringLiteral("windowClose");
+  case IconKind::download: return QStringLiteral("download");
   }
   fatal(QStringLiteral("Unknown icon kind"));
 }
