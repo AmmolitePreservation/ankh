@@ -33,11 +33,6 @@ Game gameFromWorld(const World& world)
     initialsFor(world.game), world.color, world.status, world.accountDomainID, world.accountDomain, false};
 }
 
-QString libraryDescription(const Game& game)
-{
-  return QStringLiteral("%1 %2 %3").arg(game.worldName, QString(QChar(0x00B7)), game.edition);
-}
-
 void paintGameIcon(QPainter& painter, const QRect& area, const QString& initials, const QColor& tint)
 {
   painter.save();
