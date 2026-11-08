@@ -47,6 +47,7 @@ qt_add_executable(ankh WIN32
   src/accountView.cpp
   src/signInDialog.cpp
   src/darkTitleBar.cpp
+  src/userMenuButton.cpp
   src/libraryPane.cpp
   src/gamePage.cpp
   src/settingsPane.cpp
@@ -112,3 +113,9 @@ target_include_directories(signInDialogTest PRIVATE src)
 target_link_libraries(signInDialogTest PRIVATE Qt6::Test Qt6::Widgets dwmapi)
 add_test(NAME signInDialog COMMAND signInDialogTest)
 set_tests_properties(signInDialog PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+qt_add_executable(userMenuButtonTest tests/userMenuButtonTest.cpp src/userMenuButton.cpp src/icons.cpp src/fatal.cpp)
+target_include_directories(userMenuButtonTest PRIVATE src)
+target_link_libraries(userMenuButtonTest PRIVATE Qt6::Test Qt6::Widgets Qt6::Svg)
+add_test(NAME userMenuButton COMMAND userMenuButtonTest)
+set_tests_properties(userMenuButton PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")

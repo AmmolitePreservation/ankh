@@ -13,6 +13,7 @@
 class EdgeGrain;
 class GamePage;
 class LibraryPane;
+class QAction;
 class QPushButton;
 class QStackedWidget;
 class QSvgWidget;
@@ -90,6 +91,8 @@ private:
   QPushButton* settingsButton;
   QPushButton* activityButton;
   UserMenuButton* userMenuButton;
+  QAction* signInAction;
+  QAction* signOutAction;
   UpdateChecker* updateChecker;
   QTimer updateTimer;
   UpdateOffer pendingOffer;

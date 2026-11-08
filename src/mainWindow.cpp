@@ -14,6 +14,7 @@
 #include "signInDialog.h"
 #include "updateChecker.h"
 #include "updateSheet.h"
+#include "userMenuButton.h"
 #include "windowControls.h"
 
 #include <QAbstractScrollArea>
@@ -44,6 +45,7 @@ constexpr int maximumSidebarWidth = 420;
 constexpr int defaultSidebarWidth = 360;
 constexpr int headerHeight = 84;
 constexpr int resizeBorder = 6;
+const QString signedOutName = QStringLiteral("Sign in");
 constexpr const char* defaultServiceAddress = "https://ammolite.unseencolor.com:1996";
 
 QUrl serviceUrl(const QSettings& settings)
@@ -53,55 +55,6 @@ QUrl serviceUrl(const QSettings& settings)
 
 }
 
-class UserMenuButton : public QPushButton {
-public:
-  UserMenuButton(const QString& name, QWidget* parent)
-    : QPushButton(parent), userName(name)
-  {
-    setFlat(true);
-    setAccessibleName(QStringLiteral("%1 menu").arg(name));
-    setFixedHeight(48);
-    QFont measured = font();
-    measured.setPixelSize(18);
-    setFixedWidth(54 + QFontMetrics(measured).horizontalAdvance(name) + 46);
-  }
-
-  void setColors(const QColor& text, const QColor& secondary, const QColor& border)
-  {
-    textColor = text;
-    secondaryColor = secondary;
-    borderColor = border;
-    update();
-  }
-
-protected:
-  void paintEvent(QPaintEvent*) override
-  {
-    QPainter painter(this);
-    painter.setRenderHint(QPainter::Antialiasing, true);
-    const qreal ratio = devicePixelRatioF();
-    painter.setPen(QPen(QColor("#4A4E50"), 1));
-    painter.setBrush(Qt::NoBrush);
-    painter.drawEllipse(QRectF(0.5, 4.5, 39, 39));
-    painter.drawPixmap(QRect(9, 13, 22, 22), iconPixmap(IconKind::user, 22, textColor, ratio));
-    painter.setPen(textColor);
-    QFont textFont = font();
-    textFont.setPixelSize(18);
-    painter.setFont(textFont);
-    painter.drawText(QRect(54, 0, width() - 54 - 34, height()), Qt::AlignVCenter | Qt::AlignLeft, userName);
-    painter.drawPixmap(QRect(width() - 26, 15, 18, 18), iconPixmap(IconKind::chevronDown, 18, textColor, ratio));
-    if (hasFocus()) {
-      painter.setPen(QPen(borderColor, 1, Qt::DotLine));
-      painter.drawRect(rect().adjusted(0, 0, -1, -1));
-    }
-  }
-
-private:
-  QString userName;
-  QColor textColor;
-  QColor secondaryColor;
-  QColor borderColor;
-};
 SplitHandle::SplitHandle(QWidget* parent)
   : QWidget(parent)
 {
@@ -148,15 +101,11 @@ MainWindow::MainWindow()
     libraryNavigation(new QPushButton(QStringLiteral("Library"), this)),
     settingsButton(new QPushButton(QStringLiteral("Settings"), this)),
     activityButton(new QPushButton(QStringLiteral("Activity"), this)),
-    userMenuButton(nullptr),
+    userMenuButton(new UserMenuButton(signedOutName, this)),
+    signInAction(new QAction(QStringLiteral("Sign in"), this)),
+    signOutAction(new QAction(QStringLiteral("Sign out"), this)),
     updateChecker(new UpdateChecker(QString::fromLatin1(appVersion), this))
 {
-  const QString userName = qEnvironmentVariable("USERNAME");
-  if (userName.isEmpty()) {
-    fatal(QStringLiteral("The USERNAME environment variable is not set."));
-  }
-  userMenuButton = new UserMenuButton(userName, this);
-
   setWindowTitle(QStringLiteral("Ankh"));
   setWindowIcon(QIcon(QStringLiteral(":/ankh.ico")));
   setMinimumSize(1180, 760);
@@ -251,6 +200,12 @@ MainWindow::MainWindow()
   placeWindowControls();
 
   auto* userMenu = new QMenu(userMenuButton);
+  signOutAction->setVisible(false);
+  userMenu->addAction(signInAction);
+  userMenu->addAction(signOutAction);
+  userMenu->addSeparator();
+  connect(signInAction, &QAction::triggered, this, [this] { openSignIn(QString(), false); });
+  connect(signOutAction, &QAction::triggered, client, &AmmoliteClient::signOut);
   connect(userMenu->addAction(QStringLiteral("Settings")), &QAction::triggered, this, [this] { showSettings(0); });
   connect(userMenu->addAction(QStringLiteral("Attributions")), &QAction::triggered, this, [this] { showSettings(2); });
   connect(userMenuButton, &QPushButton::clicked, this, [this, userMenu] {
@@ -398,6 +353,9 @@ void MainWindow::openSignIn(const QString& note, bool isCreatingAccount)
 void MainWindow::enterSignedInState(const SignedInUser& user)
 {
   settingsPage->accountView()->showSignedIn(user);
+  userMenuButton->setUserName(user.username);
+  signInAction->setVisible(false);
+  signOutAction->setVisible(true);
   libraryPane->showMessage(QStringLiteral("Loading the collection..."), QString());
   client->loadWorlds();
   client->loadGameAccounts();
@@ -406,6 +364,9 @@ void MainWindow::enterSignedInState(const SignedInUser& user)
 void MainWindow::enterSignedOutState(const QString& note)
 {
   settingsPage->accountView()->showSignedOut(note);
+  userMenuButton->setUserName(signedOutName);
+  signInAction->setVisible(true);
+  signOutAction->setVisible(false);
   hasSelectedGame = false;
   libraryAction = LibraryAction::signIn;
   libraryPane->showMessage(note.isEmpty() ? QStringLiteral("Sign in to see the collection.") : note, QStringLiteral("Sign in"));
