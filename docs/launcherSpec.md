@@ -72,7 +72,7 @@ Dependencies are operational, not arbitrary: a script that arranges windows need
 - **Divider alignment is a shell invariant:** the wordmark area and the context pane have exactly the same width. Use one continuous vertical divider from the top edge through the header to the bottom edge. There is no separately sized brand box. Top navigation starts inside the main pane with a normal content gutter. Apply this on every page.
 - Define sidebar width once in the shared layout component and reuse it for the wordmark and context pane. Resizing must update both together; do not calculate their widths independently.
 - Exactly **two primary columns**: context list and selected detail. Top navigation is horizontal, not a third vertical rail. Editors may have internal panels or a temporary drawer.
-- Header: brand mark and wordmark at left; **Library / Sessions / Bots / Automation / Connections** across the top when enabled, the selected destination underlined in the accent color; at right a compact user menu with a user glyph, the user's Windows login name and a chevron, opening Settings and Attributions. The window controls sit above it in the corner.
+- Header: brand mark and wordmark at left; **Library / Sessions / Bots / Automation / Connections** across the top when enabled, the selected destination underlined in the accent color; at right a compact user menu with a user glyph, the signed-in Ammolite username (or "Sign in" when signed out) and a chevron, opening Sign in or Sign out, Settings and Attributions. The window controls sit above it in the corner.
 - Left pane changes with destination: game library, saved sessions, script list, or connection list. Settings and Activity remain at its foot.
 - The main pane owns its scroll position. The context list scrolls independently. Selection, search, sort, filters, and scroll position survive navigation.
 - A contextual bottom action bar stays within the main pane. It shows status and the primary action for that page; it never covers the final row of content.
@@ -609,7 +609,7 @@ Each of ten screens is rendered once. These are visual concepts; the Markdown re
 
 ### Exact mockup data
 
-- User: the Windows login name. WoW Classic realm: **Arcanite**. Account: **Main account**. Build: **1.12.1**.
+- User: the Ammolite username. WoW Classic realm: **Arcanite**. Account: **Main account**. Build: **1.12.1**.
 - Character sample: Merrin — 60 — Human Priest — Ironforge; Brannoc — 42 — Dwarf Hunter — Loch Modan; Thistle — 28 — Night Elf Druid — Ashenvale. Source line: **Realm snapshot · Updated 2 min ago**.
 - Character equipment example: Benediction, Robes of the Exalted, Devout Sandals. These are illustrative item names, not a verified character inventory.
 - EQ tools sample: **Required for this client · 3 ready**. Connection setup, Legacy runtime, Client compatibility. Optional tool labels are descriptive placeholders, not claims about specific released packages.

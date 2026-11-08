@@ -14,6 +14,7 @@ Sign in and account creation are a modal over the current page, so the user stay
 - Create an account: `POST /api/v1/register` with an invite code, username, password and its confirmation, then the same sign-in. If the account is created but signing in fails, the message says so.
 - The token is kept in Windows Credential Manager under `Ankh/AmmolitePreservation/apiToken` (generic credential, this Windows user, this computer). The password is never stored.
 - Every other request sends `Authorization: Bearer <token>`. A 401 on any of them ends the session: the stored token is removed and the sign-in modal opens with the reason.
+- The name at the top right of the window is the signed-in Ammolite username, or "Sign in" when signed out. Its menu offers Sign in or Sign out, Settings and Attributions.
 - Sign out (Settings, Account) revokes the token on the server and removes it from Credential Manager. If the server cannot be reached the stored token is removed anyway and the message says it could not be revoked.
 
 ## What the library shows
