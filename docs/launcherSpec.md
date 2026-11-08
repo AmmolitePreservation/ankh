@@ -95,7 +95,7 @@ The simple default exposes Library and Settings. Screens in this concept set del
 
 - 78 px row height with a hairline divider between rows, 56 px game icon, title and edition on separate lines, favorite star, and a small status icon when attention is needed. The selected row has an accent outline.
 - The pane starts with a **Library** heading and a count ("7 games" or "3 of 7 games" when filtered). The search field has a search glyph and a chevron that opens a filter and sort menu.
-- Search covers title, edition, tags, and configured realm aliases. Chips below the search: **All games**, **Favorites**, and **Name A-Z**, a sort toggle. The filter menu adds Installed only and the sorts Custom, Name A-Z and Installed first; Recently played joins it once play history exists.
+- Search covers title, edition, tags, and configured realm aliases. Chips below the search: **All games**, **Favorites**, and **Name A-Z**, a sort toggle that is on at start, so the list opens alphabetical; turning it off shows Custom order (the order the site lists the worlds). The filter menu adds Installed only and the sorts Custom, Name A-Z and Installed first; Recently played joins it once play history exists.
 - Virtualize long lists; there is no fixed game limit in the UI. Filter counts, empty results, keyboard movement, and a visible scrollbar are required.
 - A game release is selectable independently of other releases of the same game. WoW Classic, TBC, and WotLK are distinct entries.
 
