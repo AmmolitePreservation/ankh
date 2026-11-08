@@ -40,8 +40,13 @@ qt_add_executable(ankh WIN32
   src/installInfo.cpp
   src/updateSignature.cpp
   src/updateInstaller.cpp
+  src/credentialStore.cpp
+  src/ammoliteClient.cpp
   src/palette.cpp
   src/gameCatalog.cpp
+  src/accountView.cpp
+  src/signInDialog.cpp
+  src/darkTitleBar.cpp
   src/libraryPane.cpp
   src/gamePage.cpp
   src/settingsPane.cpp
@@ -54,7 +59,7 @@ qt_add_executable(ankh WIN32
 )
 
 target_include_directories(ankh PRIVATE src ${CMAKE_CURRENT_BINARY_DIR})
-target_link_libraries(ankh PRIVATE Qt6::Widgets Qt6::Svg Qt6::SvgWidgets Qt6::Network dwmapi bcrypt)
+target_link_libraries(ankh PRIVATE Qt6::Widgets Qt6::Svg Qt6::SvgWidgets Qt6::Network dwmapi bcrypt advapi32)
 target_compile_definitions(ankh PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN)
 
 file(GLOB glyphFiles CONFIGURE_DEPENDS assets/glyphs/*.svg)
@@ -85,3 +90,25 @@ target_include_directories(pointerCursorsTest PRIVATE src)
 target_link_libraries(pointerCursorsTest PRIVATE Qt6::Test Qt6::Widgets)
 add_test(NAME pointerCursors COMMAND pointerCursorsTest)
 set_tests_properties(pointerCursors PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+qt_add_executable(ammoliteClientTest tests/ammoliteClientTest.cpp src/ammoliteClient.cpp src/fatal.cpp)
+target_include_directories(ammoliteClientTest PRIVATE src)
+target_link_libraries(ammoliteClientTest PRIVATE Qt6::Test Qt6::Network Qt6::Widgets)
+target_compile_definitions(ammoliteClientTest PRIVATE "ANKH_FIXTURE_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures\"")
+add_test(NAME ammoliteClient COMMAND ammoliteClientTest)
+
+qt_add_executable(credentialStoreTest tests/credentialStoreTest.cpp src/credentialStore.cpp src/fatal.cpp)
+target_include_directories(credentialStoreTest PRIVATE src)
+target_link_libraries(credentialStoreTest PRIVATE Qt6::Test Qt6::Widgets advapi32)
+add_test(NAME credentialStore COMMAND credentialStoreTest)
+
+qt_add_executable(gameCatalogTest tests/gameCatalogTest.cpp src/gameCatalog.cpp src/ammoliteClient.cpp src/fatal.cpp)
+target_include_directories(gameCatalogTest PRIVATE src)
+target_link_libraries(gameCatalogTest PRIVATE Qt6::Test Qt6::Network Qt6::Widgets)
+add_test(NAME gameCatalog COMMAND gameCatalogTest)
+
+qt_add_executable(signInDialogTest tests/signInDialogTest.cpp src/signInDialog.cpp src/darkTitleBar.cpp)
+target_include_directories(signInDialogTest PRIVATE src)
+target_link_libraries(signInDialogTest PRIVATE Qt6::Test Qt6::Widgets dwmapi)
+add_test(NAME signInDialog COMMAND signInDialogTest)
+set_tests_properties(signInDialog PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")

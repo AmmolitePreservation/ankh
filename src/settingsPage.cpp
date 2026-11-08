@@ -1,5 +1,6 @@
 #include "settingsPage.h"
 
+#include "accountView.h"
 #include "appVersion.h"
 #include "attributionsView.h"
 #include "installInfo.h"
@@ -30,8 +31,8 @@ QLabel* headingLabel(const QString& text, QWidget* parent)
 
 }
 
-SettingsPage::SettingsPage(QWidget* parent)
-  : QWidget(parent), sections(new QStackedWidget(this)), updateStatus(new QLabel(this))
+SettingsPage::SettingsPage(const QString& serviceAddress, QWidget* parent)
+  : QWidget(parent), sections(new QStackedWidget(this)), account(new AccountView(serviceAddress, this)), updateStatus(new QLabel(this))
 {
   auto* about = new QWidget(this);
   auto* aboutLayout = new QVBoxLayout(about);
@@ -54,6 +55,7 @@ SettingsPage::SettingsPage(QWidget* parent)
   aboutLayout->addWidget(updateStatus);
   aboutLayout->addStretch(1);
 
+  sections->addWidget(account);
   sections->addWidget(about);
   sections->addWidget(new AttributionsView(this));
 
@@ -62,6 +64,11 @@ SettingsPage::SettingsPage(QWidget* parent)
   layout->addWidget(sections);
 
   connect(check, &QPushButton::clicked, this, &SettingsPage::updateCheckRequested);
+}
+
+AccountView* SettingsPage::accountView() const
+{
+  return account;
 }
 
 void SettingsPage::showSection(int index)

@@ -1,5 +1,7 @@
 #include "updateSheet.h"
 
+#include "darkTitleBar.h"
+
 #include "installInfo.h"
 #include "updateInstaller.h"
 
@@ -93,6 +95,12 @@ UpdateSheet::UpdateSheet(const UpdateOffer& offer, const QString& currentVersion
     updateButton->setEnabled(true);
     closeButton->setEnabled(true);
   });
+}
+
+void UpdateSheet::showEvent(QShowEvent* event)
+{
+  applyDarkTitleBar(this);
+  QDialog::showEvent(event);
 }
 
 void UpdateSheet::setOffer(const UpdateOffer& offer)

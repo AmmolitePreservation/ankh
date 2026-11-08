@@ -1,32 +1,29 @@
 #pragma once
 
+#include "ammoliteClient.h"
+
 #include <QColor>
-#include <QList>
 #include <QRect>
 #include <QString>
-#include <QStringList>
 #include <optional>
 
 class QPainter;
 
-struct Character {
-  QString name;
-  QString summary;
-};
-
 struct Game {
   QString id;
+  int serverID;
   QString title;
   QString edition;
+  QString worldName;
   QString initials;
   QColor tint;
-  QString build;
+  QString status;
+  std::optional<int> accountDomainID;
+  QString accountDomain;
   bool isInstalled;
-  QStringList realms;
-  QStringList accounts;
-  std::optional<Character> recentCharacter;
 };
 
-const QList<Game>& gameCatalog();
-const Game& gameWithId(const QString& id);
+QString initialsFor(const QString& title);
+Game gameFromWorld(const World& world);
+QString libraryDescription(const Game& game);
 void paintGameIcon(QPainter& painter, const QRect& area, const QString& initials, const QColor& tint);

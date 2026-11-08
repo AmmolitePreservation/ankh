@@ -18,6 +18,9 @@ public:
 
   void setOffer(const UpdateOffer& offer);
 
+protected:
+  void showEvent(QShowEvent* event) override;
+
 private:
   UpdateInstaller* installer;
   QLabel* heading;

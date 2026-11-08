@@ -1,5 +1,7 @@
 #pragma once
 
+#include "ammoliteClient.h"
+#include "credentialStore.h"
 #include "palette.h"
 #include "updateChecker.h"
 
@@ -16,6 +18,7 @@ class QStackedWidget;
 class QSvgWidget;
 class SettingsPage;
 class SettingsPane;
+class SignInDialog;
 class UpdateChecker;
 class UpdateSheet;
 class UserMenuButton;
@@ -57,12 +60,21 @@ private:
   void applyPalette();
   void showLibrary();
   void showSettings(int section);
+  void enterSignedInState(const SignedInUser& user);
+  void enterSignedOutState(const QString& note);
+  void showCollectionProblem(const QString& message);
+  void openSignIn(const QString& note, bool isCreatingAccount);
   void setSidebarWidth(int width);
   void placeWindowControls();
   void openUpdateSheet();
   long hitTest(const QPoint& position) const;
 
+  enum class LibraryAction { signIn, retry };
+
   QSettings settings;
+  AmmoliteClient* client;
+  CredentialStore tokenStore;
+  SignInDialog* signInDialog;
   WindowControls* windowControls;
   EdgeGrain* edgeGrain;
   QWidget* sidebar;
@@ -82,6 +94,8 @@ private:
   QTimer updateTimer;
   UpdateOffer pendingOffer;
   UpdateSheet* openSheet = nullptr;
+  LibraryAction libraryAction = LibraryAction::signIn;
+  bool hasSelectedGame = false;
   QSize desiredSize;
   bool isSizeApplied = false;
   bool isMaximizePressed = false;

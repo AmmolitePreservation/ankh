@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ammoliteClient.h"
 #include "gameCatalog.h"
 #include "palette.h"
 
@@ -10,6 +11,7 @@ class QLabel;
 class QPushButton;
 class QStackedWidget;
 class QTabBar;
+class QVBoxLayout;
 
 class GamePage : public QWidget {
   Q_OBJECT
@@ -18,11 +20,17 @@ public:
   explicit GamePage(QWidget* parent = nullptr);
 
   void showGame(const Game& game);
+  void setDownloads(int serverID, const QList<DownloadGroup>& groups);
+  void setDownloadsFailed(int serverID, const QString& message);
+  void setGameAccounts(const QList<AccountDomain>& domains);
+  void setGameAccountsFailed(const QString& message);
   void applyPalette(const Palette& newColors);
 
 private:
   void refreshIcons();
+  void refreshAccounts();
   void updateStatus();
+  void clearDownloads();
 
   Palette colors;
   Game game;
@@ -38,18 +46,17 @@ private:
   QPushButton* launchSettingsToggle;
   QLabel* launchSettingsNote;
   QWidget* installedSection;
-  QWidget* characterSection;
-  QLabel* installNote;
+  QWidget* downloadsBox;
+  QVBoxLayout* downloadsLayout;
   QLabel* upToDateIcon;
   QLabel* compatibilityIcon;
   QLabel* optionalToolsIcon;
-  QLabel* portraitLabel;
-  QLabel* characterName;
-  QLabel* characterSummary;
   QPushButton* checkForUpdates;
   QPushButton* clientToolsLink;
   QLabel* statusDot;
   QLabel* statusTitle;
   QLabel* statusDetail;
   QPushButton* primaryButton;
+  QList<AccountDomain> accountDomains;
+  QString accountsProblem;
 };

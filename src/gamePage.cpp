@@ -78,14 +78,11 @@ GamePage::GamePage(QWidget* parent)
     launchSettingsToggle(new QPushButton(QStringLiteral("More launch settings"), this)),
     launchSettingsNote(makeLabel(QStringLiteral("No additional launch settings for this release."), "secondary", this)),
     installedSection(new QWidget(this)),
-    characterSection(new QWidget(this)),
-    installNote(makeLabel(QStringLiteral("Install this game to choose a realm and an account."), "secondary", this)),
+    downloadsBox(new QWidget(this)),
+    downloadsLayout(new QVBoxLayout(downloadsBox)),
     upToDateIcon(makeFixedLabel(30, this)),
     compatibilityIcon(makeFixedLabel(30, this)),
     optionalToolsIcon(makeFixedLabel(30, this)),
-    portraitLabel(makeFixedLabel(64, this)),
-    characterName(makeLabel(QString(), "characterName", this)),
-    characterSummary(makeLabel(QString(), "bodySecondary", this)),
     checkForUpdates(new QPushButton(QStringLiteral("Check for updates"), this)),
     clientToolsLink(new QPushButton(QStringLiteral("Client tools"), this)),
     statusDot(makeFixedLabel(28, this)),
@@ -109,12 +106,13 @@ GamePage::GamePage(QWidget* parent)
   manageAccounts->setProperty("link", true);
   manageAccounts->setProperty("underlined", true);
   manageAccounts->setEnabled(false);
-  manageAccounts->setToolTip(QStringLiteral("Account management is not built yet."));
+  manageAccounts->setToolTip(QStringLiteral("Game accounts are managed on the Ammolite site for now."));
   launchSettingsToggle->setProperty("disclosure", true);
   launchSettingsToggle->setCheckable(true);
   launchSettingsToggle->setIconSize(QSize(18, 18));
   launchSettingsNote->setVisible(false);
-  installNote->setVisible(false);
+  downloadsLayout->setContentsMargins(0, 0, 0, 0);
+  downloadsLayout->setSpacing(8);
   checkForUpdates->setLayoutDirection(Qt::RightToLeft);
   checkForUpdates->setMinimumHeight(42);
   checkForUpdates->setEnabled(false);
@@ -172,7 +170,7 @@ GamePage::GamePage(QWidget* parent)
   toolsRow->setSpacing(12);
   toolsRow->addWidget(optionalToolsIcon);
   toolsRow->addWidget(makeLabel(QStringLiteral("Optional tools"), nullptr, installedSection));
-  toolsRow->addWidget(makeLabel(QStringLiteral("·   None enabled"), "bodySecondary", installedSection));
+  toolsRow->addWidget(makeLabel(QStringLiteral("%1   None enabled").arg(QChar(0x00B7)), "bodySecondary", installedSection));
   toolsRow->addStretch(1);
   toolsRow->addWidget(clientToolsLink);
 
@@ -185,35 +183,20 @@ GamePage::GamePage(QWidget* parent)
   installedLayout->addLayout(toolsRow);
   installedLayout->addWidget(makeDivider(installedSection));
 
-  auto* characterText = new QVBoxLayout;
-  characterText->setSpacing(2);
-  characterText->addStretch(1);
-  characterText->addWidget(characterName);
-  characterText->addWidget(characterSummary);
-  characterText->addStretch(1);
-  auto* characterRow = new QHBoxLayout;
-  characterRow->setSpacing(16);
-  characterRow->addWidget(portraitLabel);
-  characterRow->addLayout(characterText, 1);
-  auto* characterLayout = new QVBoxLayout(characterSection);
-  characterLayout->setContentsMargins(0, 0, 0, 0);
-  characterLayout->setSpacing(14);
-  characterLayout->addWidget(makeLabel(QStringLiteral("Recent character"), "sectionHeading", characterSection));
-  characterLayout->addLayout(characterRow);
-
   auto* playContent = new QWidget(this);
   auto* playLayout = new QVBoxLayout(playContent);
   playLayout->setContentsMargins(gutter, 14, gutter, 16);
   playLayout->setSpacing(20);
   playLayout->addWidget(makeLabel(QStringLiteral("Launch setup"), "sectionHeading", playContent));
   playLayout->addWidget(launchSetup);
-  playLayout->addWidget(installNote);
+  playLayout->addWidget(makeDivider(playContent));
+  playLayout->addWidget(makeLabel(QStringLiteral("Downloads"), "sectionHeading", playContent));
+  playLayout->addWidget(downloadsBox);
   playLayout->addWidget(makeDivider(playContent));
   playLayout->addWidget(launchSettingsToggle, 0, Qt::AlignLeft);
   playLayout->addWidget(launchSettingsNote);
   playLayout->addWidget(makeDivider(playContent));
   playLayout->addWidget(installedSection);
-  playLayout->addWidget(characterSection);
   playLayout->addStretch(1);
 
   auto* playScroll = new QScrollArea(this);
@@ -283,7 +266,6 @@ GamePage::GamePage(QWidget* parent)
     launchSettingsNote->setVisible(isShown);
     refreshIcons();
   });
-  connect(realmChoice, &QComboBox::currentIndexChanged, this, [this] { updateStatus(); });
   connect(accountChoice, &QComboBox::currentIndexChanged, this, [this] { updateStatus(); });
   connect(primaryButton, &QPushButton::clicked, this, [this] {
     if (game.isInstalled) {
@@ -305,27 +287,12 @@ void GamePage::refreshIcons()
   upToDateIcon->setPixmap(iconPixmap(IconKind::checkBadge, 30, QColor(), ratio));
   compatibilityIcon->setPixmap(iconPixmap(IconKind::checkBadge, 30, QColor(), ratio));
   optionalToolsIcon->setPixmap(iconPixmap(IconKind::settings, 28, colors.text, ratio));
-  statusDot->setPixmap(iconPixmap(IconKind::statusDot, 28, game.isInstalled ? colors.success : colors.secondary, ratio));
+  statusDot->setPixmap(iconPixmap(IconKind::statusDot, 28, game.status.startsWith(QStringLiteral("Online")) ? colors.success : colors.secondary, ratio));
   gameOptions->setIcon(makeIcon(IconKind::chevronDown, 18, colors.text));
   checkForUpdates->setIcon(makeIcon(IconKind::chevronDown, 18, colors.text));
   clientToolsLink->setIcon(makeIcon(IconKind::chevronRight, 18, colors.accent));
   launchSettingsToggle->setIcon(makeIcon(launchSettingsToggle->isChecked() ? IconKind::chevronDown : IconKind::chevronRight, 18, colors.text));
   primaryButton->setIcon(game.isInstalled ? makeIcon(IconKind::play, 22, QColor("#16120A")) : QIcon());
-
-  QPixmap portrait(QSize(64, 64) * ratio);
-  portrait.setDevicePixelRatio(ratio);
-  portrait.fill(Qt::transparent);
-  QPainter painter(&portrait);
-  painter.setRenderHint(QPainter::Antialiasing, true);
-  painter.setPen(Qt::NoPen);
-  painter.setBrush(colors.raised);
-  painter.drawEllipse(QRectF(3.5, 3.5, 57, 57));
-  painter.drawPixmap(QRect(16, 16, 32, 32), iconPixmap(IconKind::user, 32, colors.secondary, ratio));
-  painter.setPen(QPen(QColor("#8E9497"), 1.6));
-  painter.setBrush(Qt::NoBrush);
-  painter.drawEllipse(QRectF(0.8, 0.8, 62.4, 62.4));
-  painter.end();
-  portraitLabel->setPixmap(portrait);
 
   if (!game.id.isEmpty()) {
     QPixmap icon(QSize(70, 70) * ratio);
@@ -340,44 +307,116 @@ void GamePage::refreshIcons()
 
 void GamePage::updateStatus()
 {
+  statusTitle->setText(game.status.isEmpty() ? QStringLiteral("Status not reported") : game.status);
   if (game.isInstalled) {
-    statusTitle->setText(QStringLiteral("Ready to play"));
-    statusDetail->setText(QStringLiteral("%1 · %2").arg(realmChoice->currentText(), accountChoice->currentText()));
+    statusDetail->setText(QStringLiteral("%1 %2 %3").arg(realmChoice->currentText(), QString(QChar(0x00B7)), accountChoice->currentText()));
     primaryButton->setText(QStringLiteral("  Play"));
     primaryButton->setEnabled(true);
     primaryButton->setToolTip(QString());
   } else {
-    statusTitle->setText(QStringLiteral("Not installed"));
-    statusDetail->setText(QStringLiteral("Required compatibility installs with the game."));
+    statusDetail->setText(QStringLiteral("Installing and launching are not built yet."));
     primaryButton->setText(QStringLiteral("Install"));
     primaryButton->setEnabled(false);
     primaryButton->setToolTip(QStringLiteral("Installing games is not built yet."));
   }
 }
 
+void GamePage::refreshAccounts()
+{
+  accountChoice->clear();
+  if (!accountsProblem.isEmpty()) {
+    accountChoice->addItem(QStringLiteral("Could not load game accounts"));
+    accountChoice->setToolTip(accountsProblem);
+    accountChoice->setEnabled(false);
+    return;
+  }
+  accountChoice->setToolTip(QString());
+  if (!game.accountDomainID) {
+    accountChoice->addItem(QStringLiteral("This realm has no shared logins"));
+    accountChoice->setEnabled(false);
+    return;
+  }
+  for (const AccountDomain& domain : accountDomains) {
+    if (domain.accountDomainID != *game.accountDomainID) {
+      continue;
+    }
+    for (const GameLogin& login : domain.logins) {
+      accountChoice->addItem(login.gameUsername);
+    }
+  }
+  if (accountChoice->count() == 0) {
+    accountChoice->addItem(QStringLiteral("No game account yet"));
+  }
+  accountChoice->setEnabled(game.isInstalled && accountChoice->count() > 0);
+}
+
+void GamePage::clearDownloads()
+{
+  while (QLayoutItem* item = downloadsLayout->takeAt(0)) {
+    delete item->widget();
+    delete item;
+  }
+}
+
+void GamePage::setDownloads(int serverID, const QList<DownloadGroup>& groups)
+{
+  if (serverID != game.serverID) {
+    return;
+  }
+  clearDownloads();
+  if (groups.isEmpty()) {
+    downloadsLayout->addWidget(makeLabel(QStringLiteral("Nothing is attached to this realm yet."), "secondary", downloadsBox));
+    return;
+  }
+  for (const DownloadGroup& group : groups) {
+    downloadsLayout->addWidget(makeLabel(group.category, "fieldLabel", downloadsBox));
+    for (const Download& download : group.packages) {
+      auto* row = new QWidget(downloadsBox);
+      auto* rowLayout = new QHBoxLayout(row);
+      rowLayout->setContentsMargins(0, 0, 0, 0);
+      rowLayout->addWidget(makeLabel(download.label, nullptr, row), 1);
+      rowLayout->addWidget(makeLabel(QStringLiteral("%1 %2 %3").arg(download.version, QString(QChar(0x00B7)),
+        QLocale().formattedDataSize(download.byteSize, 1, QLocale::DataSizeTraditionalFormat)), "bodySecondary", row));
+      downloadsLayout->addWidget(row);
+    }
+  }
+}
+
+void GamePage::setDownloadsFailed(int serverID, const QString& message)
+{
+  if (serverID != game.serverID) {
+    return;
+  }
+  clearDownloads();
+  downloadsLayout->addWidget(makeLabel(QStringLiteral("Could not load the downloads: %1").arg(message), "secondary", downloadsBox));
+}
+
+void GamePage::setGameAccounts(const QList<AccountDomain>& domains)
+{
+  accountDomains = domains;
+  accountsProblem.clear();
+  refreshAccounts();
+  updateStatus();
+}
+
+void GamePage::setGameAccountsFailed(const QString& message)
+{
+  accountsProblem = message;
+  refreshAccounts();
+}
+
 void GamePage::showGame(const Game& newGame)
 {
   game = newGame;
   titleLabel->setText(game.title);
-  subtitleLabel->setText(game.build.isEmpty() ? game.edition : QStringLiteral("%1 · %2").arg(game.edition, game.build));
+  subtitleLabel->setText(libraryDescription(game));
   realmChoice->clear();
-  accountChoice->clear();
-  if (game.isInstalled) {
-    realmChoice->addItems(game.realms);
-    accountChoice->addItems(game.accounts);
-  } else {
-    realmChoice->addItem(QStringLiteral("Install the game first"));
-    accountChoice->addItem(QStringLiteral("Install the game first"));
-  }
-  realmChoice->setEnabled(game.isInstalled);
-  accountChoice->setEnabled(game.isInstalled);
-  installNote->setVisible(!game.isInstalled);
+  realmChoice->addItem(game.worldName);
+  realmChoice->setEnabled(false);
+  refreshAccounts();
   installedSection->setVisible(game.isInstalled);
-  characterSection->setVisible(game.isInstalled && game.recentCharacter.has_value());
-  if (game.recentCharacter) {
-    characterName->setText(game.recentCharacter->name);
-    characterSummary->setText(game.recentCharacter->summary);
-  }
+  clearDownloads();
+  downloadsLayout->addWidget(makeLabel(QStringLiteral("Loading downloads..."), "secondary", downloadsBox));
   tabs->setCurrentIndex(0);
   refreshIcons();
   updateStatus();

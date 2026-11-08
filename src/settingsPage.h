@@ -2,6 +2,7 @@
 
 #include <QWidget>
 
+class AccountView;
 class QLabel;
 class QStackedWidget;
 
@@ -9,8 +10,9 @@ class SettingsPage : public QWidget {
   Q_OBJECT
 
 public:
-  explicit SettingsPage(QWidget* parent = nullptr);
+  SettingsPage(const QString& serviceAddress, QWidget* parent = nullptr);
 
+  AccountView* accountView() const;
   void showSection(int index);
   void setUpdateStatus(const QString& text);
 
@@ -19,5 +21,6 @@ signals:
 
 private:
   QStackedWidget* sections;
+  AccountView* account;
   QLabel* updateStatus;
 };
