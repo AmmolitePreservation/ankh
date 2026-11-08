@@ -130,9 +130,10 @@ The default profile does not require users to understand tool bundles. More laun
 
 | State | Primary action | Supporting behavior |
 | --- | --- | --- |
-| Not installed | Install | Destination and total disk requirement appear in a compact sheet. Required packages are included. |
-| Downloading | Pause | Bytes, speed, progress, and cancel in Activity; resume after interruption. |
-| Verifying / applying | Progress state | Show the current step. Cancellation waits for a safe checkpoint or rolls back. |
+| Not installed | Install | Destination, packages and disk requirement appear in a compact sheet. Required packages are included. Built: see `docs/install.md`. |
+| Downloading | Cancel | The step and a progress bar sit on the status line; finished and partial downloads are kept and resumed. |
+| Verifying / applying | Progress state | Show the current step. Cancellation during extraction removes the extraction folders; moving into place cannot be cancelled. |
+| Not installable | Install, disabled | The edition has no client, or the client or a required tool has no published version; the reason is on the status line. |
 | Required update | Update | Explain which release or required component changed. |
 | Optional update only | Play | Small update notice in Client tools; do not block launch. |
 | Required component broken | Repair | Explain the failing component and planned repair. |
@@ -549,6 +550,8 @@ Use specific recoverable states: Build mismatch, Required component missing, Too
 **About:** original game metadata, preserved edition/build, local notes, source references, and adapter/manifest versions. Keep operational setup elsewhere.
 
 **Attributions:** a Help page inside the application, opened from **Settings → About Ankh → Attributions** and from the Help item of the profile menu. It lists every third-party component in the running build: name, version, what Ankh uses it for, license name, copyright line, a source link, and the full license text in an expandable row. Qt's entry states that it is used under the LGPL, linked dynamically, and that its libraries sit beside the executable and can be replaced. The installer's tool is listed too. The page reads a manifest generated at build time from the same dependency list the build uses, bundled with the application, so it is correct offline and cannot drift from what ships. It is plain text in the application's own components, searchable, with no web view. Attribution is given even where a license does not require it.
+
+**Games:** the game library folder and Change library folder, with the install records that could not be read, under Settings.
 
 **About Ankh:** version, install scope and folder, Check for updates, and the Attributions page, under Settings.
 

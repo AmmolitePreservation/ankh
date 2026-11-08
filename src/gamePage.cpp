@@ -10,6 +10,7 @@
 #include <QMenu>
 #include <QPainter>
 #include <QPixmap>
+#include <QProgressBar>
 #include <QPushButton>
 #include <QScrollArea>
 #include <QStackedWidget>
@@ -88,8 +89,14 @@ GamePage::GamePage(QWidget* parent)
     statusDot(makeFixedLabel(28, this)),
     statusTitle(makeLabel(QString(), "statusTitle", this)),
     statusDetail(makeLabel(QString(), "secondary", this)),
+    progress(new QProgressBar(this)),
     primaryButton(new QPushButton(this))
 {
+  progress->setTextVisible(false);
+  progress->setRange(0, 0);
+  progress->setVisible(false);
+  progress->setAccessibleName(QStringLiteral("Install progress"));
+  statusDetail->setWordWrap(true);
   gameOptions->setLayoutDirection(Qt::RightToLeft);
   gameOptions->setMinimumSize(189, 42);
   auto* optionsMenu = new QMenu(gameOptions);
@@ -234,6 +241,7 @@ GamePage::GamePage(QWidget* parent)
   statusText->addStretch(1);
   statusText->addWidget(statusTitle);
   statusText->addWidget(statusDetail);
+  statusText->addWidget(progress);
   statusText->addStretch(1);
   auto* bottomRow = new QHBoxLayout;
   bottomRow->setSpacing(14);
@@ -268,8 +276,19 @@ GamePage::GamePage(QWidget* parent)
   });
   connect(accountChoice, &QComboBox::currentIndexChanged, this, [this] { updateStatus(); });
   connect(primaryButton, &QPushButton::clicked, this, [this] {
-    if (game.isInstalled) {
+    switch (installState) {
+    case InstallState::installed:
       statusDetail->setText(QStringLiteral("Launching is not built yet."));
+      break;
+    case InstallState::installing:
+      emit cancelRequested();
+      break;
+    case InstallState::notInstalled:
+      emit installRequested(game);
+      break;
+    case InstallState::unavailable:
+    case InstallState::busyElsewhere:
+      break;
     }
   });
   refreshIcons();
@@ -292,7 +311,7 @@ void GamePage::refreshIcons()
   checkForUpdates->setIcon(makeIcon(IconKind::chevronDown, 18, colors.text));
   clientToolsLink->setIcon(makeIcon(IconKind::chevronRight, 18, colors.accent));
   launchSettingsToggle->setIcon(makeIcon(launchSettingsToggle->isChecked() ? IconKind::chevronDown : IconKind::chevronRight, 18, colors.text));
-  primaryButton->setIcon(game.isInstalled ? makeIcon(IconKind::play, 22, QColor("#16120A")) : QIcon());
+  primaryButton->setIcon(installState == InstallState::installed ? makeIcon(IconKind::play, 22, QColor("#16120A")) : QIcon());
 
   if (!game.id.isEmpty()) {
     QPixmap icon(QSize(70, 70) * ratio);
@@ -308,17 +327,53 @@ void GamePage::refreshIcons()
 void GamePage::updateStatus()
 {
   statusTitle->setText(game.status.isEmpty() ? QStringLiteral("Status not reported") : game.status);
-  if (game.isInstalled) {
+  installedSection->setVisible(installState == InstallState::installed);
+  progress->setVisible(installState == InstallState::installing);
+  primaryButton->setEnabled(true);
+  primaryButton->setToolTip(QString());
+  switch (installState) {
+  case InstallState::installed:
     statusDetail->setText(QStringLiteral("%1 %2 %3").arg(realmChoice->currentText(), QString(QChar(0x00B7)), accountChoice->currentText()));
     primaryButton->setText(QStringLiteral("  Play"));
-    primaryButton->setEnabled(true);
-    primaryButton->setToolTip(QString());
-  } else {
-    statusDetail->setText(QStringLiteral("Installing and launching are not built yet."));
+    break;
+  case InstallState::installing:
+    statusDetail->setText(installDetail);
+    primaryButton->setText(QStringLiteral("Cancel"));
+    break;
+  case InstallState::notInstalled:
+    statusDetail->setText(installDetail.isEmpty() ? QStringLiteral("Not installed.") : installDetail);
+    primaryButton->setText(QStringLiteral("Install"));
+    break;
+  case InstallState::unavailable:
+    statusDetail->setText(installDetail);
     primaryButton->setText(QStringLiteral("Install"));
     primaryButton->setEnabled(false);
-    primaryButton->setToolTip(QStringLiteral("Installing games is not built yet."));
+    primaryButton->setToolTip(installDetail);
+    break;
+  case InstallState::busyElsewhere:
+    statusDetail->setText(installDetail);
+    primaryButton->setText(QStringLiteral("Install"));
+    primaryButton->setEnabled(false);
+    break;
   }
+  accountChoice->setEnabled(installState == InstallState::installed && accountsProblem.isEmpty() && game.accountDomainID.has_value()
+    && accountChoice->count() > 0 && accountChoice->itemText(0) != QStringLiteral("No game account yet"));
+  refreshIcons();
+}
+
+void GamePage::setInstallState(InstallState state, const QString& detail)
+{
+  installState = state;
+  installDetail = detail;
+  updateStatus();
+}
+
+void GamePage::showInstallProgress(const QString& text, qint64 done, qint64 total)
+{
+  installDetail = text;
+  statusDetail->setText(total > 0 ? QStringLiteral("%1 %2%").arg(text).arg(done * 100 / total) : text);
+  progress->setRange(0, total > 0 ? 10000 : 0);
+  progress->setValue(total > 0 ? static_cast<int>(done * 10000 / total) : 0);
 }
 
 void GamePage::refreshAccounts()
@@ -346,8 +401,8 @@ void GamePage::refreshAccounts()
   }
   if (accountChoice->count() == 0) {
     accountChoice->addItem(QStringLiteral("No game account yet"));
+    accountChoice->setEnabled(false);
   }
-  accountChoice->setEnabled(game.isInstalled && accountChoice->count() > 0);
 }
 
 void GamePage::clearDownloads()
@@ -397,7 +452,6 @@ void GamePage::setPackages(const QList<Package>& newPackages)
 void GamePage::refreshGame(const Game& newGame)
 {
   game = newGame;
-  refreshIcons();
   updateStatus();
 }
 
@@ -424,9 +478,7 @@ void GamePage::showGame(const Game& newGame)
   realmChoice->addItem(game.worldName);
   realmChoice->setEnabled(false);
   refreshAccounts();
-  installedSection->setVisible(game.isInstalled);
   showDownloads();
   tabs->setCurrentIndex(0);
-  refreshIcons();
   updateStatus();
 }

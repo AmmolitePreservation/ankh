@@ -27,4 +27,6 @@ One request, `GET /api/v1/manifest`, carries everything that changes on the serv
 
 `GET /api/v1/me/gameAccounts` supplies the logins the user has in the world's account domain, offered in the Account list.
 
-A reply that is missing a field or has the wrong type is refused by name; nothing is guessed. Installing, launching and managing game accounts are not built yet.
+`GET /api/v1/packages/<name>/versions/<version>/files` lists the files inside a package version (path, size, CRC-32); an install records them in its receipt (see `install.md`). Downloads follow the manifest's `url` for each version with the same bearer token.
+
+A reply that is missing a field or has the wrong type is refused by name; nothing is guessed. Launching and managing game accounts are not built yet.

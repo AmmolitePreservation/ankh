@@ -8,6 +8,7 @@
 #include "gameCatalog.h"
 #include "gamePage.h"
 #include "icons.h"
+#include "installSheet.h"
 #include "libraryPane.h"
 #include "settingsPage.h"
 #include "settingsPane.h"
@@ -20,6 +21,8 @@
 #include <QAbstractScrollArea>
 #include <QFrame>
 #include <QApplication>
+#include <QDir>
+#include <QFileDialog>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
@@ -51,6 +54,11 @@ constexpr const char* defaultServiceAddress = "https://ammolite.unseencolor.com:
 QUrl serviceUrl(const QSettings& settings)
 {
   return validatedServiceUrl(settings.value(QStringLiteral("ammolite/url"), QString::fromLatin1(defaultServiceAddress)).toString());
+}
+
+QString libraryRootFrom(const QSettings& settings)
+{
+  return settings.value(QStringLiteral("library/root"), defaultLibraryRoot()).toString();
 }
 
 }
@@ -97,7 +105,7 @@ MainWindow::MainWindow()
     libraryPane(new LibraryPane(settings, this)),
     settingsPane(new SettingsPane(this)),
     gamePage(new GamePage(this)),
-    settingsPage(new SettingsPage(serviceUrl(settings).toString(), this)),
+    settingsPage(new SettingsPage(serviceUrl(settings).toString(), libraryRootFrom(settings), this)),
     libraryNavigation(new QPushButton(QStringLiteral("Library"), this)),
     settingsButton(new QPushButton(QStringLiteral("Settings"), this)),
     activityButton(new QPushButton(QStringLiteral("Activity"), this)),
@@ -206,7 +214,7 @@ MainWindow::MainWindow()
   connect(signInAction, &QAction::triggered, this, [this] { openSignIn(QString(), false); });
   connect(signOutAction, &QAction::triggered, client, &AmmoliteClient::signOut);
   connect(userMenu->addAction(QStringLiteral("Settings")), &QAction::triggered, this, [this] { showSettings(0); });
-  connect(userMenu->addAction(QStringLiteral("Attributions")), &QAction::triggered, this, [this] { showSettings(2); });
+  connect(userMenu->addAction(QStringLiteral("Attributions")), &QAction::triggered, this, [this] { showSettings(3); });
   connect(userMenuButton, &QPushButton::clicked, this, [this, userMenu] {
     userMenu->exec(userMenuButton->mapToGlobal(QPoint(userMenuButton->width() - userMenu->sizeHint().width(), userMenuButton->height())));
   });
@@ -228,14 +236,23 @@ MainWindow::MainWindow()
   connect(settingsButton, &QPushButton::clicked, this, [this] { showSettings(0); });
   connect(settingsPane, &SettingsPane::sectionSelected, settingsPage, &SettingsPage::showSection);
   connect(settingsPage, &SettingsPage::updateCheckRequested, this, &MainWindow::checkManifest);
+  connect(settingsPage, &SettingsPage::libraryRootChangeRequested, this, &MainWindow::chooseLibraryRoot);
+  connect(gamePage, &GamePage::installRequested, this, &MainWindow::startInstall);
+  connect(gamePage, &GamePage::cancelRequested, this, [this] {
+    if (installJob != nullptr) {
+      installJob->cancel();
+    }
+  });
   connect(libraryPane, &LibraryPane::gameSelected, this, [this](const Game& game) {
     hasSelectedGame = true;
-    if (game.id == shownGameId) {
+    if (game.id == shownGame.id) {
+      shownGame = game;
       gamePage->refreshGame(game);
     } else {
-      shownGameId = game.id;
+      shownGame = game;
       gamePage->showGame(game);
     }
+    refreshInstallState();
     settings.setValue(QStringLiteral("library/selected"), game.id);
     if (leftStack->currentWidget() == libraryPane) {
       showLibrary();
@@ -302,6 +319,7 @@ MainWindow::MainWindow()
   updateTimer.setInterval(15 * 60 * 1000);
   connect(&updateTimer, &QTimer::timeout, this, &MainWindow::checkManifest);
   updateTimer.start();
+  rescanLibrary();
 
   const std::optional<QString> token = tokenStore.load();
   if (token) {
@@ -349,7 +367,9 @@ void MainWindow::enterSignedOutState(const QString& note)
   signOutAction->setVisible(false);
   hasSelectedGame = false;
   hasCollection = false;
-  shownGameId.clear();
+  shownGame = Game{};
+  worlds.clear();
+  packages.clear();
   manifestEtag.clear();
   gamePage->setPackages({});
   libraryAction = LibraryAction::signIn;
@@ -394,11 +414,20 @@ void MainWindow::applyManifest(const Manifest& manifest, const QByteArray& etag)
   }
 }
 
-void MainWindow::showCollection(const QList<World>& worlds, const QList<Package>& packages)
+void MainWindow::showCollection(const QList<World>& newWorlds, const QList<Package>& newPackages)
+{
+  worlds = newWorlds;
+  packages = newPackages;
+  rebuildGames();
+}
+
+void MainWindow::rebuildGames()
 {
   QList<Game> games;
   for (const World& world : worlds) {
-    games.append(gameFromWorld(world));
+    Game game = gameFromWorld(world);
+    game.isInstalled = isGameInstalled(game);
+    games.append(game);
   }
   gamePage->setPackages(packages);
   libraryPane->showGames(games);
@@ -406,6 +435,141 @@ void MainWindow::showCollection(const QList<World>& worlds, const QList<Package>
     libraryPane->selectGame(settings.value(QStringLiteral("library/selected")).toString());
   }
   hasCollection = true;
+  refreshInstallState();
+}
+
+bool MainWindow::isGameInstalled(const Game& game) const
+{
+  for (const Package& package : packagesFor(game, packages)) {
+    if (package.role == QLatin1String("client")) {
+      return receiptForClient(libraryScan.receipts, package.name) != nullptr;
+    }
+  }
+  return false;
+}
+
+QString MainWindow::libraryRoot() const
+{
+  return libraryRootFrom(settings);
+}
+
+void MainWindow::rescanLibrary()
+{
+  libraryScan = scanLibrary(libraryRoot());
+  settingsPage->setLibraryProblems(libraryScan.problems);
+  if (hasCollection) {
+    rebuildGames();
+  }
+}
+
+void MainWindow::refreshInstallState()
+{
+  if (shownGame.id.isEmpty()) {
+    return;
+  }
+  if (installJob != nullptr) {
+    if (shownGame.id == installingGameId) {
+      gamePage->setInstallState(InstallState::installing, installStepText);
+      gamePage->showInstallProgress(installStepText, installDone, installTotal);
+    } else {
+      gamePage->setInstallState(InstallState::busyElsewhere, QStringLiteral("Installing %1 first. One install runs at a time.").arg(installingLabel));
+    }
+    return;
+  }
+  if (shownGame.isInstalled) {
+    gamePage->setInstallState(InstallState::installed, QString());
+    return;
+  }
+  QString problem;
+  if (!planInstall(shownGame, packages, libraryRoot(), problem)) {
+    gamePage->setInstallState(InstallState::unavailable, problem);
+    return;
+  }
+  gamePage->setInstallState(InstallState::notInstalled, installNotes.value(shownGame.id));
+}
+
+void MainWindow::startInstall(const Game& game)
+{
+  if (installJob != nullptr) {
+    return;
+  }
+  QString problem;
+  std::optional<InstallPlan> plan = planInstall(game, packages, libraryRoot(), problem);
+  if (!plan) {
+    gamePage->setInstallState(InstallState::unavailable, problem);
+    return;
+  }
+  InstallSheet sheet(game, *plan, libraryRoot(), this);
+  connect(&sheet, &InstallSheet::libraryRootChosen, this, [this, &sheet, &plan, &game](const QString& root) {
+    settings.setValue(QStringLiteral("library/root"), root);
+    settingsPage->setLibraryRoot(root);
+    QString replanProblem;
+    plan = planInstall(game, packages, root, replanProblem);
+    if (!plan) {
+      fatal(QStringLiteral("The install plan changed with the library folder: %1").arg(replanProblem));
+    }
+    sheet.showPlan(*plan, root);
+    rescanLibrary();
+  });
+  if (sheet.exec() != QDialog::Accepted) {
+    return;
+  }
+  installNotes.remove(game.id);
+  installingGameId = game.id;
+  installingLabel = QStringLiteral("%1 %2").arg(game.title, game.edition);
+  installStepText = QStringLiteral("Starting...");
+  installDone = 0;
+  installTotal = 0;
+  installJob = new InstallJob(*plan, libraryRoot(), client->baseUrl(), client->token(), QString::fromLatin1(appVersion), this);
+  connect(installJob, &InstallJob::statusChanged, this, [this](const QString& text) {
+    installStepText = text;
+    installDone = 0;
+    installTotal = 0;
+    if (shownGame.id == installingGameId) {
+      gamePage->showInstallProgress(text, 0, 0);
+    }
+  });
+  connect(installJob, &InstallJob::progressChanged, this, [this](qint64 done, qint64 total) {
+    installDone = done;
+    installTotal = total;
+    if (shownGame.id == installingGameId) {
+      gamePage->showInstallProgress(installStepText, done, total);
+    }
+  });
+  connect(installJob, &InstallJob::finished, this, [this](const Receipt&) { finishInstall(QString()); });
+  connect(installJob, &InstallJob::failed, this, &MainWindow::finishInstall);
+  connect(installJob, &InstallJob::cancelled, this, [this] {
+    finishInstall(QStringLiteral("The install was cancelled. Finished downloads are kept for next time."));
+  });
+  installJob->start();
+  refreshInstallState();
+}
+
+void MainWindow::finishInstall(const QString& note)
+{
+  installJob->deleteLater();
+  installJob = nullptr;
+  if (note.isEmpty()) {
+    installNotes.remove(installingGameId);
+  } else {
+    installNotes.insert(installingGameId, note);
+  }
+  installingGameId.clear();
+  installingLabel.clear();
+  rescanLibrary();
+  refreshInstallState();
+}
+
+void MainWindow::chooseLibraryRoot()
+{
+  const QString chosen = QFileDialog::getExistingDirectory(this, QStringLiteral("Game library folder"), libraryRoot());
+  if (chosen.isEmpty()) {
+    return;
+  }
+  settings.setValue(QStringLiteral("library/root"), QDir::toNativeSeparators(chosen));
+  settingsPage->setLibraryRoot(libraryRoot());
+  rescanLibrary();
+  refreshInstallState();
 }
 
 void MainWindow::showCollectionProblem(const QString& message)
@@ -471,6 +635,9 @@ void MainWindow::placeWindowControls()
 void MainWindow::openUpdateSheet()
 {
   UpdateSheet sheet(pendingOffer, QString::fromLatin1(appVersion), this);
+  if (installJob != nullptr) {
+    sheet.holdFor(QStringLiteral("The install of %1").arg(installingLabel));
+  }
   openSheet = &sheet;
   sheet.exec();
   openSheet = nullptr;
