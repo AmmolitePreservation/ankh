@@ -30,6 +30,9 @@ public:
 signals:
   void gameSelected(const QString& id);
 
+protected:
+  bool eventFilter(QObject* watched, QEvent* event) override;
+
 private:
   void applyFilters();
   void setSortMode(SortMode mode);

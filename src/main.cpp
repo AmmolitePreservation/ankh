@@ -1,5 +1,6 @@
 #include "appVersion.h"
 #include "mainWindow.h"
+#include "pointerCursors.h"
 #include "updateInstaller.h"
 
 #include <QApplication>
@@ -11,6 +12,8 @@ int main(int argc, char* argv[])
   application.setOrganizationName(QStringLiteral("AmmolitePreservation"));
   application.setApplicationVersion(QString::fromLatin1(appVersion));
 
+  PointerCursors pointerCursors;
+  application.installEventFilter(&pointerCursors);
   removeUpdateLeftovers();
   MainWindow window;
   window.show();

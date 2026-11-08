@@ -36,6 +36,7 @@ qt_add_executable(ankh WIN32
   src/windowControls.cpp
   src/icons.cpp
   src/edgeGrain.cpp
+  src/pointerCursors.cpp
   src/installInfo.cpp
   src/updateSignature.cpp
   src/updateInstaller.cpp
@@ -78,3 +79,9 @@ target_include_directories(updateSignatureTest PRIVATE src)
 target_link_libraries(updateSignatureTest PRIVATE Qt6::Test Qt6::Widgets bcrypt)
 target_compile_definitions(updateSignatureTest PRIVATE "ANKH_FIXTURE_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures\"")
 add_test(NAME updateSignature COMMAND updateSignatureTest)
+
+qt_add_executable(pointerCursorsTest tests/pointerCursorsTest.cpp src/pointerCursors.cpp)
+target_include_directories(pointerCursorsTest PRIVATE src)
+target_link_libraries(pointerCursorsTest PRIVATE Qt6::Test Qt6::Widgets)
+add_test(NAME pointerCursors COMMAND pointerCursorsTest)
+set_tests_properties(pointerCursors PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
