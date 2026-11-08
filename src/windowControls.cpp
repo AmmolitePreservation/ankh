@@ -1,6 +1,7 @@
 #include "windowControls.h"
 
 #include "captionButton.h"
+#include "icons.h"
 
 #include <QHBoxLayout>
 #include <QPainter>
@@ -14,30 +15,20 @@ UpdateButton::UpdateButton(QWidget* parent)
 
 QSize UpdateButton::sizeHint() const
 {
-  return QSize(40, 24);
+  return QSize(32, 32);
 }
 
 void UpdateButton::paintEvent(QPaintEvent*)
 {
   QPainter painter(this);
-  painter.setRenderHint(QPainter::Antialiasing, true);
-  QColor fill("#2F9E5B");
+  QColor color("#2F9E5B");
   if (isDown()) {
-    fill = fill.darker(120);
+    color = color.darker(125);
   } else if (underMouse() || hasFocus()) {
-    fill = fill.lighter(115);
+    color = color.lighter(130);
   }
-  painter.setPen(Qt::NoPen);
-  painter.setBrush(fill);
-  painter.drawRoundedRect(rect(), 4, 4);
-  painter.setPen(QPen(QColor("#FFFFFF"), 1.8, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-  const qreal centerX = width() / 2.0;
-  painter.drawLine(QPointF(centerX, 6), QPointF(centerX, 14.5));
-  painter.drawLine(QPointF(centerX - 4, 10.5), QPointF(centerX, 14.5));
-  painter.drawLine(QPointF(centerX + 4, 10.5), QPointF(centerX, 14.5));
-  painter.drawLine(QPointF(centerX - 5.5, 18), QPointF(centerX + 5.5, 18));
+  painter.drawPixmap(QRect(5, 5, 22, 22), iconPixmap(IconKind::download, 22, color, devicePixelRatioF()));
 }
-
 WindowControls::WindowControls(QWidget* parent)
   : QWidget(parent),
     update(new UpdateButton(this)),
@@ -59,7 +50,7 @@ WindowControls::WindowControls(QWidget* parent)
   layout->setSpacing(0);
   layout->setSizeConstraint(QLayout::SetFixedSize);
   layout->addWidget(update, 0, Qt::AlignVCenter);
-  layout->addSpacing(8);
+  layout->addSpacing(4);
   layout->addWidget(minimize);
   layout->addWidget(maximize);
   layout->addWidget(close);

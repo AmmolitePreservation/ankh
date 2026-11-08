@@ -20,6 +20,7 @@ enum class IconKind {
   windowMaximize,
   windowRestore,
   windowClose,
+  download,
 };
 
 QPixmap iconPixmap(IconKind kind, int size, const QColor& color, qreal ratio);
