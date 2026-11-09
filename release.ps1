@@ -52,7 +52,7 @@ if ($previous) {
 } else {
   $range = $target
 }
-$lines = @(git -C $repositoryRoot log --pretty=format:'- %s' $range)
+$lines = @(git -C $repositoryRoot log --no-merges --pretty=format:'- %s' $range)
 if ($lines.Count -eq 0) {
   $lines = @('- No code changes since the previous release.')
 }
