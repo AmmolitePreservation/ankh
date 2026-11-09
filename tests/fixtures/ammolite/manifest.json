@@ -27,4 +27,4 @@
    "editions":[{"game":"World of Warcraft","variant":"classic","edition":"Classic (1.12.1)"},
                {"game":"World of Warcraft","variant":"tbc","edition":"The Burning Crusade (2.4.3)"}],
    "latest":null}],
- "attachedGames":[{"game":"Dungeons & Dragons Online","variant":"live","edition":"Live","color":"#c0392b","executable":"x64/dndclient64.exe"}]}
+ "attachedGames":[{"game":"Dungeons & Dragons Online","variant":"live","edition":"Live","color":"#c0392b","executable":"x64/dndclient64.exe","launcher":"turbineGLS","launcherConfig":"ddo.launcherconfig"}]}

@@ -35,6 +35,14 @@ public:
   QStringList chosenOptionalTools() const;
   void showScreenshot(const QString& packageName, const QByteArray& image);
   void showScreenshotProblem(const QString& packageName, const QString& message);
+  // An attached game's worlds (from its own launcher service) and the logins kept on this computer, with the ones
+  // to preselect; a problem replaces the world list.
+  void setAttachedWorlds(const QStringList& worlds, const QString& selected, const QString& problem);
+  void setLocalLogins(const QStringList& usernames, const QString& selected);
+  // While a launch runs the Play button is held and the status line shows the step; an empty text ends it.
+  void showLaunchStatus(const QString& text);
+  QString selectedRealm() const;
+  QString selectedAccount() const;
   void applyPalette(const Palette& newColors);
 
 signals:
@@ -45,6 +53,10 @@ signals:
   void toolsApplyRequested(const Game& game, const QStringList& optionalToolNames);
   void toolChoiceChanged();
   void screenshotWanted(const Package& package);
+  void launchRequested(const Game& game, const QString& world, const QString& username);
+  void manageLoginsRequested(const Game& game);
+  void realmChosen(const Game& game, const QString& world);
+  void accountChosen(const Game& game, const QString& username);
 
 private:
   void refreshIcons();
@@ -91,4 +103,6 @@ private:
   QString accountsProblem;
   InstallState installState = InstallState::notInstalled;
   QString installDetail;
+  QString launchStatus;
+  bool isFillingChoices = false;
 };

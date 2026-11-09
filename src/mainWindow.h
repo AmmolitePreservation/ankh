@@ -84,6 +84,8 @@ private:
   void startInstall(const Game& game);
   void startUpdate(const Game& game);
   void startAttach(const Game& game);
+  void refreshAttachedChoices();
+  void startLaunch(const Game& game, const QString& world, const QString& username);
   void startToolChange(const Game& game, const QStringList& optionalToolNames);
   void refreshToolState();
   void runPlan(const Game& game, const InstallPlan& plan);
@@ -128,6 +130,11 @@ private:
   LibraryScan libraryScan;
   Game shownGame{};
   InstallJob* installJob = nullptr;
+  class TurbineLauncher* launcher = nullptr;
+  QMap<QString, QStringList> attachedWorlds;
+  QMap<QString, QString> attachedWorldProblems;
+  QString launchingGameId;
+  QString listingWorldsGameId;
   QString installingGameId;
   QString installingLabel;
   QString installStepText;

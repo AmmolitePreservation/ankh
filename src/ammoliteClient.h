@@ -93,6 +93,8 @@ struct AttachedGame {
   QString edition;
   QColor color;
   QString executable;
+  QString launcher;
+  QString launcherConfig;
 };
 
 struct Manifest {

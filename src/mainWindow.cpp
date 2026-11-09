@@ -6,6 +6,8 @@
 #include "edgeGrain.h"
 #include "fatal.h"
 #include "gameCatalog.h"
+#include "gameLoginDialog.h"
+#include "gameLoginStore.h"
 #include "gamePage.h"
 #include "icons.h"
 #include "installSheet.h"
@@ -14,6 +16,7 @@
 #include "settingsPane.h"
 #include "signInDialog.h"
 #include "updateOffer.h"
+#include "turbineLauncher.h"
 #include "updateSheet.h"
 #include "userMenuButton.h"
 #include "windowControls.h"
@@ -30,6 +33,8 @@
 #include <QMenu>
 #include <QMouseEvent>
 #include <QPainter>
+#include <QNetworkAccessManager>
+#include <QProcess>
 #include <QPushButton>
 #include <QStandardPaths>
 #include <QStackedWidget>
@@ -247,6 +252,68 @@ MainWindow::MainWindow()
   connect(gamePage, &GamePage::installRequested, this, &MainWindow::startInstall);
   connect(gamePage, &GamePage::updateRequested, this, &MainWindow::startUpdate);
   connect(gamePage, &GamePage::toolsApplyRequested, this, &MainWindow::startToolChange);
+  connect(gamePage, &GamePage::launchRequested, this, &MainWindow::startLaunch);
+  connect(gamePage, &GamePage::manageLoginsRequested, this, [this](const Game& game) {
+    GameLoginDialog dialog(game, this);
+    dialog.exec();
+    refreshAttachedChoices();
+  });
+  connect(gamePage, &GamePage::realmChosen, this, [this](const Game& game, const QString& world) {
+    settings.setValue(QStringLiteral("attached/%1/world").arg(game.id), world);
+  });
+  connect(gamePage, &GamePage::accountChosen, this, [this](const Game& game, const QString& username) {
+    settings.setValue(QStringLiteral("attached/%1/account").arg(game.id), username);
+  });
+  launcher = new TurbineLauncher(new QNetworkAccessManager(this), this);
+  connect(launcher, &TurbineLauncher::worldsListed, this, [this](const QList<TurbineWorld>& worlds) {
+    QStringList names;
+    for (const TurbineWorld& world : worlds) {
+      names.append(world.name);
+    }
+    attachedWorlds.insert(listingWorldsGameId, names);
+    listingWorldsGameId.clear();
+    refreshAttachedChoices();
+  });
+  connect(launcher, &TurbineLauncher::statusChanged, gamePage, [this](const QString& text) {
+    if (shownGame.id == launchingGameId) {
+      gamePage->showLaunchStatus(text);
+    }
+  });
+  connect(launcher, &TurbineLauncher::failed, this, [this](const QString& message) {
+    if (!listingWorldsGameId.isEmpty()) {
+      attachedWorldProblems.insert(listingWorldsGameId, QStringLiteral("Could not list the worlds: %1").arg(message));
+      listingWorldsGameId.clear();
+      refreshAttachedChoices();
+      return;
+    }
+    const QString gameId = launchingGameId;
+    launchingGameId.clear();
+    installNotes.insert(gameId, QStringLiteral("Could not start the game: %1").arg(message));
+    if (shownGame.id == gameId) {
+      gamePage->showLaunchStatus(QString());
+      refreshInstallState();
+    }
+  });
+  connect(launcher, &TurbineLauncher::launchReady, this, [this](const QString& executable, const QStringList& arguments) {
+    const QString gameId = launchingGameId;
+    launchingGameId.clear();
+    const Receipt* receipt = receiptFor(shownGame);
+    if (shownGame.id != gameId || receipt == nullptr) {
+      return;
+    }
+    const QString program = QDir(receipt->folder).filePath(shownGame.executable);
+    QString note;
+    if (QFileInfo(program).fileName().compare(executable, Qt::CaseInsensitive) != 0) {
+      note = QStringLiteral("The game's launcher names the client %1, but the edition's executable is %2.").arg(executable, QFileInfo(program).fileName());
+    } else if (!QProcess::startDetached(program, arguments, receipt->folder)) {
+      note = QStringLiteral("Could not start %1.").arg(QDir::toNativeSeparators(program));
+    } else {
+      note = QStringLiteral("Started %1 as %2 on %3.").arg(shownGame.title, gamePage->selectedAccount(), gamePage->selectedRealm());
+    }
+    installNotes.insert(gameId, note);
+    gamePage->showLaunchStatus(QString());
+    refreshInstallState();
+  });
   connect(gamePage, &GamePage::screenshotWanted, this, [this](const Package& package) {
     client->loadScreenshot(package.name, *package.screenshot,
       QDir(QStandardPaths::writableLocation(QStandardPaths::CacheLocation)).filePath(QStringLiteral("screenshots")));
@@ -548,6 +615,7 @@ void MainWindow::refreshInstallState()
     return;
   }
   refreshToolState();
+  refreshAttachedChoices();
   if (installJob != nullptr) {
     if (shownGame.id == installingGameId) {
       gamePage->setInstallState(InstallState::installing, installStepText);
@@ -630,6 +698,48 @@ void MainWindow::startInstall(const Game& game)
     return;
   }
   runPlan(game, *plan);
+}
+
+void MainWindow::refreshAttachedChoices()
+{
+  if (!shownGame.isAttached) {
+    return;
+  }
+  const Receipt* receipt = receiptFor(shownGame);
+  if (receipt == nullptr) {
+    gamePage->setAttachedWorlds({}, QString(), QStringLiteral("Add the tools first"));
+    gamePage->setLocalLogins({}, QString());
+    return;
+  }
+  if (!attachedWorlds.contains(shownGame.id) && !attachedWorldProblems.contains(shownGame.id) && listingWorldsGameId.isEmpty()
+      && launchingGameId.isEmpty()) {
+    listingWorldsGameId = shownGame.id;
+    launcher->listWorlds(receipt->folder, shownGame.launcherConfig);
+  }
+  const QString problem = attachedWorldProblems.value(shownGame.id);
+  gamePage->setAttachedWorlds(attachedWorlds.value(shownGame.id), settings.value(QStringLiteral("attached/%1/world").arg(shownGame.id)).toString(),
+    problem.isEmpty() && !attachedWorlds.contains(shownGame.id) ? QStringLiteral("Asking the game for its worlds...") : problem);
+  gamePage->setLocalLogins(GameLoginStore(shownGame.title, shownGame.variant).usernames(),
+    settings.value(QStringLiteral("attached/%1/account").arg(shownGame.id)).toString());
+}
+
+void MainWindow::startLaunch(const Game& game, const QString& world, const QString& username)
+{
+  const Receipt* receipt = receiptFor(game);
+  if (receipt == nullptr || !launchingGameId.isEmpty() || world.isEmpty() || username.isEmpty()) {
+    return;
+  }
+  const std::optional<QString> password = GameLoginStore(game.title, game.variant).password(username);
+  if (!password) {
+    installNotes.insert(game.id, QStringLiteral("The login %1 is no longer saved. Add it again under Manage accounts.").arg(username));
+    refreshAttachedChoices();
+    refreshInstallState();
+    return;
+  }
+  installNotes.remove(game.id);
+  launchingGameId = game.id;
+  gamePage->showLaunchStatus(QStringLiteral("Starting..."));
+  launcher->prepareLaunch(receipt->folder, game.launcherConfig, world, username, *password, QStringLiteral("English"));
 }
 
 void MainWindow::startToolChange(const Game& game, const QStringList& optionalToolNames)

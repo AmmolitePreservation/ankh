@@ -201,8 +201,17 @@ Manifest parseManifest(const QJsonObject& object)
           || executable.contains(QLatin1Char(':')) || executable.split(QLatin1Char('/')).contains(QStringLiteral(".."))) {
         throw ReplyError{QStringLiteral("the executable of an attached game is not a path inside its folder: %1").arg(executable)};
       }
+      const QString launcher = requiredString(attached, "launcher");
+      const QString launcherConfig = requiredString(attached, "launcherConfig");
+      if (launcher != QLatin1String("turbineGLS")) {
+        throw ReplyError{QStringLiteral("the launcher of an attached game is unknown: %1").arg(launcher)};
+      }
+      if (launcherConfig.isEmpty() || launcherConfig.contains(QLatin1Char('/')) || launcherConfig.contains(QLatin1Char('\\'))
+          || launcherConfig == QLatin1String("..")) {
+        throw ReplyError{QStringLiteral("the launcher configuration of an attached game is not a file name: %1").arg(launcherConfig)};
+      }
       manifest.attachedGames.append({requiredString(attached, "game"), requiredString(attached, "variant"),
-        requiredString(attached, "edition"), color, executable});
+        requiredString(attached, "edition"), color, executable, launcher, launcherConfig});
     }
   }
   return manifest;

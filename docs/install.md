@@ -25,7 +25,7 @@ Some games in the library are not hosted by Ammolite at all: the manifest's `att
 
 - The game page shows "Your own copy of the game" and the primary button reads **Add tools**. It opens a folder picker; a folder without the executable is refused with the reason. The sheet then lists the required tools and the optional ones ticked on the Client tools tab, and Ankh adds them with the same job as a tool change: files are written into the game folder, a file already there with a tool's name is replaced and reported, and the game's own files are not touched.
 - The receipt is `<game folder>\.ankheceipt.json` with `"client": null` and `"attached": {"game", "variant"}`; downloads stage in `<game folder>\.ankh\.staging`, since the folder beside a player's own install is not Ankh's. The folder is remembered under `library/installs` like a game installed outside the library.
-- Updates, the Client tools tab and Apply work as for an installed game, minus the client: a tool with a newer version is updated, one that left the edition is removed. Removing every tool at once (detaching) and the game's own login are not built yet; launching is not built for any game.
+- Updates, the Client tools tab and Apply work as for an installed game, minus the client: a tool with a newer version is updated, one that left the edition is removed. Removing every tool at once (detaching) is not built yet. The game's own logins and its launch are described in `launch.md`.
 
 ## Client tools
 
