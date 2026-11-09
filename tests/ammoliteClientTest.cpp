@@ -1,11 +1,14 @@
 #include "ammoliteClient.h"
 
+#include <QCryptographicHash>
+#include <QDir>
 #include <QFile>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QMap>
 #include <QTcpServer>
 #include <QTcpSocket>
+#include <QTemporaryDir>
 #include <QtTest>
 
 QByteArray fixture(const char* name)
@@ -305,6 +308,67 @@ private slots:
     QCOMPARE(thorium.role, QStringLiteral("requiredTool"));
     QCOMPARE(thorium.editions.size(), 2);
     QVERIFY(!thorium.latest.has_value());
+    QCOMPARE(wowClient.description, QString());
+    QVERIFY(!wowClient.screenshot.has_value());
+    QCOMPARE(thorium.description, QStringLiteral("Compatibility layer.\nInstalled with the game."));
+    QVERIFY(thorium.screenshot.has_value());
+    QCOMPARE(thorium.screenshot->url, QUrl(QStringLiteral("https://ammolite.test/api/v1/packages/thorium/screenshot")));
+    QCOMPARE(thorium.screenshot->sha256, QStringLiteral("ab12"));
+    QCOMPARE(thorium.screenshot->contentType, QStringLiteral("image/png"));
+  }
+
+  void aScreenshotIsFetchedOnceVerifiedAndThenServedFromTheCache()
+  {
+    const QByteArray image("pretend this is a png");
+    const QString hash = QString::fromLatin1(QCryptographicHash::hash(image, QCryptographicHash::Sha256).toHex());
+    FakeServer server;
+    server.answer(QStringLiteral("GET /shot"), 200, image);
+    AmmoliteClient client(server.url(), QStringLiteral("2026.11.08.0100"));
+    client.setToken(QStringLiteral("ammolite_secret"));
+    QTemporaryDir cache;
+    const PackageScreenshot screenshot{QUrl(server.url().toString() + QStringLiteral("/shot")), hash, QStringLiteral("image/png")};
+    QList<QByteArray> loaded;
+    QStringList failures;
+    connect(&client, &AmmoliteClient::screenshotLoaded, this, [&](const QString&, const QString&, const QByteArray& bytes) { loaded.append(bytes); });
+    connect(&client, &AmmoliteClient::screenshotFailed, this, [&](const QString&, const QString& message) { failures.append(message); });
+
+    client.loadScreenshot(QStringLiteral("thorium"), screenshot, cache.path());
+    QTRY_COMPARE_WITH_TIMEOUT(loaded.size(), 1, 5000);
+    QCOMPARE(loaded.first(), image);
+    QCOMPARE(server.requests.size(), 1);
+    QCOMPARE(server.requests.first().authorization, QByteArray("Bearer ammolite_secret"));
+    client.loadScreenshot(QStringLiteral("thorium"), screenshot, cache.path());
+    QTRY_COMPARE_WITH_TIMEOUT(loaded.size(), 2, 5000);
+    QCOMPARE(server.requests.size(), 1);
+
+    QFile damaged(QDir(cache.path()).filePath(hash));
+    QVERIFY(damaged.open(QIODevice::WriteOnly | QIODevice::Truncate));
+    damaged.write("something else");
+    damaged.close();
+    client.loadScreenshot(QStringLiteral("thorium"), screenshot, cache.path());
+    QTRY_COMPARE_WITH_TIMEOUT(loaded.size(), 3, 5000);
+    QCOMPARE(server.requests.size(), 2);
+    QCOMPARE(loaded.last(), image);
+    QVERIFY(failures.isEmpty());
+  }
+
+  void aScreenshotThatDoesNotMatchItsChecksumIsRefusedAndNotCached()
+  {
+    FakeServer server;
+    server.answer(QStringLiteral("GET /shot"), 200, QByteArray("tampered"));
+    AmmoliteClient client(server.url(), QStringLiteral("2026.11.08.0100"));
+    QTemporaryDir cache;
+    const QString wrongHash = QString::fromLatin1(QCryptographicHash::hash("original", QCryptographicHash::Sha256).toHex());
+    QStringList failures;
+    bool isLoaded = false;
+    connect(&client, &AmmoliteClient::screenshotLoaded, this, [&] { isLoaded = true; });
+    connect(&client, &AmmoliteClient::screenshotFailed, this, [&](const QString&, const QString& message) { failures.append(message); });
+    client.loadScreenshot(QStringLiteral("thorium"),
+      PackageScreenshot{QUrl(server.url().toString() + QStringLiteral("/shot")), wrongHash, QStringLiteral("image/png")}, cache.path());
+    QTRY_COMPARE_WITH_TIMEOUT(failures.size(), 1, 5000);
+    QVERIFY(failures.first().contains(QStringLiteral("checksum")));
+    QVERIFY(!isLoaded);
+    QVERIFY(QDir(cache.path()).isEmpty());
   }
 
   void anUnchangedManifestIsReportedWithoutAParse()

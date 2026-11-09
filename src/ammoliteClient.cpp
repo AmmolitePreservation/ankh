@@ -2,6 +2,9 @@
 
 #include "fatal.h"
 
+#include <QCryptographicHash>
+#include <QDir>
+#include <QFile>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -130,7 +133,8 @@ PackageVersion parsePackageVersion(const QJsonObject& object)
 Package parsePackage(const QJsonObject& object)
 {
   static const QStringList roles = {QStringLiteral("client"), QStringLiteral("requiredTool"), QStringLiteral("optionalTool")};
-  Package package{requiredString(object, "name"), requiredString(object, "label"), requiredString(object, "role"), {}, std::nullopt};
+  Package package{requiredString(object, "name"), requiredString(object, "label"), requiredString(object, "role"), {}, std::nullopt,
+    requiredString(object, "description"), std::nullopt};
   if (!roles.contains(package.role)) {
     throw ReplyError{QStringLiteral("the role of the package %1 is unknown: %2").arg(package.name, package.role)};
   }
@@ -140,6 +144,12 @@ Package parsePackage(const QJsonObject& object)
   const QJsonValue latest = requiredValue(object, "latest");
   if (!latest.isNull()) {
     package.latest = parsePackageVersion(objectAt(latest));
+  }
+  const QJsonValue screenshot = requiredValue(object, "screenshot");
+  if (!screenshot.isNull()) {
+    const QJsonObject described = objectAt(screenshot);
+    package.screenshot = PackageScreenshot{requiredUrl(described, "url"), requiredString(described, "sha256"),
+      requiredString(described, "contentType")};
   }
   return package;
 }
@@ -382,4 +392,46 @@ void AmmoliteClient::loadGameAccounts()
       emit gameAccountsLoaded(domains);
     },
     [this](const QString& message) { emit requestFailed(QStringLiteral("game accounts"), message); });
+}
+
+// Images are cached by their SHA-256, so a screenshot that changed on the server is fetched again and an unchanged one
+// never is. A cached file whose hash does not match its name is discarded.
+void AmmoliteClient::loadScreenshot(const QString& packageName, const PackageScreenshot& screenshot, const QString& cacheFolder)
+{
+  const QString cachePath = QDir(cacheFolder).filePath(screenshot.sha256);
+  QFile cached(cachePath);
+  if (cached.open(QIODevice::ReadOnly)) {
+    const QByteArray image = cached.readAll();
+    cached.close();
+    if (QCryptographicHash::hash(image, QCryptographicHash::Sha256).toHex() == screenshot.sha256.toLatin1()) {
+      QMetaObject::invokeMethod(this, [this, packageName, hash = screenshot.sha256, image] {
+        emit screenshotLoaded(packageName, hash, image);
+      }, Qt::QueuedConnection);
+      return;
+    }
+    QFile::remove(cachePath);
+  }
+  QNetworkRequest request(screenshot.url);
+  request.setRawHeader("Authorization", "Bearer " + apiToken.toUtf8());
+  request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("Ankh/%1").arg(appVersion));
+  request.setTransferTimeout(20000);
+  QNetworkReply* reply = network->get(request);
+  connect(reply, &QNetworkReply::finished, this, [this, reply, packageName, screenshot, cacheFolder, cachePath] {
+    reply->deleteLater();
+    if (reply->error() != QNetworkReply::NoError) {
+      emit screenshotFailed(packageName, reply->errorString());
+      return;
+    }
+    const QByteArray image = reply->readAll();
+    if (QCryptographicHash::hash(image, QCryptographicHash::Sha256).toHex() != screenshot.sha256.toLatin1()) {
+      emit screenshotFailed(packageName, QStringLiteral("The screenshot did not match the checksum Ammolite gave for it."));
+      return;
+    }
+    QDir().mkpath(cacheFolder);
+    QFile target(cachePath);
+    if (target.open(QIODevice::WriteOnly)) {
+      target.write(image);
+    }
+    emit screenshotLoaded(packageName, screenshot.sha256, image);
+  });
 }

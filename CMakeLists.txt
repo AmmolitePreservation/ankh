@@ -50,6 +50,7 @@ qt_add_executable(ankh WIN32
   src/userMenuButton.cpp
   src/libraryPane.cpp
   src/gamePage.cpp
+  src/toolsPane.cpp
   src/settingsPane.cpp
   src/settingsPage.cpp
   src/attributionsView.cpp
@@ -145,3 +146,10 @@ target_include_directories(libraryPaneTest PRIVATE src)
 target_link_libraries(libraryPaneTest PRIVATE Qt6::Test Qt6::Network Qt6::Widgets Qt6::Svg)
 add_test(NAME libraryPane COMMAND libraryPaneTest)
 set_tests_properties(libraryPane PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+qt_add_executable(toolsPaneTest tests/toolsPaneTest.cpp src/toolsPane.cpp src/palette.cpp)
+qt_add_resources(toolsPaneTest toolsPaneGlyphs PREFIX "/" FILES ${glyphFiles})
+target_include_directories(toolsPaneTest PRIVATE src)
+target_link_libraries(toolsPaneTest PRIVATE Qt6::Test Qt6::Network Qt6::Widgets)
+add_test(NAME toolsPane COMMAND toolsPaneTest)
+set_tests_properties(toolsPane PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")

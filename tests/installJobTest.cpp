@@ -149,6 +149,10 @@ class InstallJobTest : public QObject {
   const QByteArray clientZip = fixture("client.zip");
   const QByteArray client2Zip = fixture("client2.zip");
   const QByteArray toolZip = fixture("tool.zip");
+  const QByteArray mapsZip = fixture("maps.zip");
+  const QByteArray mapsListing = "{\"files\":["
+    "{\"path\":\"maps/world.map\",\"byteSize\":400,\"crc32\":901,\"writeOnce\":false},"
+    "{\"path\":\"maps/maps.ini\",\"byteSize\":19,\"crc32\":902,\"writeOnce\":true}]}";
   const QByteArray clientListing = "{\"files\":["
     "{\"path\":\"Game.exe\",\"byteSize\":200,\"crc32\":111,\"writeOnce\":false},"
     "{\"path\":\"Data/world.dat\",\"byteSize\":2400,\"crc32\":222,\"writeOnce\":false},"
@@ -208,8 +212,18 @@ class InstallJobTest : public QObject {
       {{QStringLiteral("Alpha"), QStringLiteral("classic"), QStringLiteral("Classic")}}, std::nullopt};
   }
 
+  Package mapsPackage(const FakeFileServer& server) const
+  {
+    return {QStringLiteral("alpha-maps"), QStringLiteral("Alpha maps"), QStringLiteral("optionalTool"),
+      {{QStringLiteral("Alpha"), QStringLiteral("classic"), QStringLiteral("Classic")}},
+      PackageVersion{QStringLiteral("2026.11.03"), QStringLiteral("alphaMaps.zip"), mapsZip.size(), sha256Of(mapsZip),
+        QStringLiteral("2026-11-03T00:00:00Z"), 2, 419, QUrl(server.url().toString() + QStringLiteral("/files/maps.zip"))}};
+  }
+
   void serveEverything(FakeFileServer& server)
   {
+    server.answer(QStringLiteral("/api/v1/packages/alpha-maps/versions/2026.11.03/files"), 200, mapsListing, "application/json");
+    server.answer(QStringLiteral("/files/maps.zip"), 200, mapsZip, "application/octet-stream");
     server.answer(QStringLiteral("/api/v1/packages/alpha-client/versions/2026.11.01/files"), 200, clientListing, "application/json");
     server.answer(QStringLiteral("/api/v1/packages/alpha-client/versions/2026.11.09/files"), 200, client2Listing, "application/json");
     server.answer(QStringLiteral("/api/v1/packages/alpha-tools/versions/2026.11.02-abc1234/files"), 200, toolListing, "application/json");
@@ -580,6 +594,98 @@ private slots:
     QCOMPARE(QDir(stagingFolderFor(library.path())).entryList(QDir::AllEntries | QDir::NoDotAndDotDot), QStringList());
     QVERIFY(!planUpdate(alpha(), {client2Package(server), toolPackage(server), optionalPackage()}, *stored, problem));
     QVERIFY(problem.isEmpty());
+  }
+
+  void anInstallTakesTheOptionalToolsItIsToldToAndRefusesUnknownOnes()
+  {
+    FakeFileServer server;
+    QString problem;
+    const QList<Package> packages = {clientPackage(server), toolPackage(server), mapsPackage(server)};
+    const std::optional<InstallPlan> plain = planInstall(alpha(), packages, QStringLiteral("D:/Games"), problem);
+    QVERIFY2(plain.has_value(), qPrintable(problem));
+    QCOMPARE(plain->fetch.size(), 2);
+    const std::optional<InstallPlan> withMaps = planInstall(alpha(), packages, QStringLiteral("D:/Games"), problem, {QStringLiteral("alpha-maps")});
+    QVERIFY2(withMaps.has_value(), qPrintable(problem));
+    QCOMPARE(withMaps->fetch.size(), 3);
+    QCOMPARE(withMaps->tools.last().name, QStringLiteral("alpha-maps"));
+    QVERIFY(!planInstall(alpha(), packages, QStringLiteral("D:/Games"), problem, {QStringLiteral("alpha-tools")}));
+    QCOMPARE(problem, QStringLiteral("alpha-tools is not an optional tool of Alpha Classic."));
+    QVERIFY(!planInstall(alpha(), packages, QStringLiteral("D:/Games"), problem, {QStringLiteral("nothing")}));
+    Package unpublished = mapsPackage(server);
+    unpublished.latest.reset();
+    QVERIFY(!planInstall(alpha(), {clientPackage(server), toolPackage(server), unpublished}, QStringLiteral("D:/Games"), problem, {QStringLiteral("alpha-maps")}));
+    QCOMPARE(problem, QStringLiteral("The optional tool Alpha maps has no version published yet."));
+  }
+
+  void aToolChangeAddsAnOptionalToolThenRemovesItKeepingItsWriteOnceFiles()
+  {
+    FakeFileServer server;
+    serveEverything(server);
+    QTemporaryDir library;
+    const Receipt first = installFirstVersion(server, library.path());
+    const QList<Package> packages = {clientPackage(server), toolPackage(server), mapsPackage(server)};
+    QString problem = QStringLiteral("stale");
+    QVERIFY(!planToolChange(alpha(), packages, first, {}, problem));
+    QVERIFY(problem.isEmpty());
+
+    const std::optional<InstallPlan> add = planToolChange(alpha(), packages, first, {QStringLiteral("alpha-maps")}, problem);
+    QVERIFY2(add.has_value(), qPrintable(problem));
+    QVERIFY(add->isToolChange && add->isUpdate());
+    QCOMPARE(add->fetch.size(), 1);
+    QCOMPARE(add->fetch.first().name, QStringLiteral("alpha-maps"));
+    QVERIFY(add->removed.isEmpty());
+    QCOMPARE(add->tools.size(), 2);
+    InstallJob addJob(*add, server.url(), QStringLiteral("t"), QStringLiteral("2026.11.08.1200"));
+    Outcome added;
+    run(addJob, added);
+    QVERIFY2(added.isDone, qPrintable(added.failure));
+    const QDir folder(first.folder);
+    QCOMPARE(QFileInfo(folder.filePath(QStringLiteral("maps/world.map"))).size(), qint64(400));
+    QCOMPARE(QFileInfo(folder.filePath(QStringLiteral("Game.exe"))).size(), qint64(200));
+    QCOMPARE(added.summary.written, 2);
+    QCOMPARE(added.receipt.client.version, QStringLiteral("2026.11.01"));
+    QCOMPARE(added.receipt.tools.size(), 2);
+    QCOMPARE(added.receipt.files.size(), 7);
+    QVERIFY(added.receipt.files.value(QStringLiteral("maps/maps.ini")).isWriteOnce);
+    QVERIFY(!planToolChange(alpha(), packages, added.receipt, {QStringLiteral("alpha-maps")}, problem));
+
+    writeFile(folder.filePath(QStringLiteral("maps/maps.ini")), "zoom=3\r\n");
+    const std::optional<InstallPlan> remove = planToolChange(alpha(), packages, added.receipt, {}, problem);
+    QVERIFY2(remove.has_value(), qPrintable(problem));
+    QVERIFY(remove->fetch.isEmpty());
+    QCOMPARE(remove->removed, QStringList{QStringLiteral("alpha-maps")});
+    const int requestsBefore = server.requests.size();
+    InstallJob removeJob(*remove, server.url(), QStringLiteral("t"), QStringLiteral("2026.11.08.1200"));
+    Outcome removed;
+    run(removeJob, removed);
+    QVERIFY2(removed.isDone, qPrintable(removed.failure));
+    QCOMPARE(server.requests.size(), requestsBefore);
+    QVERIFY(!QFile::exists(folder.filePath(QStringLiteral("maps/world.map"))));
+    QCOMPARE(contentOf(folder.filePath(QStringLiteral("maps/maps.ini"))), QByteArray("zoom=3\r\n"));
+    QCOMPARE(removed.summary.deleted, 1);
+    QCOMPARE(removed.summary.kept, QStringList{QStringLiteral("maps/maps.ini")});
+    QCOMPARE(removed.receipt.tools.size(), 1);
+    QCOMPARE(removed.receipt.tools.first().name, QStringLiteral("alpha-tools"));
+    QCOMPARE(removed.receipt.files.size(), 5);
+    QVERIFY(!removed.receipt.files.contains(QStringLiteral("maps/maps.ini")));
+    QCOMPARE(QFileInfo(folder.filePath(QStringLiteral("Game.exe"))).size(), qint64(200));
+  }
+
+  void aToolChangeLeavesOutdatedPackagesAloneAndFetchesAMissingRequiredTool()
+  {
+    FakeFileServer server;
+    Receipt receipt{QStringLiteral("D:\\Games\\Alpha - Classic"), {QStringLiteral("alpha-client"), QStringLiteral("2026.11.01"), QStringLiteral("x")}, {}, {}};
+    QString problem;
+    const std::optional<InstallPlan> plan = planToolChange(alpha(), {client2Package(server), toolPackage(server), mapsPackage(server)}, receipt,
+      {QStringLiteral("alpha-maps")}, problem);
+    QVERIFY2(plan.has_value(), qPrintable(problem));
+    QStringList fetched;
+    for (const Package& package : plan->fetch) {
+      fetched.append(package.name);
+    }
+    QCOMPARE(fetched, (QStringList{QStringLiteral("alpha-tools"), QStringLiteral("alpha-maps")}));
+    QVERIFY(!planToolChange(alpha(), {client2Package(server), toolPackage(server)}, receipt, {QStringLiteral("unknown")}, problem));
+    QCOMPARE(problem, QStringLiteral("unknown is not a tool of Alpha Classic."));
   }
 
   void anUpdateRemovesAToolThatLeftTheEdition()

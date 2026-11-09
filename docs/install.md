@@ -1,6 +1,6 @@
 # Installing and updating games
 
-Install on a game page downloads the edition's client and its required tools from Ammolite, verifies them, and places them in the game library; Update brings an installed game to the packages' newest versions. Optional tools, launching, repair and uninstall are not built yet.
+Install on a game page downloads the edition's client and its required tools from Ammolite, verifies them, and places them in the game library; Update brings an installed game to the packages' newest versions. Optional tools are chosen on the game's Client tools tab. Launching, repair and uninstalling a game are not built yet.
 
 ## Library
 
@@ -14,10 +14,19 @@ Install on a game page downloads the edition's client and its required tools fro
 ## Install
 
 1. Install opens a sheet: the client and required tools with their versions and download sizes, the destination folder, the bytes to download, the size once installed, what is still needed and the free space on that drive. An all-users install under Program Files cannot write beside itself, so the sheet refuses until another folder is chosen for the game or the library folder is changed under Settings -> Games.
-2. The install plan is the edition's client plus every package whose role is required tool. It is refused when the client or a required tool has no published version, or when the edition has no client; the Install button is disabled with the reason.
+2. The install plan is the edition's client, every required tool, and the optional tools ticked on the Client tools tab. It is refused when the client or a required tool has no published version, or when the edition has no client; the Install button is disabled with the reason.
 3. The job reads each package's file list (`GET /api/v1/packages/<name>/versions/<version>/files`), downloads each archive to `.staging\<name>-<version>.zip.part` with `Range` resume, checks its SHA-256 against the manifest (a mismatch deletes the file and stops), extracts each archive with Windows' own `tar.exe` into `.staging\<name>-<version>.extract`, renames the client's folder into place, moves the tools' files in, writes the receipt, and deletes the archives.
 4. Progress, the current step and a Cancel button sit on the game page's status line; the library row shows the game as installed when the receipt is written. Cancel stops the download or extraction and removes the extraction folders; finished and partial downloads stay in `.staging`, so the next Install resumes. One install runs at a time; other games say so.
 5. Failures are reported on the status line and nothing half-installed is left: the install folder exists only once the client is complete, and a tool file that cannot be moved undoes the folder.
+
+## Client tools
+
+The game page's Client tools tab lists the edition's tools in two columns: a checkbox row for each tool (required first, then optional) and, beside it, a help box with the selected tool's description and screenshot, which Ammolite supplies (see `ammolite.md`). The client is not listed there.
+
+- A required tool is always ticked and cannot be unticked. Before the install its row says it installs with the game; afterwards, that it is installed.
+- An optional tool is ticked when installed. Ticking or unticking only stages a change, and the row says "will be installed" or "will be removed"; nothing downloads or is deleted until **Apply changes** and the confirmation sheet that follows, which lists what will be fetched and removed. **Reset** drops the staged choices. Before the game is installed there is no Apply: what is ticked goes along with Install.
+- Applying fetches the tools ticked and not installed, and removes the tools unticked and installed, with the same rule as an update (the receipt's files of that package are deleted, anything else is never touched). A file the package marks write-once stays on disk, is reported, and leaves the receipt. The client and the other tools are not updated by a tool change; a required tool that is missing is fetched.
+- Nothing can be ticked or applied while an install runs. The screenshot is fetched on first view, checked against the SHA-256 Ammolite gives and cached by that hash under the user's cache folder.
 
 ## Update
 

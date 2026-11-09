@@ -1,6 +1,7 @@
 #include "gamePage.h"
 
 #include "icons.h"
+#include "toolsPane.h"
 
 #include <QComboBox>
 #include <QFrame>
@@ -85,6 +86,8 @@ GamePage::GamePage(QWidget* parent)
     upToDateLabel(makeLabel(QStringLiteral("Up to date"), nullptr, this)),
     compatibilityIcon(makeFixedLabel(30, this)),
     optionalToolsIcon(makeFixedLabel(30, this)),
+    optionalToolsSummary(makeLabel(QStringLiteral("%1   None enabled").arg(QChar(0x00B7)), "bodySecondary", this)),
+    toolsPane(new ToolsPane(this)),
     checkForUpdates(new QPushButton(QStringLiteral("Check for updates"), this)),
     clientToolsLink(new QPushButton(QStringLiteral("Client tools"), this)),
     statusDot(makeFixedLabel(28, this)),
@@ -179,7 +182,8 @@ GamePage::GamePage(QWidget* parent)
   toolsRow->setSpacing(12);
   toolsRow->addWidget(optionalToolsIcon);
   toolsRow->addWidget(makeLabel(QStringLiteral("Optional tools"), nullptr, installedSection));
-  toolsRow->addWidget(makeLabel(QStringLiteral("%1   None enabled").arg(QChar(0x00B7)), "bodySecondary", installedSection));
+  optionalToolsSummary->setParent(installedSection);
+  toolsRow->addWidget(optionalToolsSummary);
   toolsRow->addStretch(1);
   toolsRow->addWidget(clientToolsLink);
 
@@ -215,6 +219,10 @@ GamePage::GamePage(QWidget* parent)
 
   pages->addWidget(playScroll);
   for (int index = 1; index < tabs->count(); ++index) {
+    if (index == 2) {
+      pages->addWidget(toolsPane);
+      continue;
+    }
     auto* unavailable = makeLabel(QStringLiteral("Not available in this build."), "secondary", this);
     unavailable->setAlignment(Qt::AlignCenter);
     pages->addWidget(unavailable);
@@ -271,6 +279,9 @@ GamePage::GamePage(QWidget* parent)
   layout->addWidget(bottomBar);
 
   connect(tabs, &QTabBar::currentChanged, pages, &QStackedWidget::setCurrentIndex);
+  connect(toolsPane, &ToolsPane::applyRequested, this, [this](const QStringList& names) { emit toolsApplyRequested(game, names); });
+  connect(toolsPane, &ToolsPane::choiceChanged, this, &GamePage::toolChoiceChanged);
+  connect(toolsPane, &ToolsPane::screenshotWanted, this, &GamePage::screenshotWanted);
   connect(clientToolsLink, &QPushButton::clicked, this, [this] { tabs->setCurrentIndex(2); });
   connect(checkForUpdates, &QPushButton::clicked, this, &GamePage::updateCheckRequested);
   connect(launchSettingsToggle, &QPushButton::toggled, this, [this](bool isShown) {
@@ -467,6 +478,48 @@ void GamePage::setPackages(const QList<Package>& newPackages)
 {
   packages = newPackages;
   showDownloads();
+  refreshTools();
+}
+
+void GamePage::setToolState(bool isInstalled, const QStringList& installedNames, const QString& busyReason)
+{
+  toolsInstalled = isInstalled;
+  toolsInstalledNames = installedNames;
+  toolsBusyReason = busyReason;
+  refreshTools();
+}
+
+QStringList GamePage::chosenOptionalTools() const
+{
+  return toolsPane->chosenOptionalTools();
+}
+
+void GamePage::showScreenshot(const QString& packageName, const QByteArray& image)
+{
+  toolsPane->showScreenshot(packageName, image);
+}
+
+void GamePage::showScreenshotProblem(const QString& packageName, const QString& message)
+{
+  toolsPane->showScreenshotProblem(packageName, message);
+}
+
+void GamePage::refreshTools()
+{
+  QList<Package> tools;
+  QStringList installedLabels;
+  for (const Package& package : packagesFor(game, packages)) {
+    if (package.role == QLatin1String("client")) {
+      continue;
+    }
+    tools.append(package);
+    if (package.role == QLatin1String("optionalTool") && toolsInstalledNames.contains(package.name)) {
+      installedLabels.append(package.label);
+    }
+  }
+  toolsPane->showTools(tools, toolsInstalled, toolsInstalledNames, toolsBusyReason);
+  optionalToolsSummary->setText(QStringLiteral("%1   %2").arg(QChar(0x00B7),
+    installedLabels.isEmpty() ? QStringLiteral("None enabled") : installedLabels.join(QStringLiteral(", "))));
 }
 
 void GamePage::refreshGame(const Game& newGame)
@@ -499,6 +552,7 @@ void GamePage::showGame(const Game& newGame)
   realmChoice->setEnabled(false);
   refreshAccounts();
   showDownloads();
+  refreshTools();
   tabs->setCurrentIndex(0);
   updateStatus();
 }

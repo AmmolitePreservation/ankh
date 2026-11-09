@@ -52,12 +52,20 @@ struct PackageVersion {
   QUrl url;
 };
 
+struct PackageScreenshot {
+  QUrl url;
+  QString sha256;
+  QString contentType;
+};
+
 struct Package {
   QString name;
   QString label;
   QString role;
   QList<Edition> editions;
   std::optional<PackageVersion> latest;
+  QString description;
+  std::optional<PackageScreenshot> screenshot;
 };
 
 struct ReleaseNote {
@@ -115,6 +123,7 @@ public:
   void loadMe();
   void loadManifest(const QByteArray& etag);
   void loadGameAccounts();
+  void loadScreenshot(const QString& packageName, const PackageScreenshot& screenshot, const QString& cacheFolder);
 
 signals:
   void signedIn(const SignedInUser& user, const QString& token);
@@ -125,6 +134,8 @@ signals:
   void manifestLoaded(const Manifest& manifest, const QByteArray& etag);
   void manifestUnchanged();
   void gameAccountsLoaded(const QList<AccountDomain>& domains);
+  void screenshotLoaded(const QString& packageName, const QString& sha256, const QByteArray& image);
+  void screenshotFailed(const QString& packageName, const QString& message);
   void sessionExpired();
   void requestFailed(const QString& what, const QString& message);
 
