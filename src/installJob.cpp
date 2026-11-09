@@ -15,6 +15,7 @@
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QProcess>
+#include <QSet>
 #include <QStorageInfo>
 #include <QTimer>
 
@@ -57,13 +58,24 @@ QMap<QString, OwnedFile> parseListing(const QByteArray& payload, const QString& 
     const QJsonValue path = entry.value(QStringLiteral("path"));
     const QJsonValue byteSize = entry.value(QStringLiteral("byteSize"));
     const QJsonValue crc = entry.value(QStringLiteral("crc32"));
-    if (!path.isString() || path.toString().isEmpty() || !byteSize.isDouble() || !crc.isDouble()
+    const QJsonValue writeOnce = entry.value(QStringLiteral("writeOnce"));
+    if (!path.isString() || path.toString().isEmpty() || !byteSize.isDouble() || !crc.isDouble() || !writeOnce.isBool()
         || byteSize.toInteger() < 0 || crc.toInteger() < 0) {
       throw ListingError{QStringLiteral("the file list of %1 has an entry that was not understood").arg(packageName)};
     }
-    files.insert(path.toString(), {packageName, byteSize.toInteger(), static_cast<quint32>(crc.toInteger())});
+    files.insert(path.toString(), {packageName, byteSize.toInteger(), static_cast<quint32>(crc.toInteger()), writeOnce.toBool()});
   }
   return files;
+}
+
+const Package* clientOf(const QList<Package>& attached)
+{
+  for (const Package& package : attached) {
+    if (package.role == QLatin1String("client")) {
+      return &package;
+    }
+  }
+  return nullptr;
 }
 
 }
@@ -128,17 +140,15 @@ private:
   std::function<void(const QString&)> error;
 };
 
-QList<Package> InstallPlan::packages() const
+bool InstallPlan::isUpdate() const
 {
-  QList<Package> all{client};
-  all.append(tools);
-  return all;
+  return existing.has_value();
 }
 
 qint64 InstallPlan::downloadBytes() const
 {
   qint64 total = 0;
-  for (const Package& package : packages()) {
+  for (const Package& package : fetch) {
     total += package.latest->byteSize;
   }
   return total;
@@ -147,7 +157,7 @@ qint64 InstallPlan::downloadBytes() const
 qint64 InstallPlan::extractedBytes() const
 {
   qint64 total = 0;
-  for (const Package& package : packages()) {
+  for (const Package& package : fetch) {
     total += package.latest->extractedBytes;
   }
   return total;
@@ -156,7 +166,7 @@ qint64 InstallPlan::extractedBytes() const
 int InstallPlan::fileCount() const
 {
   int total = 0;
-  for (const Package& package : packages()) {
+  for (const Package& package : fetch) {
     total += package.latest->fileCount;
   }
   return total;
@@ -165,29 +175,97 @@ int InstallPlan::fileCount() const
 std::optional<InstallPlan> planInstall(const Game& game, const QList<Package>& packages, const QString& libraryRoot,
   QString& problem)
 {
+  problem.clear();
+  const QList<Package> attached = packagesFor(game, packages);
+  const Package* client = clientOf(attached);
+  if (client == nullptr) {
+    problem = QStringLiteral("No client is published for %1 %2 yet.").arg(game.title, game.edition);
+    return std::nullopt;
+  }
+  if (!client->latest) {
+    problem = QStringLiteral("The client %1 has no version published yet.").arg(client->label);
+    return std::nullopt;
+  }
   InstallPlan plan;
-  bool hasClient = false;
-  for (const Package& package : packagesFor(game, packages)) {
+  plan.client = *client;
+  plan.fetch.append(*client);
+  for (const Package& package : attached) {
+    if (package.role != QLatin1String("requiredTool")) {
+      continue;
+    }
+    if (!package.latest) {
+      problem = QStringLiteral("The required tool %1 has no version published yet.").arg(package.label);
+      return std::nullopt;
+    }
+    plan.tools.append(package);
+    plan.fetch.append(package);
+  }
+  plan.folder = native(QDir(libraryRoot).filePath(installFolderNameFor(plan.client)));
+  return plan;
+}
+
+std::optional<InstallPlan> planUpdate(const Game& game, const QList<Package>& packages, const Receipt& receipt,
+  QString& problem)
+{
+  problem.clear();
+  const QList<Package> attached = packagesFor(game, packages);
+  const Package* client = clientOf(attached);
+  if (client == nullptr) {
+    problem = QStringLiteral("No client is published for %1 %2 any more.").arg(game.title, game.edition);
+    return std::nullopt;
+  }
+  if (client->name != receipt.client.name) {
+    problem = QStringLiteral("The edition's client changed from %1 to %2. Remove %3 and install again.")
+      .arg(receipt.client.name, client->name, receipt.folder);
+    return std::nullopt;
+  }
+  if (!client->latest) {
+    problem = QStringLiteral("The client %1 has no version published any more.").arg(client->label);
+    return std::nullopt;
+  }
+  InstallPlan plan;
+  plan.client = *client;
+  plan.folder = receipt.folder;
+  plan.existing = receipt;
+  if (client->latest->version != receipt.client.version) {
+    plan.fetch.append(*client);
+  }
+  QMap<QString, QString> installedVersions;
+  for (const InstalledPackage& tool : receipt.tools) {
+    installedVersions.insert(tool.name, tool.version);
+  }
+  QSet<QString> attachedNames;
+  for (const Package& package : attached) {
+    attachedNames.insert(package.name);
     if (package.role == QLatin1String("client")) {
-      if (!package.latest) {
-        problem = QStringLiteral("The client %1 has no version published yet.").arg(package.label);
-        return std::nullopt;
-      }
-      plan.client = package;
-      hasClient = true;
-    } else if (package.role == QLatin1String("requiredTool")) {
+      continue;
+    }
+    const auto installed = installedVersions.constFind(package.name);
+    if (package.role == QLatin1String("requiredTool")) {
       if (!package.latest) {
         problem = QStringLiteral("The required tool %1 has no version published yet.").arg(package.label);
         return std::nullopt;
       }
       plan.tools.append(package);
+      if (installed == installedVersions.constEnd() || *installed != package.latest->version) {
+        plan.fetch.append(package);
+      }
+    } else if (installed != installedVersions.constEnd()) {
+      // An optional tool that is installed stays and follows its newest version.
+      plan.tools.append(package);
+      if (package.latest && package.latest->version != *installed) {
+        plan.fetch.append(package);
+      }
     }
   }
-  if (!hasClient) {
-    problem = QStringLiteral("No client is published for %1 %2 yet.").arg(game.title, game.edition);
+  for (const InstalledPackage& tool : receipt.tools) {
+    if (!attachedNames.contains(tool.name)) {
+      plan.removed.append(tool.name);
+    }
+  }
+  if (plan.fetch.isEmpty() && plan.removed.isEmpty()) {
     return std::nullopt;
   }
-  plan.folder = native(QDir(libraryRoot).filePath(installFolderNameFor(plan.client)));
   return plan;
 }
 
@@ -204,7 +282,7 @@ QString stagedZipPath(const QString& libraryRoot, const Package& package)
 qint64 bytesStillNeeded(const InstallPlan& plan, const QString& libraryRoot)
 {
   qint64 needed = plan.extractedBytes();
-  for (const Package& package : plan.packages()) {
+  for (const Package& package : plan.fetch) {
     const QString zip = stagedZipPath(libraryRoot, package);
     if (QFile::exists(zip)) {
       continue;
@@ -217,7 +295,7 @@ qint64 bytesStillNeeded(const InstallPlan& plan, const QString& libraryRoot)
 InstallJob::InstallJob(const InstallPlan& plan, const QString& libraryRoot, const QUrl& serviceUrl, const QString& token,
   const QString& appVersion, QObject* parent)
   : QObject(parent), installPlan(plan), libraryRoot(libraryRoot), serviceUrl(serviceUrl), token(token),
-    appVersion(appVersion), network(new QNetworkAccessManager(this)), queue(plan.packages())
+    appVersion(appVersion), network(new QNetworkAccessManager(this)), queue(plan.fetch)
 {
 }
 
@@ -236,14 +314,28 @@ QString InstallJob::extractFolder(const Package& package) const
   return native(QDir(stagingFolderFor(libraryRoot)).filePath(QStringLiteral("%1-%2.extract").arg(package.name, package.latest->version)));
 }
 
+const Package& InstallJob::fetchedPackage(const QString& name) const
+{
+  for (const Package& package : queue) {
+    if (package.name == name) {
+      return package;
+    }
+  }
+  fatal(QStringLiteral("The install plan has no package named %1.").arg(name));
+}
+
 void InstallJob::start()
 {
   if (!QDir().mkpath(stagingFolderFor(libraryRoot))) {
     fail(QStringLiteral("Could not create %1.").arg(stagingFolderFor(libraryRoot)));
     return;
   }
-  if (QDir(installPlan.folder).exists()) {
+  if (!installPlan.isUpdate() && QDir(installPlan.folder).exists()) {
     fail(QStringLiteral("%1 already exists. Remove it before installing.").arg(installPlan.folder));
+    return;
+  }
+  if (installPlan.isUpdate() && !QDir(installPlan.folder).exists()) {
+    fail(QStringLiteral("%1 no longer exists.").arg(installPlan.folder));
     return;
   }
   const QStorageInfo storage(libraryRoot);
@@ -534,8 +626,18 @@ void InstallJob::extract(int index)
 void InstallJob::apply()
 {
   isApplying = true;
-  emit statusChanged(QStringLiteral("Moving the files into place..."));
   emit progressChanged(0, 0);
+  if (installPlan.isUpdate()) {
+    emit statusChanged(QStringLiteral("Applying the update..."));
+    applyUpdate();
+  } else {
+    emit statusChanged(QStringLiteral("Moving the files into place..."));
+    applyInstall();
+  }
+}
+
+void InstallJob::applyInstall()
+{
   if (!QDir().mkpath(QFileInfo(installPlan.folder).absolutePath())) {
     fail(QStringLiteral("Could not create %1.").arg(QFileInfo(installPlan.folder).absolutePath()));
     return;
@@ -563,19 +665,114 @@ void InstallJob::apply()
       }
     }
   }
-  removeExtractFolders();
-  Receipt receipt{installPlan.folder, {installPlan.client.name, installPlan.client.latest->version, installPlan.client.latest->sha256}, {}, ownedFiles};
+  Receipt receipt{installPlan.folder, {installPlan.client.name, installPlan.client.latest->version, installPlan.client.latest->sha256},
+    {}, ownedFiles};
   for (const Package& tool : installPlan.tools) {
     receipt.tools.append({tool.name, tool.latest->version, tool.latest->sha256});
   }
+  ApplySummary summary;
+  summary.written = static_cast<int>(ownedFiles.size());
+  complete(receipt, summary);
+}
+
+// The rule Steam applies: a file whose package entry did not change is left alone whatever its state, a changed
+// entry is written over, a dropped entry is deleted, and anything no package lists is never touched. A write-once
+// file that exists is never written over.
+void InstallJob::applyUpdate()
+{
+  const Receipt& old = *installPlan.existing;
+  const QDir folder(installPlan.folder);
+  QSet<QString> fetchedNames;
+  for (const Package& package : queue) {
+    fetchedNames.insert(package.name);
+  }
+  const QSet<QString> removedNames(installPlan.removed.cbegin(), installPlan.removed.cend());
+  QMap<QString, OwnedFile> files;
+  QStringList toDelete;
+  for (auto entry = old.files.constBegin(); entry != old.files.constEnd(); ++entry) {
+    const QString& owner = entry.value().package;
+    if (removedNames.contains(owner) || (fetchedNames.contains(owner) && !ownedFiles.contains(entry.key()))) {
+      toDelete.append(entry.key());
+    } else if (!fetchedNames.contains(owner)) {
+      files.insert(entry.key(), entry.value());
+    }
+  }
+  const qint64 total = toDelete.size() + ownedFiles.size();
+  qint64 done = 0;
+  ApplySummary summary;
+  for (const QString& path : toDelete) {
+    const QString target = folder.filePath(path);
+    if (QFile::exists(target)) {
+      if (!QFile::remove(target)) {
+        fail(QStringLiteral("Could not remove %1; the update is incomplete. Press Update again to finish it.").arg(path));
+        return;
+      }
+      ++summary.deleted;
+    }
+    emit progressChanged(++done, total);
+  }
+  for (auto entry = ownedFiles.constBegin(); entry != ownedFiles.constEnd(); ++entry) {
+    const QString& path = entry.key();
+    const OwnedFile& file = entry.value();
+    files.insert(path, file);
+    emit progressChanged(++done, total);
+    const auto previous = old.files.constFind(path);
+    if (previous != old.files.constEnd() && previous->package == file.package && previous->byteSize == file.byteSize
+        && previous->crc32 == file.crc32) {
+      continue;
+    }
+    const QString target = folder.filePath(path);
+    if (file.isWriteOnce && QFile::exists(target)) {
+      summary.kept.append(path);
+      continue;
+    }
+    if (QFile::exists(target) && !QFile::remove(target)) {
+      fail(QStringLiteral("Could not replace %1; the update is incomplete. Press Update again to finish it.").arg(path));
+      return;
+    }
+    const QString source = QDir(extractFolder(fetchedPackage(file.package))).filePath(path);
+    if (!QDir().mkpath(QFileInfo(target).absolutePath()) || !QFile::rename(source, target)) {
+      fail(QStringLiteral("Could not write %1; the update is incomplete. Press Update again to finish it.").arg(path));
+      return;
+    }
+    ++summary.written;
+  }
+  Receipt receipt{installPlan.folder, old.client, {}, files};
+  if (fetchedNames.contains(installPlan.client.name)) {
+    receipt.client = {installPlan.client.name, installPlan.client.latest->version, installPlan.client.latest->sha256};
+  }
+  for (const Package& tool : installPlan.tools) {
+    if (fetchedNames.contains(tool.name)) {
+      receipt.tools.append({tool.name, tool.latest->version, tool.latest->sha256});
+      continue;
+    }
+    bool isFound = false;
+    for (const InstalledPackage& installed : old.tools) {
+      if (installed.name == tool.name) {
+        receipt.tools.append(installed);
+        isFound = true;
+      }
+    }
+    if (!isFound) {
+      fatal(QStringLiteral("The update plan lists %1, which is neither fetched nor installed.").arg(tool.name));
+    }
+  }
+  complete(receipt, summary);
+}
+
+void InstallJob::complete(Receipt receipt, const ApplySummary& summary)
+{
+  removeExtractFolders();
   const QString problem = writeReceipt(receipt);
   if (!problem.isEmpty()) {
-    fail(QStringLiteral("%1 The files are in %2 but Ankh has no record of them; remove that folder and install again.")
-      .arg(problem, installPlan.folder));
+    fail(installPlan.isUpdate()
+      ? QStringLiteral("%1 The files are updated but Ankh could not record it; press Update again.").arg(problem)
+      : QStringLiteral("%1 The files are in %2 but Ankh has no record of them; remove that folder and install again.")
+          .arg(problem, installPlan.folder));
     return;
   }
   for (const Package& package : queue) {
     QFile::remove(stagedZipPath(libraryRoot, package));
   }
-  emit finished(receipt);
+  emit finished(receipt, summary);
 }

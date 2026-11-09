@@ -45,6 +45,15 @@ qint64 requiredCount(const QJsonObject& object, const char* key)
   return value.toInteger();
 }
 
+bool requiredFlag(const QJsonObject& object, const char* key)
+{
+  const QJsonValue value = required(object, key);
+  if (!value.isBool()) {
+    throw ReceiptError{QStringLiteral("the field \"%1\" is not true or false").arg(QLatin1String(key))};
+  }
+  return value.toBool();
+}
+
 InstalledPackage packageFrom(const QJsonValue& value)
 {
   if (!value.isObject()) {
@@ -98,7 +107,8 @@ QString writeReceipt(const Receipt& receipt)
   QJsonObject files;
   for (auto entry = receipt.files.constBegin(); entry != receipt.files.constEnd(); ++entry) {
     files.insert(entry.key(), QJsonObject{{QStringLiteral("package"), entry.value().package},
-      {QStringLiteral("byteSize"), entry.value().byteSize}, {QStringLiteral("crc32"), static_cast<qint64>(entry.value().crc32)}});
+      {QStringLiteral("byteSize"), entry.value().byteSize}, {QStringLiteral("crc32"), static_cast<qint64>(entry.value().crc32)},
+      {QStringLiteral("writeOnce"), entry.value().isWriteOnce}});
   }
   QJsonArray tools;
   for (const InstalledPackage& tool : receipt.tools) {
@@ -152,7 +162,7 @@ std::optional<Receipt> readReceipt(const QString& folder, QString& problem)
       }
       const QJsonObject owned = entry.value().toObject();
       receipt.files.insert(entry.key(), {requiredText(owned, "package"), requiredCount(owned, "byteSize"),
-        static_cast<quint32>(requiredCount(owned, "crc32"))});
+        static_cast<quint32>(requiredCount(owned, "crc32")), requiredFlag(owned, "writeOnce")});
     }
     return receipt;
   } catch (const ReceiptError& error) {

@@ -16,9 +16,10 @@ Receipt sampleReceipt(const QString& folder)
 {
   Receipt receipt{folder, {QStringLiteral("wow-classic"), QStringLiteral("2026.10.13"), QStringLiteral("d298")}, {}, {}};
   receipt.tools.append({QStringLiteral("thorium"), QStringLiteral("2026.11.01-abc1234"), QStringLiteral("5580")});
-  receipt.files.insert(QStringLiteral("WoW.exe"), {QStringLiteral("wow-classic"), 5335826980, 0xDEADBEEFu});
-  receipt.files.insert(QStringLiteral("Data/common.MPQ"), {QStringLiteral("wow-classic"), 12, 7u});
-  receipt.files.insert(QStringLiteral("thorium/thorium.dll"), {QStringLiteral("thorium"), 3, 9u});
+  receipt.files.insert(QStringLiteral("WoW.exe"), {QStringLiteral("wow-classic"), 5335826980, 0xDEADBEEFu, false});
+  receipt.files.insert(QStringLiteral("Data/common.MPQ"), {QStringLiteral("wow-classic"), 12, 7u, false});
+  receipt.files.insert(QStringLiteral("WTF/Config.wtf"), {QStringLiteral("wow-classic"), 40, 8u, true});
+  receipt.files.insert(QStringLiteral("thorium/thorium.dll"), {QStringLiteral("thorium"), 3, 9u, false});
   return receipt;
 }
 
@@ -67,10 +68,27 @@ private slots:
     QCOMPARE(read->client.sha256, QStringLiteral("d298"));
     QCOMPARE(read->tools.size(), 1);
     QCOMPARE(read->tools.first().name, QStringLiteral("thorium"));
-    QCOMPARE(read->files.size(), 3);
+    QCOMPARE(read->files.size(), 4);
     QCOMPARE(read->files.value(QStringLiteral("WoW.exe")).byteSize, qint64(5335826980));
     QCOMPARE(read->files.value(QStringLiteral("WoW.exe")).crc32, 0xDEADBEEFu);
+    QCOMPARE(read->files.value(QStringLiteral("WoW.exe")).isWriteOnce, false);
+    QCOMPARE(read->files.value(QStringLiteral("WTF/Config.wtf")).isWriteOnce, true);
     QCOMPARE(read->files.value(QStringLiteral("thorium/thorium.dll")).package, QStringLiteral("thorium"));
+  }
+
+  void aReceiptWithoutTheWriteOnceFlagIsRefused()
+  {
+    QTemporaryDir library;
+    const QString folder = QDir(library.path()).filePath(QStringLiteral("Old"));
+    QVERIFY(QDir().mkpath(folder + QStringLiteral("/.ankh")));
+    QFile old(QDir(folder).filePath(QStringLiteral(".ankh/receipt.json")));
+    QVERIFY(old.open(QIODevice::WriteOnly));
+    old.write("{\"client\": {\"name\": \"a\", \"version\": \"1\", \"sha256\": \"b\"}, \"tools\": [], "
+      "\"files\": {\"a.exe\": {\"package\": \"a\", \"byteSize\": 1, \"crc32\": 2}}}");
+    old.close();
+    QString problem;
+    QVERIFY(!readReceipt(folder, problem).has_value());
+    QVERIFY2(problem.endsWith(QStringLiteral("is not a valid install record: the field \"writeOnce\" is missing.")), qPrintable(problem));
   }
 
   void aScanFindsEveryReceiptAndNamesTheBrokenOnes()

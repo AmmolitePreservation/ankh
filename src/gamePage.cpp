@@ -82,6 +82,7 @@ GamePage::GamePage(QWidget* parent)
     downloadsBox(new QWidget(this)),
     downloadsLayout(new QVBoxLayout(downloadsBox)),
     upToDateIcon(makeFixedLabel(30, this)),
+    upToDateLabel(makeLabel(QStringLiteral("Up to date"), nullptr, this)),
     compatibilityIcon(makeFixedLabel(30, this)),
     optionalToolsIcon(makeFixedLabel(30, this)),
     checkForUpdates(new QPushButton(QStringLiteral("Check for updates"), this)),
@@ -122,8 +123,9 @@ GamePage::GamePage(QWidget* parent)
   downloadsLayout->setSpacing(8);
   checkForUpdates->setLayoutDirection(Qt::RightToLeft);
   checkForUpdates->setMinimumHeight(42);
-  checkForUpdates->setEnabled(false);
-  checkForUpdates->setToolTip(QStringLiteral("Update checks for games are not built yet."));
+  checkForUpdates->setToolTip(QStringLiteral("Ask Ammolite for the newest packages now."));
+  upToDateLabel->setWordWrap(false);
+  upToDateLabel->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
   clientToolsLink->setProperty("link", true);
   clientToolsLink->setLayoutDirection(Qt::RightToLeft);
   realmChoice->setAccessibleName(QStringLiteral("Realm"));
@@ -164,13 +166,13 @@ GamePage::GamePage(QWidget* parent)
   auto* statusRow = new QHBoxLayout;
   statusRow->setSpacing(12);
   statusRow->addWidget(upToDateIcon);
-  statusRow->addWidget(makeLabel(QStringLiteral("Up to date"), nullptr, installedSection));
+  statusRow->addWidget(upToDateLabel, 1);
   statusRow->addSpacing(20);
   statusRow->addWidget(makeVerticalDivider(installedSection));
   statusRow->addSpacing(20);
   statusRow->addWidget(compatibilityIcon);
   statusRow->addWidget(makeLabel(QStringLiteral("Required compatibility ready"), nullptr, installedSection));
-  statusRow->addStretch(1);
+  statusRow->addSpacing(20);
   statusRow->addWidget(checkForUpdates);
 
   auto* toolsRow = new QHBoxLayout;
@@ -270,6 +272,7 @@ GamePage::GamePage(QWidget* parent)
 
   connect(tabs, &QTabBar::currentChanged, pages, &QStackedWidget::setCurrentIndex);
   connect(clientToolsLink, &QPushButton::clicked, this, [this] { tabs->setCurrentIndex(2); });
+  connect(checkForUpdates, &QPushButton::clicked, this, &GamePage::updateCheckRequested);
   connect(launchSettingsToggle, &QPushButton::toggled, this, [this](bool isShown) {
     launchSettingsNote->setVisible(isShown);
     refreshIcons();
@@ -285,6 +288,9 @@ GamePage::GamePage(QWidget* parent)
       break;
     case InstallState::notInstalled:
       emit installRequested(game);
+      break;
+    case InstallState::updateAvailable:
+      emit updateRequested(game);
       break;
     case InstallState::unavailable:
     case InstallState::busyElsewhere:
@@ -327,14 +333,27 @@ void GamePage::refreshIcons()
 void GamePage::updateStatus()
 {
   statusTitle->setText(game.status.isEmpty() ? QStringLiteral("Status not reported") : game.status);
-  installedSection->setVisible(installState == InstallState::installed);
+  const bool isInstalled = installState == InstallState::installed || installState == InstallState::updateAvailable
+    || (installState == InstallState::installing && game.isInstalled);
+  installedSection->setVisible(isInstalled);
   progress->setVisible(installState == InstallState::installing);
   primaryButton->setEnabled(true);
   primaryButton->setToolTip(QString());
+  upToDateLabel->setText(QStringLiteral("Up to date"));
+  upToDateLabel->setToolTip(QString());
   switch (installState) {
   case InstallState::installed:
+    if (!installDetail.isEmpty()) {
+      upToDateLabel->setText(installDetail);
+      upToDateLabel->setToolTip(installDetail);
+    }
     statusDetail->setText(QStringLiteral("%1 %2 %3").arg(realmChoice->currentText(), QString(QChar(0x00B7)), accountChoice->currentText()));
     primaryButton->setText(QStringLiteral("  Play"));
+    break;
+  case InstallState::updateAvailable:
+    upToDateLabel->setText(QStringLiteral("Update available"));
+    statusDetail->setText(installDetail);
+    primaryButton->setText(QStringLiteral("Update"));
     break;
   case InstallState::installing:
     statusDetail->setText(installDetail);
@@ -356,7 +375,8 @@ void GamePage::updateStatus()
     primaryButton->setEnabled(false);
     break;
   }
-  accountChoice->setEnabled(installState == InstallState::installed && accountsProblem.isEmpty() && game.accountDomainID.has_value()
+  accountChoice->setEnabled((installState == InstallState::installed || installState == InstallState::updateAvailable)
+    && accountsProblem.isEmpty() && game.accountDomainID.has_value()
     && accountChoice->count() > 0 && accountChoice->itemText(0) != QStringLiteral("No game account yet"));
   refreshIcons();
 }

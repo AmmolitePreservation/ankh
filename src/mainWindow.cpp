@@ -238,6 +238,8 @@ MainWindow::MainWindow()
   connect(settingsPage, &SettingsPage::updateCheckRequested, this, &MainWindow::checkManifest);
   connect(settingsPage, &SettingsPage::libraryRootChangeRequested, this, &MainWindow::chooseLibraryRoot);
   connect(gamePage, &GamePage::installRequested, this, &MainWindow::startInstall);
+  connect(gamePage, &GamePage::updateRequested, this, &MainWindow::startUpdate);
+  connect(gamePage, &GamePage::updateCheckRequested, this, &MainWindow::checkManifest);
   connect(gamePage, &GamePage::cancelRequested, this, [this] {
     if (installJob != nullptr) {
       installJob->cancel();
@@ -426,7 +428,7 @@ void MainWindow::rebuildGames()
   QList<Game> games;
   for (const World& world : worlds) {
     Game game = gameFromWorld(world);
-    game.isInstalled = isGameInstalled(game);
+    game.isInstalled = receiptFor(game) != nullptr;
     games.append(game);
   }
   gamePage->setPackages(packages);
@@ -438,14 +440,14 @@ void MainWindow::rebuildGames()
   refreshInstallState();
 }
 
-bool MainWindow::isGameInstalled(const Game& game) const
+const Receipt* MainWindow::receiptFor(const Game& game) const
 {
   for (const Package& package : packagesFor(game, packages)) {
     if (package.role == QLatin1String("client")) {
-      return receiptForClient(libraryScan.receipts, package.name) != nullptr;
+      return receiptForClient(libraryScan.receipts, package.name);
     }
   }
-  return false;
+  return nullptr;
 }
 
 QString MainWindow::libraryRoot() const
@@ -476,8 +478,22 @@ void MainWindow::refreshInstallState()
     }
     return;
   }
-  if (shownGame.isInstalled) {
-    gamePage->setInstallState(InstallState::installed, QString());
+  const Receipt* receipt = receiptFor(shownGame);
+  if (receipt != nullptr) {
+    QString problem;
+    const std::optional<InstallPlan> update = planUpdate(shownGame, packages, *receipt, problem);
+    if (update) {
+      QStringList changes;
+      for (const Package& package : update->fetch) {
+        changes.append(QStringLiteral("%1 %2").arg(package.label, package.latest->version));
+      }
+      for (const QString& name : update->removed) {
+        changes.append(QStringLiteral("%1 removed").arg(name));
+      }
+      gamePage->setInstallState(InstallState::updateAvailable, QStringLiteral("Update available: %1").arg(changes.join(QStringLiteral(", "))));
+    } else {
+      gamePage->setInstallState(InstallState::installed, problem.isEmpty() ? installNotes.value(shownGame.id) : problem);
+    }
     return;
   }
   QString problem;
@@ -490,15 +506,36 @@ void MainWindow::refreshInstallState()
 
 void MainWindow::startInstall(const Game& game)
 {
-  if (installJob != nullptr) {
-    return;
-  }
   QString problem;
-  std::optional<InstallPlan> plan = planInstall(game, packages, libraryRoot(), problem);
+  const std::optional<InstallPlan> plan = planInstall(game, packages, libraryRoot(), problem);
   if (!plan) {
     gamePage->setInstallState(InstallState::unavailable, problem);
     return;
   }
+  runPlan(game, *plan);
+}
+
+void MainWindow::startUpdate(const Game& game)
+{
+  const Receipt* receipt = receiptFor(game);
+  if (receipt == nullptr) {
+    return;
+  }
+  QString problem;
+  const std::optional<InstallPlan> plan = planUpdate(game, packages, *receipt, problem);
+  if (!plan) {
+    gamePage->setInstallState(InstallState::installed, problem);
+    return;
+  }
+  runPlan(game, *plan);
+}
+
+void MainWindow::runPlan(const Game& game, const InstallPlan& startingPlan)
+{
+  if (installJob != nullptr) {
+    return;
+  }
+  std::optional<InstallPlan> plan = startingPlan;
   InstallSheet sheet(game, *plan, libraryRoot(), this);
   connect(&sheet, &InstallSheet::libraryRootChosen, this, [this, &sheet, &plan, &game](const QString& root) {
     settings.setValue(QStringLiteral("library/root"), root);
@@ -536,7 +573,22 @@ void MainWindow::startInstall(const Game& game)
       gamePage->showInstallProgress(installStepText, done, total);
     }
   });
-  connect(installJob, &InstallJob::finished, this, [this](const Receipt&) { finishInstall(QString()); });
+  connect(installJob, &InstallJob::finished, this, [this, isUpdate = plan->isUpdate()](const Receipt& receipt, const ApplySummary& summary) {
+    if (!isUpdate) {
+      finishInstall(QString());
+      return;
+    }
+    QString note = QStringLiteral("Updated to %1: %2 written, %3 deleted").arg(receipt.client.version)
+      .arg(summary.written).arg(summary.deleted);
+    if (!summary.kept.isEmpty()) {
+      QStringList named = summary.kept.mid(0, 3);
+      if (summary.kept.size() > 3) {
+        named.append(QStringLiteral("%1 more").arg(summary.kept.size() - 3));
+      }
+      note += QStringLiteral(", kept as you had them: %1").arg(named.join(QStringLiteral(", ")));
+    }
+    finishInstall(note);
+  });
   connect(installJob, &InstallJob::failed, this, &MainWindow::finishInstall);
   connect(installJob, &InstallJob::cancelled, this, [this] {
     finishInstall(QStringLiteral("The install was cancelled. Finished downloads are kept for next time."));

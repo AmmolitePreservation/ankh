@@ -18,6 +18,7 @@ struct OwnedFile {
   QString package;
   qint64 byteSize;
   quint32 crc32;
+  bool isWriteOnce;
 };
 
 struct Receipt {
