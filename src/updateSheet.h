@@ -18,11 +18,14 @@ public:
 
   void setOffer(const UpdateOffer& offer);
   void holdFor(const QString& activity);
+  void setChecking(bool isCheckingNow, const QString& problem);
 
 protected:
   void showEvent(QShowEvent* event) override;
 
 private:
+  void refresh();
+
   UpdateInstaller* installer;
   QLabel* heading;
   QPlainTextEdit* notes;
@@ -31,5 +34,9 @@ private:
   QPushButton* updateButton;
   QPushButton* closeButton;
   QUrl page;
+  QString heldFor;
+  QString checkProblem;
+  QString lastFailure;
+  bool isChecking = false;
   bool isWorking = false;
 };
