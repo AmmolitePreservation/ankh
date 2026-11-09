@@ -21,7 +21,7 @@ project(ankh VERSION ${ANKH_V1}.${ANKH_V2}.${ANKH_V3}.${ANKH_V4} LANGUAGES CXX R
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Widgets Svg SvgWidgets Network Test)
+find_package(Qt6 REQUIRED COMPONENTS Widgets Svg SvgWidgets Network Xml Test)
 qt_standard_project_setup()
 
 configure_file(src/appVersion.h.in appVersion.h @ONLY)
@@ -59,12 +59,15 @@ qt_add_executable(ankh WIN32
   src/installLibrary.cpp
   src/installJob.cpp
   src/installSheet.cpp
+  src/gameLoginStore.cpp
+  src/gameLoginDialog.cpp
+  src/turbineLauncher.cpp
   src/mainWindow.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/ankh.rc
 )
 
 target_include_directories(ankh PRIVATE src ${CMAKE_CURRENT_BINARY_DIR})
-target_link_libraries(ankh PRIVATE Qt6::Widgets Qt6::Svg Qt6::SvgWidgets Qt6::Network dwmapi bcrypt advapi32)
+target_link_libraries(ankh PRIVATE Qt6::Widgets Qt6::Svg Qt6::SvgWidgets Qt6::Network Qt6::Xml dwmapi bcrypt advapi32)
 target_compile_definitions(ankh PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN)
 
 file(GLOB glyphFiles CONFIGURE_DEPENDS assets/glyphs/*.svg)
@@ -153,3 +156,13 @@ target_include_directories(toolsPaneTest PRIVATE src)
 target_link_libraries(toolsPaneTest PRIVATE Qt6::Test Qt6::Network Qt6::Widgets)
 add_test(NAME toolsPane COMMAND toolsPaneTest)
 set_tests_properties(toolsPane PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+qt_add_executable(gameLoginStoreTest tests/gameLoginStoreTest.cpp src/gameLoginStore.cpp src/credentialStore.cpp src/fatal.cpp)
+target_include_directories(gameLoginStoreTest PRIVATE src)
+target_link_libraries(gameLoginStoreTest PRIVATE Qt6::Test Qt6::Widgets advapi32)
+add_test(NAME gameLoginStore COMMAND gameLoginStoreTest)
+
+qt_add_executable(turbineLauncherTest tests/turbineLauncherTest.cpp src/turbineLauncher.cpp)
+target_include_directories(turbineLauncherTest PRIVATE src)
+target_link_libraries(turbineLauncherTest PRIVATE Qt6::Test Qt6::Network Qt6::Xml Qt6::Widgets)
+add_test(NAME turbineLauncher COMMAND turbineLauncherTest)

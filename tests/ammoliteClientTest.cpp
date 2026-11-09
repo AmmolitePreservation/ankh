@@ -322,6 +322,8 @@ private slots:
     QCOMPARE(ddo.edition, QStringLiteral("Live"));
     QCOMPARE(ddo.color, QColor("#c0392b"));
     QCOMPARE(ddo.executable, QStringLiteral("x64/dndclient64.exe"));
+    QCOMPARE(ddo.launcher, QStringLiteral("turbineGLS"));
+    QCOMPARE(ddo.launcherConfig, QStringLiteral("ddo.launcherconfig"));
   }
 
   void anAttachedGameWhoseExecutableLeavesItsFolderIsRefused()

@@ -1,0 +1,21 @@
+# Launching attached games
+
+Only attached games launch today (see `install.md`, Attached games). A museum game's Play button still says launching is not built.
+
+## Logins kept on this computer
+
+An attached game's accounts are the player's own and never reach Ammolite. **Manage accounts** on the game page opens the logins dialog: a list of the saved account names, a row to add one or replace a password, and Remove. Each login is a Windows Credential Manager generic credential for the current Windows user, target `Ankh/AmmolitePreservation/gameLogin/<game>/<variant>/<account>` (the parts percent-escaped), with the account name as the credential's user name and the password as its secret. The password is typed once and never shown again; any program running as that Windows user can read Credential Manager, which is the same standing as the Ammolite token.
+
+The Account list on the game page holds those names and the Realm list holds the game's own worlds. Both choices are remembered per game in the settings (`attached/<id>/world`, `attached/<id>/account`).
+
+## The Turbine launch
+
+An attached edition names its launcher kind and configuration file in the manifest. The one kind so far is `turbineGLS`, what the Turbine and Standing Stone launchers do, read from the game folder's `ddo.launcherconfig` (or the like):
+
+1. `Launcher.DataCenterService.GLS` and `DataCenter.GameName` come from that file. Every published `http://` address is used over `https://`.
+2. `GetDatacenters` (SOAP) on the GLS service names the game's auth server, its server-side launcher configuration and its worlds, each with a chat server and a status address. The Realm list is these worlds in the service's order, fetched when the game page opens and kept for the session.
+3. Play reads the server-side configuration (`GameClient.WIN64.Filename`, the `GameClient.WIN32.ArgTemplate`, the `GameClient.Arg.*` values, the login queue address and its parameter template), then calls `LoginAccount` with the saved login for a ticket; the account must hold exactly one subscription to the game. A wrong password is the service's own fault message on the status line.
+4. The world's status document gives its login servers and queue addresses; a full or unavailable world stops here with the reason. A number is taken in the login queue the way the launcher does, and a refusing queue is reported with its HRESULT.
+5. The template becomes the client's command line, with the subscription, login server, ticket, chat server and language filled in, and the client named by the server configuration is started from the game folder; it must be the edition's executable. The ticket lives only in those arguments, which the client scrubs once read.
+
+The status line shows each step while it runs and holds Play. Nothing is kept from a launch; the next Play repeats every step. Ankh does not watch the started client.

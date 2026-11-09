@@ -6,6 +6,7 @@ A minimalist, robust game management application for a private collection of pre
 - Release process and version format: [docs/releases.md](docs/releases.md)
 - Update flow: [docs/updates.md](docs/updates.md)
 - Installing and updating games: [docs/install.md](docs/install.md)
+- Launching attached games and their local logins: [docs/launch.md](docs/launch.md)
 - Ammolite backend, sign-in and the library's data: [docs/ammolite.md](docs/ammolite.md)
 - Wordmark: [assets/ankhWordmark.svg](assets/ankhWordmark.svg)
 

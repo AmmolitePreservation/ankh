@@ -25,6 +25,7 @@ struct Game {
   // An attached game: no realm, the player's own copy, recognized by this file inside its folder.
   bool isAttached = false;
   QString executable;
+  QString launcherConfig;
 };
 
 QString initialsFor(const QString& title);
