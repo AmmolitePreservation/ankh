@@ -49,8 +49,8 @@ SettingsPage::SettingsPage(const QString& serviceAddress, const QString& library
   gamesLayout->addLayout(gamesForm);
   auto* changeLibrary = new QPushButton(QStringLiteral("Change library folder..."), games);
   gamesLayout->addWidget(changeLibrary, 0, Qt::AlignLeft);
-  auto* libraryNote = new QLabel(QStringLiteral("Each game edition installs into its own subfolder of the library. Changing the folder affects new installs; "
-    "games already installed stay where they are and keep working from there."), games);
+  auto* libraryNote = new QLabel(QStringLiteral("Each game edition installs into its own subfolder of the library, unless another folder is chosen "
+    "for that one install. Changing the library affects new installs only; games already installed stay where they are."), games);
   libraryNote->setProperty("secondary", true);
   libraryNote->setWordWrap(true);
   gamesLayout->addWidget(libraryNote);

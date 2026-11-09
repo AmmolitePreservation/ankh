@@ -4,14 +4,16 @@ Install on a game page downloads the edition's client and its required tools fro
 
 ## Library
 
-- Games live under one library folder, by default `clients` beside `ankh.exe`. Settings -> Games shows it and changes it; a changed folder affects new installs, and games already installed stay where they are.
+- Games live under one library folder, by default `clients` beside `ankh.exe`. Settings -> Games shows it and is the only place that changes it (the `library/root` setting must be a rooted path; anything else stops Ankh at start). A changed library affects new installs only.
+- One install can go somewhere else: Choose another folder on the install sheet puts that game in `<chosen folder>\<game> - <edition>` and changes nothing else.
+- Ankh remembers every install folder (`library/installs`), so a game outside the library, or one installed before the library changed, is still known after a restart. A remembered folder whose receipt is gone is forgotten.
 - Each install is one folder, `<game> - <edition label>` (`World of Warcraft - Classic (1.12.1)`), or `<game>` alone when the client serves several editions (`EverQuest`). Characters Windows refuses in a name become `-`.
 - Every install folder carries `.ankh\receipt.json`: the client and each tool with its version and SHA-256, and every file the packages placed with its size, CRC-32 and write-once flag from the server's listing. Ankh scans the library's receipts at start and after every install; a world is installed when its edition's client has a receipt. A receipt that cannot be read is listed under Settings -> Games and its game shows as not installed.
-- Downloads and extraction happen under `<library>\.staging`. A finished install leaves it empty.
+- Downloads and extraction happen in `.staging` beside the install folder (`<library>\.staging`, or `<chosen folder>\.staging`), so moving files into place never crosses a drive. A finished install leaves it empty.
 
 ## Install
 
-1. Install opens a sheet: the client and required tools with their versions and download sizes, the destination folder, the bytes to download, the size once installed, what is still needed and the free space on that drive. An all-users install under Program Files cannot write beside itself, so the sheet refuses until a library folder is chosen; Ankh keeps the choice. Change library folder is on the sheet and in Settings -> Games.
+1. Install opens a sheet: the client and required tools with their versions and download sizes, the destination folder, the bytes to download, the size once installed, what is still needed and the free space on that drive. An all-users install under Program Files cannot write beside itself, so the sheet refuses until another folder is chosen for the game or the library folder is changed under Settings -> Games.
 2. The install plan is the edition's client plus every package whose role is required tool. It is refused when the client or a required tool has no published version, or when the edition has no client; the Install button is disabled with the reason.
 3. The job reads each package's file list (`GET /api/v1/packages/<name>/versions/<version>/files`), downloads each archive to `.staging\<name>-<version>.zip.part` with `Range` resume, checks its SHA-256 against the manifest (a mismatch deletes the file and stops), extracts each archive with Windows' own `tar.exe` into `.staging\<name>-<version>.extract`, renames the client's folder into place, moves the tools' files in, writes the receipt, and deletes the archives.
 4. Progress, the current step and a Cancel button sit on the game page's status line; the library row shows the game as installed when the receipt is written. Cancel stops the download or extraction and removes the extraction folders; finished and partial downloads stay in `.staging`, so the next Install resumes. One install runs at a time; other games say so.

@@ -22,6 +22,7 @@
 #include <QFrame>
 #include <QApplication>
 #include <QDir>
+#include <QFile>
 #include <QFileDialog>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -460,9 +461,36 @@ QString MainWindow::libraryRoot() const
   return libraryRootFrom(settings);
 }
 
+QStringList MainWindow::rememberedInstalls() const
+{
+  return settings.value(QStringLiteral("library/installs")).toStringList();
+}
+
+// Every install folder is remembered, so a game put somewhere else, or installed before the library folder
+// changed, is still known after a restart.
+void MainWindow::rememberInstalls(const QStringList& folders)
+{
+  QStringList remembered = rememberedInstalls();
+  for (const QString& folder : folders) {
+    if (!remembered.contains(folder, Qt::CaseInsensitive)) {
+      remembered.append(folder);
+    }
+  }
+  settings.setValue(QStringLiteral("library/installs"), remembered);
+}
+
 void MainWindow::rescanLibrary()
 {
-  libraryScan = scanLibrary(libraryRoot());
+  QStringList remembered;
+  for (const QString& folder : rememberedInstalls()) {
+    if (QFile::exists(receiptPath(folder))) {
+      remembered.append(folder);
+    }
+  }
+  if (remembered != rememberedInstalls()) {
+    settings.setValue(QStringLiteral("library/installs"), remembered);
+  }
+  libraryScan = scanLibrary(libraryRoot(), remembered);
   settingsPage->setLibraryProblems(libraryScan.problems);
   if (hasCollection) {
     rebuildGames();
@@ -541,17 +569,14 @@ void MainWindow::runPlan(const Game& game, const InstallPlan& startingPlan)
     return;
   }
   std::optional<InstallPlan> plan = startingPlan;
-  InstallSheet sheet(game, *plan, libraryRoot(), this);
-  connect(&sheet, &InstallSheet::libraryRootChosen, this, [this, &sheet, &plan, &game](const QString& root) {
-    settings.setValue(QStringLiteral("library/root"), root);
-    settingsPage->setLibraryRoot(root);
+  InstallSheet sheet(game, *plan, this);
+  connect(&sheet, &InstallSheet::destinationChosen, this, [this, &sheet, &plan, &game](const QString& parentFolder) {
     QString replanProblem;
-    plan = planInstall(game, packages, root, replanProblem);
+    plan = planInstall(game, packages, parentFolder, replanProblem);
     if (!plan) {
-      fatal(QStringLiteral("The install plan changed with the library folder: %1").arg(replanProblem));
+      fatal(QStringLiteral("The install plan changed with its folder: %1").arg(replanProblem));
     }
-    sheet.showPlan(*plan, root);
-    rescanLibrary();
+    sheet.showPlan(*plan);
   });
   if (sheet.exec() != QDialog::Accepted) {
     return;
@@ -562,7 +587,7 @@ void MainWindow::runPlan(const Game& game, const InstallPlan& startingPlan)
   installStepText = QStringLiteral("Starting...");
   installDone = 0;
   installTotal = 0;
-  installJob = new InstallJob(*plan, libraryRoot(), client->baseUrl(), client->token(), QString::fromLatin1(appVersion), this);
+  installJob = new InstallJob(*plan, client->baseUrl(), client->token(), QString::fromLatin1(appVersion), this);
   connect(installJob, &InstallJob::statusChanged, this, [this](const QString& text) {
     installStepText = text;
     installDone = 0;
@@ -580,6 +605,7 @@ void MainWindow::runPlan(const Game& game, const InstallPlan& startingPlan)
   });
   connect(installJob, &InstallJob::finished, this, [this, isUpdate = plan->isUpdate()](const Receipt& receipt, const ApplySummary& summary) {
     if (!isUpdate) {
+      rememberInstalls({receipt.folder});
       finishInstall(QString());
       return;
     }
@@ -623,6 +649,11 @@ void MainWindow::chooseLibraryRoot()
   if (chosen.isEmpty()) {
     return;
   }
+  QStringList known;
+  for (const Receipt& receipt : libraryScan.receipts) {
+    known.append(receipt.folder);
+  }
+  rememberInstalls(known);
   settings.setValue(QStringLiteral("library/root"), QDir::toNativeSeparators(chosen));
   settingsPage->setLibraryRoot(libraryRoot());
   rescanLibrary();

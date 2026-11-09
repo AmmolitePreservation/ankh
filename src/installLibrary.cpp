@@ -9,6 +9,7 @@
 #include <QJsonObject>
 #include <QRegularExpression>
 #include <QSaveFile>
+#include <QSet>
 
 namespace {
 
@@ -187,19 +188,30 @@ std::optional<Receipt> readReceipt(const QString& folder, QString& problem)
   }
 }
 
-LibraryScan scanLibrary(const QString& root)
+// Installs are the library's subfolders that carry a receipt, plus the folders remembered from installs made
+// elsewhere or under an earlier library folder.
+LibraryScan scanLibrary(const QString& root, const QStringList& rememberedFolders)
 {
   LibraryScan scan;
+  QStringList folders;
   const QDir rootDir(root);
-  if (!rootDir.exists()) {
-    return scan;
+  if (rootDir.exists()) {
+    for (const QFileInfo& entry : rootDir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name)) {
+      if (QFile::exists(receiptPath(entry.absoluteFilePath()))) {
+        folders.append(entry.absoluteFilePath());
+      }
+    }
   }
-  for (const QFileInfo& entry : rootDir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name)) {
-    if (!QFile::exists(receiptPath(entry.absoluteFilePath()))) {
+  folders.append(rememberedFolders);
+  QSet<QString> seen;
+  for (const QString& folder : folders) {
+    const QString key = QDir::cleanPath(QDir(folder).absolutePath()).toLower();
+    if (seen.contains(key)) {
       continue;
     }
+    seen.insert(key);
     QString problem;
-    const std::optional<Receipt> receipt = readReceipt(entry.absoluteFilePath(), problem);
+    const std::optional<Receipt> receipt = readReceipt(folder, problem);
     if (receipt) {
       scan.receipts.append(*receipt);
     } else {

@@ -41,20 +41,21 @@ struct ApplySummary {
   QStringList kept;
 };
 
-std::optional<InstallPlan> planInstall(const Game& game, const QList<Package>& packages, const QString& libraryRoot,
+std::optional<InstallPlan> planInstall(const Game& game, const QList<Package>& packages, const QString& parentFolder,
   QString& problem);
 std::optional<InstallPlan> planUpdate(const Game& game, const QList<Package>& packages, const Receipt& receipt,
   QString& problem);
-QString stagingFolderFor(const QString& libraryRoot);
-QString stagedZipPath(const QString& libraryRoot, const Package& package);
-qint64 bytesStillNeeded(const InstallPlan& plan, const QString& libraryRoot);
+QString stagingRootFor(const InstallPlan& plan);
+QString stagingFolderFor(const QString& stagingRoot);
+QString stagedZipPath(const QString& stagingRoot, const Package& package);
+qint64 bytesStillNeeded(const InstallPlan& plan, const QString& stagingRoot);
 
 class InstallJob : public QObject {
   Q_OBJECT
 
 public:
-  InstallJob(const InstallPlan& plan, const QString& libraryRoot, const QUrl& serviceUrl, const QString& token,
-    const QString& appVersion, QObject* parent = nullptr);
+  InstallJob(const InstallPlan& plan, const QUrl& serviceUrl, const QString& token, const QString& appVersion,
+    QObject* parent = nullptr);
 
   const InstallPlan& plan() const;
   void start();
@@ -84,7 +85,7 @@ private:
   void removeExtractFolders();
 
   InstallPlan installPlan;
-  QString libraryRoot;
+  QString stagingRoot;
   QUrl serviceUrl;
   QString token;
   QString appVersion;
