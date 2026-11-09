@@ -104,7 +104,7 @@ private slots:
     broken.close();
     QVERIFY(root.mkpath(QStringLiteral("Not an install")));
     QVERIFY(root.mkpath(QStringLiteral(".staging")));
-    const LibraryScan scan = scanLibrary(library.path());
+    const LibraryScan scan = scanLibrary(library.path(), {});
     QCOMPARE(scan.receipts.size(), 1);
     QCOMPARE(scan.receipts.first().client.name, QStringLiteral("wow-classic"));
     QCOMPARE(scan.problems.size(), 1);
@@ -126,8 +126,35 @@ private slots:
 
   void aMissingLibraryScansEmpty()
   {
-    const LibraryScan scan = scanLibrary(QStringLiteral("C:/definitely/not/here/ankh"));
+    const LibraryScan scan = scanLibrary(QStringLiteral("C:/definitely/not/here/ankh"), {});
     QVERIFY(scan.receipts.isEmpty() && scan.problems.isEmpty());
+  }
+
+  void rememberedInstallsOutsideTheLibraryAreFoundOnce()
+  {
+    QTemporaryDir library;
+    QTemporaryDir elsewhere;
+    const QString inLibrary = QDir(library.path()).filePath(QStringLiteral("World of Warcraft - Classic (1.12.1)"));
+    const QString outside = QDir(elsewhere.path()).filePath(QStringLiteral("EverQuest"));
+    const QString broken = QDir(elsewhere.path()).filePath(QStringLiteral("Broken"));
+    QVERIFY(QDir().mkpath(inLibrary) && QDir().mkpath(outside) && QDir().mkpath(broken + QStringLiteral("/.ankh")));
+    QCOMPARE(writeReceipt(sampleReceipt(inLibrary)), QString());
+    Receipt everquest = sampleReceipt(outside);
+    everquest.client.name = QStringLiteral("everquest");
+    QCOMPARE(writeReceipt(everquest), QString());
+    QFile brokenReceipt(QDir(broken).filePath(QStringLiteral(".ankh/receipt.json")));
+    QVERIFY(brokenReceipt.open(QIODevice::WriteOnly));
+    brokenReceipt.write("not json");
+    brokenReceipt.close();
+
+    const LibraryScan scan = scanLibrary(library.path(), {outside, inLibrary.toUpper(), broken});
+    QCOMPARE(scan.receipts.size(), 2);
+    QVERIFY(receiptForClient(scan.receipts, QStringLiteral("wow-classic")) != nullptr);
+    const Receipt* found = receiptForClient(scan.receipts, QStringLiteral("everquest"));
+    QVERIFY(found != nullptr);
+    QCOMPARE(found->folder, QDir::toNativeSeparators(QDir(outside).absolutePath()));
+    QCOMPARE(scan.problems.size(), 1);
+    QVERIFY2(scan.problems.first().contains(QStringLiteral("is not a JSON object")), qPrintable(scan.problems.first()));
   }
 };
 

@@ -172,7 +172,7 @@ int InstallPlan::fileCount() const
   return total;
 }
 
-std::optional<InstallPlan> planInstall(const Game& game, const QList<Package>& packages, const QString& libraryRoot,
+std::optional<InstallPlan> planInstall(const Game& game, const QList<Package>& packages, const QString& parentFolder,
   QString& problem)
 {
   problem.clear();
@@ -200,8 +200,14 @@ std::optional<InstallPlan> planInstall(const Game& game, const QList<Package>& p
     plan.tools.append(package);
     plan.fetch.append(package);
   }
-  plan.folder = native(QDir(libraryRoot).filePath(installFolderNameFor(plan.client)));
+  plan.folder = native(QDir(parentFolder).filePath(installFolderNameFor(plan.client)));
   return plan;
+}
+
+// Staging sits beside the install folder, so moving files into place never crosses a drive.
+QString stagingRootFor(const InstallPlan& plan)
+{
+  return native(QFileInfo(plan.folder).absolutePath());
 }
 
 std::optional<InstallPlan> planUpdate(const Game& game, const QList<Package>& packages, const Receipt& receipt,
@@ -269,21 +275,21 @@ std::optional<InstallPlan> planUpdate(const Game& game, const QList<Package>& pa
   return plan;
 }
 
-QString stagingFolderFor(const QString& libraryRoot)
+QString stagingFolderFor(const QString& stagingRoot)
 {
-  return native(QDir(libraryRoot).filePath(QStringLiteral(".staging")));
+  return native(QDir(stagingRoot).filePath(QStringLiteral(".staging")));
 }
 
-QString stagedZipPath(const QString& libraryRoot, const Package& package)
+QString stagedZipPath(const QString& stagingRoot, const Package& package)
 {
-  return native(QDir(stagingFolderFor(libraryRoot)).filePath(QStringLiteral("%1-%2.zip").arg(package.name, package.latest->version)));
+  return native(QDir(stagingFolderFor(stagingRoot)).filePath(QStringLiteral("%1-%2.zip").arg(package.name, package.latest->version)));
 }
 
-qint64 bytesStillNeeded(const InstallPlan& plan, const QString& libraryRoot)
+qint64 bytesStillNeeded(const InstallPlan& plan, const QString& stagingRoot)
 {
   qint64 needed = plan.extractedBytes();
   for (const Package& package : plan.fetch) {
-    const QString zip = stagedZipPath(libraryRoot, package);
+    const QString zip = stagedZipPath(stagingRoot, package);
     if (QFile::exists(zip)) {
       continue;
     }
@@ -292,9 +298,9 @@ qint64 bytesStillNeeded(const InstallPlan& plan, const QString& libraryRoot)
   return needed;
 }
 
-InstallJob::InstallJob(const InstallPlan& plan, const QString& libraryRoot, const QUrl& serviceUrl, const QString& token,
-  const QString& appVersion, QObject* parent)
-  : QObject(parent), installPlan(plan), libraryRoot(libraryRoot), serviceUrl(serviceUrl), token(token),
+InstallJob::InstallJob(const InstallPlan& plan, const QUrl& serviceUrl, const QString& token, const QString& appVersion,
+  QObject* parent)
+  : QObject(parent), installPlan(plan), stagingRoot(stagingRootFor(plan)), serviceUrl(serviceUrl), token(token),
     appVersion(appVersion), network(new QNetworkAccessManager(this)), queue(plan.fetch)
 {
 }
@@ -306,12 +312,12 @@ const InstallPlan& InstallJob::plan() const
 
 QString InstallJob::partPath(const Package& package) const
 {
-  return stagedZipPath(libraryRoot, package) + QStringLiteral(".part");
+  return stagedZipPath(stagingRoot, package) + QStringLiteral(".part");
 }
 
 QString InstallJob::extractFolder(const Package& package) const
 {
-  return native(QDir(stagingFolderFor(libraryRoot)).filePath(QStringLiteral("%1-%2.extract").arg(package.name, package.latest->version)));
+  return native(QDir(stagingFolderFor(stagingRoot)).filePath(QStringLiteral("%1-%2.extract").arg(package.name, package.latest->version)));
 }
 
 const Package& InstallJob::fetchedPackage(const QString& name) const
@@ -326,8 +332,8 @@ const Package& InstallJob::fetchedPackage(const QString& name) const
 
 void InstallJob::start()
 {
-  if (!QDir().mkpath(stagingFolderFor(libraryRoot))) {
-    fail(QStringLiteral("Could not create %1.").arg(stagingFolderFor(libraryRoot)));
+  if (!QDir().mkpath(stagingFolderFor(stagingRoot))) {
+    fail(QStringLiteral("Could not create %1.").arg(stagingFolderFor(stagingRoot)));
     return;
   }
   if (!installPlan.isUpdate() && QDir(installPlan.folder).exists()) {
@@ -338,8 +344,8 @@ void InstallJob::start()
     fail(QStringLiteral("%1 no longer exists.").arg(installPlan.folder));
     return;
   }
-  const QStorageInfo storage(libraryRoot);
-  const qint64 needed = bytesStillNeeded(installPlan, libraryRoot);
+  const QStorageInfo storage(stagingRoot);
+  const qint64 needed = bytesStillNeeded(installPlan, stagingRoot);
   if (storage.bytesAvailable() < needed) {
     fail(QStringLiteral("Not enough space on %1: the install needs %2 and %3 is free.")
       .arg(native(storage.rootPath()), sizeText(needed), sizeText(storage.bytesAvailable())));
@@ -439,7 +445,7 @@ void InstallJob::download(int index)
   }
   const Package& package = queue.at(index);
   const PackageVersion& latest = *package.latest;
-  const QString zip = stagedZipPath(libraryRoot, package);
+  const QString zip = stagedZipPath(stagingRoot, package);
   if (QFile::exists(zip)) {
     downloadedBefore += latest.byteSize;
     download(index + 1);
@@ -552,8 +558,8 @@ void InstallJob::verifyDownload(int index)
         fail(QStringLiteral("The download of %1 does not match its published SHA-256, so it was deleted.").arg(package.label));
         return;
       }
-      if (!QFile::rename(part, stagedZipPath(libraryRoot, package))) {
-        fail(QStringLiteral("Could not keep the verified download of %1 in %2.").arg(package.label, stagingFolderFor(libraryRoot)));
+      if (!QFile::rename(part, stagedZipPath(stagingRoot, package))) {
+        fail(QStringLiteral("Could not keep the verified download of %1 in %2.").arg(package.label, stagingFolderFor(stagingRoot)));
         return;
       }
       downloadedBefore += latest.byteSize;
@@ -620,7 +626,7 @@ void InstallJob::extract(int index)
       fail(QStringLiteral("Extracting %1 failed: %2").arg(package.label, process->errorString()));
     }
   });
-  process->start(tarPath(), {QStringLiteral("-xvf"), stagedZipPath(libraryRoot, package), QStringLiteral("-C"), folder});
+  process->start(tarPath(), {QStringLiteral("-xvf"), stagedZipPath(stagingRoot, package), QStringLiteral("-C"), folder});
 }
 
 void InstallJob::apply()
@@ -772,7 +778,7 @@ void InstallJob::complete(Receipt receipt, const ApplySummary& summary)
     return;
   }
   for (const Package& package : queue) {
-    QFile::remove(stagedZipPath(libraryRoot, package));
+    QFile::remove(stagedZipPath(stagingRoot, package));
   }
   emit finished(receipt, summary);
 }

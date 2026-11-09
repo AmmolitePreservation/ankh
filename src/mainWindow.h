@@ -75,6 +75,8 @@ private:
   void placeWindowControls();
   void openUpdateSheet();
   QString libraryRoot() const;
+  QStringList rememberedInstalls() const;
+  void rememberInstalls(const QStringList& folders);
   void rescanLibrary();
   void rebuildGames();
   const Receipt* receiptFor(const Game& game) const;

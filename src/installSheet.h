@@ -12,12 +12,12 @@ class InstallSheet : public QDialog {
   Q_OBJECT
 
 public:
-  InstallSheet(const Game& game, const InstallPlan& plan, const QString& libraryRoot, QWidget* parent = nullptr);
+  InstallSheet(const Game& game, const InstallPlan& plan, QWidget* parent = nullptr);
 
-  void showPlan(const InstallPlan& plan, const QString& libraryRoot);
+  void showPlan(const InstallPlan& plan);
 
 signals:
-  void libraryRootChosen(const QString& root);
+  void destinationChosen(const QString& parentFolder);
 
 protected:
   void showEvent(QShowEvent* event) override;

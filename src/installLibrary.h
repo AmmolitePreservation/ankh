@@ -39,5 +39,5 @@ QString installFolderNameFor(const Package& client);
 QString receiptPath(const QString& folder);
 QString writeReceipt(const Receipt& receipt);
 std::optional<Receipt> readReceipt(const QString& folder, QString& problem);
-LibraryScan scanLibrary(const QString& root);
+LibraryScan scanLibrary(const QString& root, const QStringList& rememberedFolders);
 const Receipt* receiptForClient(const QList<Receipt>& receipts, const QString& clientName);

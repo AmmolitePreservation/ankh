@@ -251,7 +251,7 @@ class InstallJobTest : public QObject {
 
   Receipt installFirstVersion(FakeFileServer& server, const QString& libraryRoot)
   {
-    InstallJob job(planFor(server, libraryRoot), libraryRoot, server.url(), QStringLiteral("t"), QStringLiteral("2026.11.08.1200"));
+    InstallJob job(planFor(server, libraryRoot), server.url(), QStringLiteral("t"), QStringLiteral("2026.11.08.1200"));
     Outcome outcome;
     run(job, outcome);
     if (!outcome.isDone) {
@@ -275,6 +275,26 @@ private slots:
     QCOMPARE(plan.extractedBytes(), qint64(3733));
     QCOMPARE(plan.fileCount(), 5);
     QCOMPARE(stagedZipPath(QStringLiteral("D:/Games/clients"), plan.client), QStringLiteral("D:\\Games\\clients\\.staging\\alpha-client-2026.11.01.zip"));
+    QCOMPARE(stagingRootFor(plan), QStringLiteral("D:\\Games\\clients"));
+  }
+
+  void aGameInstalledSomewhereElseStagesBesideItsOwnFolder()
+  {
+    FakeFileServer server;
+    serveEverything(server);
+    QTemporaryDir library;
+    QTemporaryDir elsewhere;
+    QString problem;
+    const std::optional<InstallPlan> plan = planInstall(alpha(), {clientPackage(server), toolPackage(server)}, elsewhere.path(), problem);
+    QVERIFY2(plan.has_value(), qPrintable(problem));
+    QCOMPARE(plan->folder, QDir::toNativeSeparators(QDir(elsewhere.path()).filePath(QStringLiteral("Alpha - Classic"))));
+    InstallJob job(*plan, server.url(), QStringLiteral("t"), QStringLiteral("2026.11.08.1200"));
+    Outcome outcome;
+    run(job, outcome);
+    QVERIFY2(outcome.isDone, qPrintable(outcome.failure));
+    QCOMPARE(QFileInfo(QDir(plan->folder).filePath(QStringLiteral("Game.exe"))).size(), qint64(200));
+    QVERIFY(QDir(stagingFolderFor(elsewhere.path())).exists());
+    QCOMPARE(QDir(library.path()).entryList(QDir::AllEntries | QDir::NoDotAndDotDot), QStringList());
   }
 
   void aPlanRefusesWithoutAPublishedClientOrRequiredTool()
@@ -298,7 +318,7 @@ private slots:
     FakeFileServer server;
     serveEverything(server);
     QTemporaryDir library;
-    InstallJob job(planFor(server, library.path()), library.path(), server.url(), QStringLiteral("secret-token"), QStringLiteral("2026.11.08.1200"));
+    InstallJob job(planFor(server, library.path()), server.url(), QStringLiteral("secret-token"), QStringLiteral("2026.11.08.1200"));
     Outcome outcome;
     run(job, outcome);
     QVERIFY2(outcome.isDone, qPrintable(outcome.failure));
@@ -353,7 +373,7 @@ private slots:
     const InstallPlan plan = planFor(server, library.path());
     QVERIFY(QDir().mkpath(stagingFolderFor(library.path())));
     writeFile(stagedZipPath(library.path(), plan.client) + QStringLiteral(".part"), clientZip.left(300));
-    InstallJob job(plan, library.path(), server.url(), QStringLiteral("t"), QStringLiteral("2026.11.08.1200"));
+    InstallJob job(plan, server.url(), QStringLiteral("t"), QStringLiteral("2026.11.08.1200"));
     Outcome outcome;
     run(job, outcome);
     QVERIFY2(outcome.isDone, qPrintable(outcome.failure));
@@ -372,7 +392,7 @@ private slots:
     const InstallPlan plan = planFor(server, library.path());
     QVERIFY(QDir().mkpath(stagingFolderFor(library.path())));
     writeFile(stagedZipPath(library.path(), plan.client) + QStringLiteral(".part"), QByteArray(300, 'x'));
-    InstallJob job(plan, library.path(), server.url(), QStringLiteral("t"), QStringLiteral("2026.11.08.1200"));
+    InstallJob job(plan, server.url(), QStringLiteral("t"), QStringLiteral("2026.11.08.1200"));
     Outcome outcome;
     run(job, outcome);
     QVERIFY2(outcome.isDone, qPrintable(outcome.failure));
@@ -395,7 +415,7 @@ private slots:
     InstallPlan plan = planFor(server, library.path());
     plan.client.latest->sha256 = QString(64, QLatin1Char('0'));
     plan.fetch.first().latest->sha256 = plan.client.latest->sha256;
-    InstallJob job(plan, library.path(), server.url(), QStringLiteral("t"), QStringLiteral("2026.11.08.1200"));
+    InstallJob job(plan, server.url(), QStringLiteral("t"), QStringLiteral("2026.11.08.1200"));
     Outcome outcome;
     run(job, outcome);
     QVERIFY(outcome.isFailed);
@@ -411,7 +431,7 @@ private slots:
     server.answer(QStringLiteral("/api/v1/packages/alpha-client/versions/2026.11.01/files"), 200, clientListing, "application/json");
     server.answer(QStringLiteral("/files/client.zip"), 200, clientZip, "application/octet-stream");
     QTemporaryDir library;
-    InstallJob job(planFor(server, library.path()), library.path(), server.url(), QStringLiteral("t"), QStringLiteral("2026.11.08.1200"));
+    InstallJob job(planFor(server, library.path()), server.url(), QStringLiteral("t"), QStringLiteral("2026.11.08.1200"));
     Outcome outcome;
     run(job, outcome);
     QVERIFY(outcome.isFailed);
@@ -426,7 +446,7 @@ private slots:
     server.answer(QStringLiteral("/api/v1/packages/alpha-client/versions/2026.11.01/files"), 200,
       "{\"files\":[{\"path\":\"Game.exe\",\"byteSize\":200,\"crc32\":111}]}", "application/json");
     QTemporaryDir library;
-    InstallJob job(planFor(server, library.path()), library.path(), server.url(), QStringLiteral("t"), QStringLiteral("2026.11.08.1200"));
+    InstallJob job(planFor(server, library.path()), server.url(), QStringLiteral("t"), QStringLiteral("2026.11.08.1200"));
     Outcome outcome;
     run(job, outcome);
     QVERIFY(outcome.isFailed);
@@ -440,7 +460,7 @@ private slots:
     QTemporaryDir library;
     const InstallPlan plan = planFor(server, library.path());
     QVERIFY(QDir().mkpath(plan.folder));
-    InstallJob job(plan, library.path(), server.url(), QStringLiteral("t"), QStringLiteral("2026.11.08.1200"));
+    InstallJob job(plan, server.url(), QStringLiteral("t"), QStringLiteral("2026.11.08.1200"));
     Outcome outcome;
     run(job, outcome);
     QVERIFY(outcome.isFailed);
@@ -455,7 +475,7 @@ private slots:
     server.holdAfterBytes = 100;
     QTemporaryDir library;
     const InstallPlan plan = planFor(server, library.path());
-    InstallJob job(plan, library.path(), server.url(), QStringLiteral("t"), QStringLiteral("2026.11.08.1200"));
+    InstallJob job(plan, server.url(), QStringLiteral("t"), QStringLiteral("2026.11.08.1200"));
     Outcome outcome;
     run(job, outcome, [&job](Outcome& soFar) {
       QTRY_VERIFY_WITH_TIMEOUT(!soFar.progress.isEmpty() && soFar.progress.last().first >= 100, 10000);
@@ -529,7 +549,7 @@ private slots:
     const std::optional<InstallPlan> plan = planUpdate(alpha(), {client2Package(server), toolPackage(server), optionalPackage()}, first, problem);
     QVERIFY2(plan.has_value(), qPrintable(problem));
     QCOMPARE(plan->fetch.size(), 1);
-    InstallJob job(*plan, library.path(), server.url(), QStringLiteral("t"), QStringLiteral("2026.11.08.1200"));
+    InstallJob job(*plan, server.url(), QStringLiteral("t"), QStringLiteral("2026.11.08.1200"));
     Outcome outcome;
     run(job, outcome);
     QVERIFY2(outcome.isDone, qPrintable(outcome.failure));
@@ -574,7 +594,7 @@ private slots:
     QVERIFY(plan->fetch.isEmpty());
     QCOMPARE(plan->removed, QStringList{QStringLiteral("alpha-tools")});
     const int requestsBefore = server.requests.size();
-    InstallJob job(*plan, library.path(), server.url(), QStringLiteral("t"), QStringLiteral("2026.11.08.1200"));
+    InstallJob job(*plan, server.url(), QStringLiteral("t"), QStringLiteral("2026.11.08.1200"));
     Outcome outcome;
     run(job, outcome);
     QVERIFY2(outcome.isDone, qPrintable(outcome.failure));
