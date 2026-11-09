@@ -24,7 +24,7 @@ The tag carries no zone letter, so the time is UTC by rule: the workflow compute
    A merge that touches only `docs/`, workflows, or other repo files makes no release.
 3. The workflow (`.github/workflows/release.yml`) takes the current UTC version, builds and packages with `package.ps1` (Qt installed with a pinned aqtinstall, Inno Setup installed from a pinned, hash-checked download), runs the signature tests, signs the manifest with `tools/signRelease.ps1`, then creates the tag and the release. Qt's LGPL text ships in the application's Attributions page.
 4. The release carries the installer, its SHA-256 file, `manifest.json` and `manifest.json.sig`.
-5. Release notes are generated from the commits since the previous tag. The repo keeps no changelog file.
+5. Release notes are generated from the commits since the previous tag, one line per commit; merge commits are left out, since the pull request's own commits already say what changed. The repo keeps no changelog file.
 
 ## Installer
 
