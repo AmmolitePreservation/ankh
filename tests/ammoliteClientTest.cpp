@@ -315,6 +315,29 @@ private slots:
     QCOMPARE(thorium.screenshot->url, QUrl(QStringLiteral("https://ammolite.test/api/v1/packages/thorium/screenshot")));
     QCOMPARE(thorium.screenshot->sha256, QStringLiteral("ab12"));
     QCOMPARE(thorium.screenshot->contentType, QStringLiteral("image/png"));
+    QCOMPARE(manifest->attachedGames.size(), 1);
+    const AttachedGame& ddo = manifest->attachedGames.first();
+    QCOMPARE(ddo.game, QStringLiteral("Dungeons & Dragons Online"));
+    QCOMPARE(ddo.variant, QStringLiteral("live"));
+    QCOMPARE(ddo.edition, QStringLiteral("Live"));
+    QCOMPARE(ddo.color, QColor("#c0392b"));
+    QCOMPARE(ddo.executable, QStringLiteral("x64/dndclient64.exe"));
+  }
+
+  void anAttachedGameWhoseExecutableLeavesItsFolderIsRefused()
+  {
+    FakeServer server;
+    server.answer(QStringLiteral("GET /api/v1/manifest"), 200, fixture("manifestBadExecutable.json"));
+    AmmoliteClient client(server.url(), QStringLiteral("2026.11.08.0100"));
+    client.setToken(QStringLiteral("ammolite_secret"));
+    QString failure;
+    bool isLoaded = false;
+    connect(&client, &AmmoliteClient::manifestLoaded, this, [&] { isLoaded = true; });
+    connect(&client, &AmmoliteClient::requestFailed, this, [&](const QString&, const QString& message) { failure = message; });
+    client.loadManifest(QByteArray());
+    QTRY_VERIFY_WITH_TIMEOUT(!failure.isEmpty(), 5000);
+    QVERIFY2(failure.contains(QStringLiteral("not a path inside its folder: ../outside/game.exe")), qPrintable(failure));
+    QVERIFY(!isLoaded);
   }
 
   void aScreenshotIsFetchedOnceVerifiedAndThenServedFromTheCache()

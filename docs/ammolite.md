@@ -25,6 +25,8 @@ One request, `GET /api/v1/manifest`, carries everything that changes on the serv
 - `worlds`, with a token: the worlds on display. Each becomes a library entry: the game's name, then the edition (for example Classic (1.12.1)). The world's name is not shown in the list but the search finds it, and the game page shows it as the Realm. A world's color is the tint of its icon, and its status line comes from the world itself and refreshes with every manifest.
 - `packages`, with a token: every package attached to an edition, with its role (client, required tool, optional tool), its editions and its newest version: file name, size, SHA-256, the number of files inside and their size once extracted, and where to download it; a description and an optional screenshot (URL, SHA-256, type) that the Client tools tab shows, the image being `GET /api/v1/packages/<name>/screenshot` fetched with the bearer token. The game page lists the packages of the selected world's edition by role.
 
+- `attachedGames`, with a token: games Ammolite does not host, each with its game, variant, edition label, color and the executable that identifies a copy of it (see `install.md`, Attached games). The executable must be a relative path inside the game folder.
+
 `GET /api/v1/me/gameAccounts` supplies the logins the user has in the world's account domain, offered in the Account list.
 
 `GET /api/v1/packages/<name>/versions/<version>/files` lists the files inside a package version (path, size, CRC-32, and whether the package marks it write-once); an install records them in its receipt and an update diffs them (see `install.md`). Downloads follow the manifest's `url` for each version with the same bearer token.

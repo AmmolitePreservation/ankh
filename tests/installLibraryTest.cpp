@@ -76,6 +76,52 @@ private slots:
     QCOMPARE(read->files.value(QStringLiteral("thorium/thorium.dll")).package, QStringLiteral("thorium"));
   }
 
+  void anAttachedReceiptHasNoClientAndIsFoundByItsGame()
+  {
+    QTemporaryDir folder;
+    Receipt receipt{QDir::toNativeSeparators(folder.path()), {}, {}, {}, QStringLiteral("Dungeons & Dragons Online"), QStringLiteral("live")};
+    receipt.tools.append({QStringLiteral("ddo-tools"), QStringLiteral("2026.11.09"), QStringLiteral("aa11")});
+    receipt.files.insert(QStringLiteral("x64/version.dll"), {QStringLiteral("ddo-tools"), 10, 5u, false});
+    QCOMPARE(writeReceipt(receipt), QString());
+    QFile stored(receiptPath(folder.path()));
+    QVERIFY(stored.open(QIODevice::ReadOnly));
+    const QByteArray text = stored.readAll();
+    QVERIFY(text.contains("\"client\": null"));
+    QVERIFY(text.contains("\"game\": \"Dungeons & Dragons Online\""));
+    stored.close();
+
+    QString problem;
+    const std::optional<Receipt> read = readReceipt(folder.path(), problem);
+    QVERIFY2(read.has_value(), qPrintable(problem));
+    QVERIFY(read->isAttached());
+    QCOMPARE(read->attachedGame, QStringLiteral("Dungeons & Dragons Online"));
+    QCOMPARE(read->attachedVariant, QStringLiteral("live"));
+    QCOMPARE(read->client.name, QString());
+    QCOMPARE(read->tools.size(), 1);
+
+    QTemporaryDir museumFolder;
+    const Receipt museum = sampleReceipt(QDir::toNativeSeparators(museumFolder.path()));
+    QVERIFY(!museum.isAttached());
+    const QList<Receipt> receipts = {museum, *read};
+    QCOMPARE(receiptForAttached(receipts, QStringLiteral("Dungeons & Dragons Online"), QStringLiteral("live"))->folder, read->folder);
+    QVERIFY(receiptForAttached(receipts, QStringLiteral("Dungeons & Dragons Online"), QStringLiteral("other")) == nullptr);
+    QCOMPARE(receiptForClient(receipts, QStringLiteral("wow-classic"))->folder, museum.folder);
+    QVERIFY(receiptForClient(receipts, QString()) == nullptr);
+  }
+
+  void aReceiptWithNoClientMustSayWhichGameItIsAttachedTo()
+  {
+    QTemporaryDir folder;
+    QVERIFY(QDir(folder.path()).mkpath(QStringLiteral(".ankh")));
+    QFile file(receiptPath(folder.path()));
+    QVERIFY(file.open(QIODevice::WriteOnly));
+    file.write("{\"client\": null, \"tools\": [], \"files\": {}}");
+    file.close();
+    QString problem;
+    QVERIFY(!readReceipt(folder.path(), problem).has_value());
+    QVERIFY2(problem.contains(QStringLiteral("the field \"attached\" is missing")), qPrintable(problem));
+  }
+
   void aReceiptWithoutTheWriteOnceFlagIsRefused()
   {
     QTemporaryDir library;

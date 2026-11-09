@@ -68,7 +68,7 @@ private:
   void enterSignedOutState(const QString& note);
   void checkManifest();
   void applyManifest(const Manifest& manifest, const QByteArray& etag);
-  void showCollection(const QList<World>& worlds, const QList<Package>& packages);
+  void showCollection(const Manifest& manifest);
   void showCollectionProblem(const QString& message);
   void openSignIn(const QString& note, bool isCreatingAccount);
   void setSidebarWidth(int width);
@@ -83,6 +83,7 @@ private:
   void refreshInstallState();
   void startInstall(const Game& game);
   void startUpdate(const Game& game);
+  void startAttach(const Game& game);
   void startToolChange(const Game& game, const QStringList& optionalToolNames);
   void refreshToolState();
   void runPlan(const Game& game, const InstallPlan& plan);
@@ -123,6 +124,7 @@ private:
   bool hasCollection = false;
   QList<World> worlds;
   QList<Package> packages;
+  QList<AttachedGame> attachedGames;
   LibraryScan libraryScan;
   Game shownGame{};
   InstallJob* installJob = nullptr;

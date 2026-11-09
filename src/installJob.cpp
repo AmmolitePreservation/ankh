@@ -216,18 +216,46 @@ std::optional<InstallPlan> planInstall(const Game& game, const QList<Package>& p
   return plan;
 }
 
+std::optional<InstallPlan> planAttach(const Game& game, const QList<Package>& packages, const QString& gameFolder,
+  QString& problem, const QStringList& optionalToolNames)
+{
+  problem.clear();
+  if (!game.isAttached) {
+    fatal(QStringLiteral("%1 %2 is installed, not attached.").arg(game.title, game.edition));
+  }
+  const QDir folder(gameFolder);
+  if (!QFileInfo(folder.filePath(game.executable)).isFile()) {
+    problem = QStringLiteral("%1 is not a copy of %2: it has no %3.")
+      .arg(native(folder.absolutePath()), game.title, native(game.executable));
+    return std::nullopt;
+  }
+  Receipt empty{native(folder.absolutePath()), {}, {}, {}, game.title, game.variant};
+  std::optional<InstallPlan> plan = planToolChange(game, packages, empty, optionalToolNames, problem);
+  if (!plan) {
+    if (problem.isEmpty()) {
+      problem = QStringLiteral("No tools are published for %1 %2 yet.").arg(game.title, game.edition);
+    }
+    return std::nullopt;
+  }
+  plan->isAttach = true;
+  return plan;
+}
+
 std::optional<InstallPlan> planToolChange(const Game& game, const QList<Package>& packages, const Receipt& receipt,
   const QStringList& optionalToolNames, QString& problem)
 {
   problem.clear();
   const QList<Package> attached = packagesFor(game, packages);
   const Package* client = clientOf(attached);
-  if (client == nullptr || client->name != receipt.client.name) {
+  if (receipt.isAttached() != game.isAttached
+      || (!game.isAttached && (client == nullptr || client->name != receipt.client.name))) {
     problem = QStringLiteral("The client of %1 %2 is not the one installed in %3.").arg(game.title, game.edition, receipt.folder);
     return std::nullopt;
   }
   InstallPlan plan;
-  plan.client = *client;
+  if (client != nullptr) {
+    plan.client = *client;
+  }
   plan.folder = receipt.folder;
   plan.existing = receipt;
   plan.isToolChange = true;
@@ -278,6 +306,10 @@ std::optional<InstallPlan> planToolChange(const Game& game, const QList<Package>
 // Staging sits beside the install folder, so moving files into place never crosses a drive.
 QString stagingRootFor(const InstallPlan& plan)
 {
+  if (plan.existing && plan.existing->isAttached()) {
+    // The folder beside a game the player installed themselves is not Ankh's to write in.
+    return native(QDir(plan.folder).filePath(QStringLiteral(".ankh")));
+  }
   return native(QFileInfo(plan.folder).absolutePath());
 }
 
@@ -287,25 +319,31 @@ std::optional<InstallPlan> planUpdate(const Game& game, const QList<Package>& pa
   problem.clear();
   const QList<Package> attached = packagesFor(game, packages);
   const Package* client = clientOf(attached);
-  if (client == nullptr) {
-    problem = QStringLiteral("No client is published for %1 %2 any more.").arg(game.title, game.edition);
-    return std::nullopt;
-  }
-  if (client->name != receipt.client.name) {
-    problem = QStringLiteral("The edition's client changed from %1 to %2. Remove %3 and install again.")
-      .arg(receipt.client.name, client->name, receipt.folder);
-    return std::nullopt;
-  }
-  if (!client->latest) {
-    problem = QStringLiteral("The client %1 has no version published any more.").arg(client->label);
-    return std::nullopt;
-  }
   InstallPlan plan;
-  plan.client = *client;
   plan.folder = receipt.folder;
   plan.existing = receipt;
-  if (client->latest->version != receipt.client.version) {
-    plan.fetch.append(*client);
+  if (receipt.isAttached() != game.isAttached) {
+    problem = QStringLiteral("%1 holds a different kind of install than %2 %3.").arg(receipt.folder, game.title, game.edition);
+    return std::nullopt;
+  }
+  if (!game.isAttached) {
+    if (client == nullptr) {
+      problem = QStringLiteral("No client is published for %1 %2 any more.").arg(game.title, game.edition);
+      return std::nullopt;
+    }
+    if (client->name != receipt.client.name) {
+      problem = QStringLiteral("The edition's client changed from %1 to %2. Remove %3 and install again.")
+        .arg(receipt.client.name, client->name, receipt.folder);
+      return std::nullopt;
+    }
+    if (!client->latest) {
+      problem = QStringLiteral("The client %1 has no version published any more.").arg(client->label);
+      return std::nullopt;
+    }
+    plan.client = *client;
+    if (client->latest->version != receipt.client.version) {
+      plan.fetch.append(*client);
+    }
   }
   QMap<QString, QString> installedVersions;
   for (const InstalledPackage& tool : receipt.tools) {
@@ -705,7 +743,8 @@ void InstallJob::apply()
   isApplying = true;
   emit progressChanged(0, 0);
   if (installPlan.isUpdate()) {
-    emit statusChanged(QStringLiteral("Applying the update..."));
+    emit statusChanged(installPlan.isAttach ? QStringLiteral("Adding the tools...")
+      : installPlan.isToolChange ? QStringLiteral("Applying the tool changes...") : QStringLiteral("Applying the update..."));
     applyUpdate();
   } else {
     emit statusChanged(QStringLiteral("Moving the files into place..."));
@@ -807,9 +846,14 @@ void InstallJob::applyUpdate()
       summary.kept.append(path);
       continue;
     }
-    if (QFile::exists(target) && !QFile::remove(target)) {
-      fail(QStringLiteral("Could not replace %1; the update is incomplete. Press Update again to finish it.").arg(path));
-      return;
+    if (QFile::exists(target)) {
+      if (!QFile::remove(target)) {
+        fail(QStringLiteral("Could not replace %1 (is the game running?); the change is incomplete. Do it again to finish it.").arg(path));
+        return;
+      }
+      if (previous == old.files.constEnd()) {
+        summary.replaced.append(path);
+      }
     }
     const QString source = QDir(extractFolder(fetchedPackage(file.package))).filePath(path);
     if (!QDir().mkpath(QFileInfo(target).absolutePath()) || !QFile::rename(source, target)) {
@@ -818,7 +862,9 @@ void InstallJob::applyUpdate()
     }
     ++summary.written;
   }
-  Receipt receipt{installPlan.folder, old.client, {}, files};
+  Receipt receipt = old;
+  receipt.tools.clear();
+  receipt.files = files;
   if (fetchedNames.contains(installPlan.client.name)) {
     receipt.client = {installPlan.client.name, installPlan.client.latest->version, installPlan.client.latest->sha256};
   }

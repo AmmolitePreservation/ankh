@@ -35,6 +35,13 @@ Game gameFromWorld(const World& world)
     world.name, initialsFor(world.game), world.color, world.status, world.accountDomainID, world.accountDomain, false};
 }
 
+Game gameFromAttached(const AttachedGame& attached)
+{
+  return {QStringLiteral("attached/%1/%2").arg(attached.game, attached.variant), 0, attached.game, attached.edition,
+    attached.variant, QString(), initialsFor(attached.game), attached.color, QString(), std::nullopt, QString(), false, true,
+    attached.executable};
+}
+
 QList<Package> packagesFor(const Game& game, const QList<Package>& packages)
 {
   QList<Package> attached;

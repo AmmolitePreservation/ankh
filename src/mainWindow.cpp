@@ -395,6 +395,7 @@ void MainWindow::enterSignedOutState(const QString& note)
   shownGame = Game{};
   worlds.clear();
   packages.clear();
+  attachedGames.clear();
   manifestEtag.clear();
   gamePage->setPackages({});
   libraryAction = LibraryAction::signIn;
@@ -440,14 +441,15 @@ void MainWindow::applyManifest(const Manifest& manifest, const QByteArray& etag)
     openSheet->setChecking(false, checkProblem);
   }
   if (manifest.hasCollection) {
-    showCollection(manifest.worlds, manifest.packages);
+    showCollection(manifest);
   }
 }
 
-void MainWindow::showCollection(const QList<World>& newWorlds, const QList<Package>& newPackages)
+void MainWindow::showCollection(const Manifest& manifest)
 {
-  worlds = newWorlds;
-  packages = newPackages;
+  worlds = manifest.worlds;
+  packages = manifest.packages;
+  attachedGames = manifest.attachedGames;
   rebuildGames();
 }
 
@@ -456,6 +458,11 @@ void MainWindow::rebuildGames()
   QList<Game> games;
   for (const World& world : worlds) {
     Game game = gameFromWorld(world);
+    game.isInstalled = receiptFor(game) != nullptr;
+    games.append(game);
+  }
+  for (const AttachedGame& attached : attachedGames) {
+    Game game = gameFromAttached(attached);
     game.isInstalled = receiptFor(game) != nullptr;
     games.append(game);
   }
@@ -470,6 +477,9 @@ void MainWindow::rebuildGames()
 
 const Receipt* MainWindow::receiptFor(const Game& game) const
 {
+  if (game.isAttached) {
+    return receiptForAttached(libraryScan.receipts, game.title, game.variant);
+  }
   for (const Package& package : packagesFor(game, packages)) {
     if (package.role == QLatin1String("client")) {
       return receiptForClient(libraryScan.receipts, package.name);
@@ -566,15 +576,53 @@ void MainWindow::refreshInstallState()
     return;
   }
   QString problem;
-  if (!planInstall(shownGame, packages, libraryRoot(), problem)) {
+  if (shownGame.isAttached) {
+    bool hasRequiredTool = false;
+    for (const Package& package : packagesFor(shownGame, packages)) {
+      if (package.role == QLatin1String("requiredTool") && !package.latest) {
+        problem = QStringLiteral("The required tool %1 has no version published yet.").arg(package.label);
+      }
+      hasRequiredTool = hasRequiredTool || package.role == QLatin1String("requiredTool");
+    }
+    if (!hasRequiredTool) {
+      problem = QStringLiteral("No tools are published for %1 %2 yet.").arg(shownGame.title, shownGame.edition);
+    }
+    if (!problem.isEmpty()) {
+      gamePage->setInstallState(InstallState::unavailable, problem);
+      return;
+    }
+  } else if (!planInstall(shownGame, packages, libraryRoot(), problem)) {
     gamePage->setInstallState(InstallState::unavailable, problem);
     return;
   }
   gamePage->setInstallState(InstallState::notInstalled, installNotes.value(shownGame.id));
 }
 
+void MainWindow::startAttach(const Game& game)
+{
+  const QString chosen = QFileDialog::getExistingDirectory(this,
+    QStringLiteral("Your %1 folder (the one that holds %2)").arg(game.title, QDir::toNativeSeparators(game.executable)),
+    settings.value(QStringLiteral("library/lastAttachFolder")).toString());
+  if (chosen.isEmpty()) {
+    return;
+  }
+  settings.setValue(QStringLiteral("library/lastAttachFolder"), QFileInfo(chosen).absolutePath());
+  QString problem;
+  const std::optional<InstallPlan> plan = planAttach(game, packages, chosen, problem, gamePage->chosenOptionalTools());
+  if (!plan) {
+    installNotes.insert(game.id, problem);
+    refreshInstallState();
+    return;
+  }
+  runPlan(game, *plan);
+}
+
 void MainWindow::startInstall(const Game& game)
 {
+  if (game.isAttached) {
+    startAttach(game);
+    return;
+  }
   QString problem;
   const std::optional<InstallPlan> plan = planInstall(game, packages, libraryRoot(), problem, gamePage->chosenOptionalTools());
   if (!plan) {
@@ -660,15 +708,23 @@ void MainWindow::runPlan(const Game& game, const InstallPlan& startingPlan)
       gamePage->showInstallProgress(installStepText, done, total);
     }
   });
-  connect(installJob, &InstallJob::finished, this, [this, isUpdate = plan->isUpdate(), isToolChange = plan->isToolChange](const Receipt& receipt, const ApplySummary& summary) {
+  connect(installJob, &InstallJob::finished, this, [this, isUpdate = plan->isUpdate(), isToolChange = plan->isToolChange, isAttach = plan->isAttach](const Receipt& receipt, const ApplySummary& summary) {
+    rememberInstalls({receipt.folder});
     if (!isUpdate) {
-      rememberInstalls({receipt.folder});
       finishInstall(QString());
       return;
     }
-    QString note = isToolChange
-      ? QStringLiteral("Tools changed: %1 written, %2 deleted").arg(summary.written).arg(summary.deleted)
+    QString note = isAttach ? QStringLiteral("Tools added: %1 files written").arg(summary.written)
+      : isToolChange ? QStringLiteral("Tools changed: %1 written, %2 deleted").arg(summary.written).arg(summary.deleted)
+      : receipt.isAttached() ? QStringLiteral("Tools updated: %1 written, %2 deleted").arg(summary.written).arg(summary.deleted)
       : QStringLiteral("Updated to %1: %2 written, %3 deleted").arg(receipt.client.version).arg(summary.written).arg(summary.deleted);
+    if (!summary.replaced.isEmpty()) {
+      QStringList named = summary.replaced.mid(0, 3);
+      if (summary.replaced.size() > 3) {
+        named.append(QStringLiteral("%1 more").arg(summary.replaced.size() - 3));
+      }
+      note += QStringLiteral(", replaced files that were already there: %1").arg(named.join(QStringLiteral(", ")));
+    }
     if (!summary.kept.isEmpty()) {
       QStringList named = summary.kept.mid(0, 3);
       if (summary.kept.size() > 3) {

@@ -343,7 +343,9 @@ void GamePage::refreshIcons()
 
 void GamePage::updateStatus()
 {
-  statusTitle->setText(game.status.isEmpty() ? QStringLiteral("Status not reported") : game.status);
+  statusTitle->setText(game.isAttached ? QStringLiteral("Your own copy of the game")
+    : game.status.isEmpty() ? QStringLiteral("Status not reported") : game.status);
+  const QString installVerb = game.isAttached ? QStringLiteral("Add tools") : QStringLiteral("Install");
   const bool isInstalled = installState == InstallState::installed || installState == InstallState::updateAvailable
     || (installState == InstallState::installing && game.isInstalled);
   installedSection->setVisible(isInstalled);
@@ -371,18 +373,19 @@ void GamePage::updateStatus()
     primaryButton->setText(QStringLiteral("Cancel"));
     break;
   case InstallState::notInstalled:
-    statusDetail->setText(installDetail.isEmpty() ? QStringLiteral("Not installed.") : installDetail);
-    primaryButton->setText(QStringLiteral("Install"));
+    statusDetail->setText(!installDetail.isEmpty() ? installDetail
+      : game.isAttached ? QStringLiteral("Point Ankh at your copy of the game to add its tools.") : QStringLiteral("Not installed."));
+    primaryButton->setText(installVerb);
     break;
   case InstallState::unavailable:
     statusDetail->setText(installDetail);
-    primaryButton->setText(QStringLiteral("Install"));
+    primaryButton->setText(installVerb);
     primaryButton->setEnabled(false);
     primaryButton->setToolTip(installDetail);
     break;
   case InstallState::busyElsewhere:
     statusDetail->setText(installDetail);
-    primaryButton->setText(QStringLiteral("Install"));
+    primaryButton->setText(installVerb);
     primaryButton->setEnabled(false);
     break;
   }
@@ -548,7 +551,7 @@ void GamePage::showGame(const Game& newGame)
   titleLabel->setText(game.title);
   subtitleLabel->setText(game.edition);
   realmChoice->clear();
-  realmChoice->addItem(game.worldName);
+  realmChoice->addItem(game.isAttached ? QStringLiteral("The game's own servers") : game.worldName);
   realmChoice->setEnabled(false);
   refreshAccounts();
   showDownloads();

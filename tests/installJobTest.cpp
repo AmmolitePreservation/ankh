@@ -212,6 +212,15 @@ class InstallJobTest : public QObject {
       {{QStringLiteral("Alpha"), QStringLiteral("classic"), QStringLiteral("Classic")}}, std::nullopt};
   }
 
+  Game ownCopy() const
+  {
+    Game game = alpha();
+    game.id = QStringLiteral("attached/Alpha/classic");
+    game.isAttached = true;
+    game.executable = QStringLiteral("bin/alpha.exe");
+    return game;
+  }
+
   Package mapsPackage(const FakeFileServer& server) const
   {
     return {QStringLiteral("alpha-maps"), QStringLiteral("Alpha maps"), QStringLiteral("optionalTool"),
@@ -686,6 +695,100 @@ private slots:
     QCOMPARE(fetched, (QStringList{QStringLiteral("alpha-tools"), QStringLiteral("alpha-maps")}));
     QVERIFY(!planToolChange(alpha(), {client2Package(server), toolPackage(server)}, receipt, {QStringLiteral("unknown")}, problem));
     QCOMPARE(problem, QStringLiteral("unknown is not a tool of Alpha Classic."));
+  }
+
+  void toolsAreAttachedToThePlayersOwnCopyUpdatedAndRemovedWithoutTouchingTheGame()
+  {
+    FakeFileServer server;
+    serveEverything(server);
+    QTemporaryDir parent;
+    const QDir folder(QDir(parent.path()).filePath(QStringLiteral("My Alpha")));
+    const QList<Package> packages = {toolPackage(server), mapsPackage(server)};
+    QString problem;
+    QVERIFY(folder.mkpath(QStringLiteral(".")));
+    QVERIFY(!planAttach(ownCopy(), packages, folder.path(), problem));
+    QVERIFY2(problem.contains(QStringLiteral("is not a copy of Alpha: it has no bin\\alpha.exe")), qPrintable(problem));
+
+    writeFile(folder.filePath(QStringLiteral("bin/alpha.exe")), "the game itself");
+    writeFile(folder.filePath(QStringLiteral("data/world.dat")), "the game's data");
+    writeFile(folder.filePath(QStringLiteral("tools/directConnect.dll")), "a copy put there by hand");
+    const std::optional<InstallPlan> plan = planAttach(ownCopy(), packages, folder.path(), problem, {QStringLiteral("alpha-maps")});
+    QVERIFY2(plan.has_value(), qPrintable(problem));
+    QVERIFY(plan->isAttach && plan->isUpdate());
+    QCOMPARE(plan->folder, QDir::toNativeSeparators(folder.absolutePath()));
+    QCOMPARE(plan->fetch.size(), 2);
+    QCOMPARE(stagingRootFor(*plan), QDir::toNativeSeparators(folder.filePath(QStringLiteral(".ankh"))));
+
+    InstallJob job(*plan, server.url(), QStringLiteral("t"), QStringLiteral("2026.11.08.1200"));
+    Outcome attached;
+    run(job, attached);
+    QVERIFY2(attached.isDone, qPrintable(attached.failure));
+    QCOMPARE(attached.statuses.last(), QStringLiteral("Adding the tools..."));
+    QCOMPARE(contentOf(folder.filePath(QStringLiteral("bin/alpha.exe"))), QByteArray("the game itself"));
+    QCOMPARE(contentOf(folder.filePath(QStringLiteral("data/world.dat"))), QByteArray("the game's data"));
+    QCOMPARE(QFileInfo(folder.filePath(QStringLiteral("tools/directConnect.dll"))).size(), qint64(1100));
+    QCOMPARE(QFileInfo(folder.filePath(QStringLiteral("maps/world.map"))).size(), qint64(400));
+    QCOMPARE(attached.summary.written, 3);
+    QCOMPARE(attached.summary.replaced, QStringList{QStringLiteral("tools/directConnect.dll")});
+    QVERIFY(attached.receipt.isAttached());
+    QCOMPARE(attached.receipt.attachedGame, QStringLiteral("Alpha"));
+    QCOMPARE(attached.receipt.tools.size(), 2);
+    QCOMPARE(attached.receipt.files.size(), 3);
+    QVERIFY(!attached.receipt.files.contains(QStringLiteral("bin/alpha.exe")));
+    QVERIFY(QDir(parent.path()).entryList(QDir::AllEntries | QDir::NoDotAndDotDot) == QStringList{QStringLiteral("My Alpha")});
+    const std::optional<Receipt> stored = readReceipt(folder.path(), problem);
+    QVERIFY2(stored.has_value(), qPrintable(problem));
+    QVERIFY(stored->isAttached());
+    QVERIFY(!planUpdate(ownCopy(), packages, *stored, problem));
+    QVERIFY(problem.isEmpty());
+
+    Package newerTool = toolPackage(server);
+    newerTool.latest->version = QStringLiteral("2026.11.20-def5678");
+    server.answer(QStringLiteral("/api/v1/packages/alpha-tools/versions/2026.11.20-def5678/files"), 200, toolListing, "application/json");
+    const std::optional<InstallPlan> update = planUpdate(ownCopy(), {newerTool, mapsPackage(server)}, *stored, problem);
+    QVERIFY2(update.has_value(), qPrintable(problem));
+    QCOMPARE(update->fetch.size(), 1);
+    QCOMPARE(update->fetch.first().name, QStringLiteral("alpha-tools"));
+    InstallJob updateJob(*update, server.url(), QStringLiteral("t"), QStringLiteral("2026.11.08.1200"));
+    Outcome updated;
+    run(updateJob, updated);
+    QVERIFY2(updated.isDone, qPrintable(updated.failure));
+    QVERIFY(updated.receipt.isAttached());
+    QCOMPARE(updated.receipt.tools.first().version, QStringLiteral("2026.11.20-def5678"));
+    QCOMPARE(updated.receipt.tools.size(), 2);
+
+    const std::optional<InstallPlan> remove = planToolChange(ownCopy(), packages, updated.receipt, {}, problem);
+    QVERIFY2(remove.has_value(), qPrintable(problem));
+    QCOMPARE(remove->removed, QStringList{QStringLiteral("alpha-maps")});
+    InstallJob removeJob(*remove, server.url(), QStringLiteral("t"), QStringLiteral("2026.11.08.1200"));
+    Outcome removed;
+    run(removeJob, removed);
+    QVERIFY2(removed.isDone, qPrintable(removed.failure));
+    QVERIFY(!QFile::exists(folder.filePath(QStringLiteral("maps/world.map"))));
+    QVERIFY(QFile::exists(folder.filePath(QStringLiteral("maps/maps.ini"))));
+    QCOMPARE(contentOf(folder.filePath(QStringLiteral("bin/alpha.exe"))), QByteArray("the game itself"));
+    QVERIFY(removed.receipt.isAttached());
+    QCOMPARE(removed.receipt.tools.size(), 1);
+  }
+
+  void anAttachNeedsAPublishedRequiredToolAndAMuseumReceiptIsNotAnAttachedOne()
+  {
+    FakeFileServer server;
+    QTemporaryDir folder;
+    writeFile(QDir(folder.path()).filePath(QStringLiteral("bin/alpha.exe")), "the game itself");
+    QString problem;
+    QVERIFY(!planAttach(ownCopy(), {}, folder.path(), problem));
+    QCOMPARE(problem, QStringLiteral("No tools are published for Alpha Classic yet."));
+    Package unpublished = toolPackage(server);
+    unpublished.latest.reset();
+    QVERIFY(!planAttach(ownCopy(), {unpublished}, folder.path(), problem));
+    QCOMPARE(problem, QStringLiteral("The required tool Alpha tools has no version published yet."));
+
+    Receipt museum{QStringLiteral("D:\\Games\\Alpha - Classic"), {QStringLiteral("alpha-client"), QStringLiteral("2026.11.01"), QStringLiteral("x")}, {}, {}};
+    QVERIFY(!planUpdate(ownCopy(), {toolPackage(server)}, museum, problem));
+    QVERIFY2(problem.contains(QStringLiteral("holds a different kind of install")), qPrintable(problem));
+    QVERIFY(!planToolChange(ownCopy(), {toolPackage(server)}, museum, {}, problem));
+    QVERIFY(!problem.isEmpty());
   }
 
   void anUpdateRemovesAToolThatLeftTheEdition()

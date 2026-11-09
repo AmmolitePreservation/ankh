@@ -1,6 +1,6 @@
 # Installing and updating games
 
-Install on a game page downloads the edition's client and its required tools from Ammolite, verifies them, and places them in the game library; Update brings an installed game to the packages' newest versions. Optional tools are chosen on the game's Client tools tab. Launching, repair and uninstalling a game are not built yet.
+Install on a game page downloads the edition's client and its required tools from Ammolite, verifies them, and places them in the game library; Update brings an installed game to the packages' newest versions. Optional tools are chosen on the game's Client tools tab. Attached games (tools added to a copy of the game the player already has) are described below. Launching, repair and uninstalling a game are not built yet.
 
 ## Library
 
@@ -18,6 +18,14 @@ Install on a game page downloads the edition's client and its required tools fro
 3. The job reads each package's file list (`GET /api/v1/packages/<name>/versions/<version>/files`), downloads each archive to `.staging\<name>-<version>.zip.part` with `Range` resume, checks its SHA-256 against the manifest (a mismatch deletes the file and stops), extracts each archive with Windows' own `tar.exe` into `.staging\<name>-<version>.extract`, renames the client's folder into place, moves the tools' files in, writes the receipt, and deletes the archives.
 4. Progress, the current step and a Cancel button sit on the game page's status line; the library row shows the game as installed when the receipt is written. Cancel stops the download or extraction and removes the extraction folders; finished and partial downloads stay in `.staging`, so the next Install resumes. One install runs at a time; other games say so.
 5. Failures are reported on the status line and nothing half-installed is left: the install folder exists only once the client is complete, and a tool file that cannot be moved undoes the folder.
+
+## Attached games
+
+Some games in the library are not hosted by Ammolite at all: the manifest's `attachedGames` name a game, an edition, a color and the executable that identifies a copy of it (for Dungeons & Dragons Online, `x64\dndclient64.exe`). The player already has the game; Ankh adds the edition's tools to it.
+
+- The game page shows "Your own copy of the game" and the primary button reads **Add tools**. It opens a folder picker; a folder without the executable is refused with the reason. The sheet then lists the required tools and the optional ones ticked on the Client tools tab, and Ankh adds them with the same job as a tool change: files are written into the game folder, a file already there with a tool's name is replaced and reported, and the game's own files are not touched.
+- The receipt is `<game folder>\.ankheceipt.json` with `"client": null` and `"attached": {"game", "variant"}`; downloads stage in `<game folder>\.ankh\.staging`, since the folder beside a player's own install is not Ankh's. The folder is remembered under `library/installs` like a game installed outside the library.
+- Updates, the Client tools tab and Apply work as for an installed game, minus the client: a tool with a newer version is updated, one that left the edition is removed. Removing every tool at once (detaching) and the game's own login are not built yet; launching is not built for any game.
 
 ## Client tools
 

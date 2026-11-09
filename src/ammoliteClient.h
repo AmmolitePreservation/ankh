@@ -85,12 +85,23 @@ struct AnkhRelease {
   QList<ReleaseNote> history;
 };
 
+// A game Ammolite does not host: the player has their own copy, recognized by the executable inside its folder, and
+// Ankh adds the edition's tools to it.
+struct AttachedGame {
+  QString game;
+  QString variant;
+  QString edition;
+  QColor color;
+  QString executable;
+};
+
 struct Manifest {
   std::optional<AnkhRelease> ankh;
   QString ankhProblem;
   bool hasCollection;
   QList<World> worlds;
   QList<Package> packages;
+  QList<AttachedGame> attachedGames;
 };
 
 struct GameLogin {
