@@ -58,7 +58,12 @@ QUrl serviceUrl(const QSettings& settings)
 
 QString libraryRootFrom(const QSettings& settings)
 {
-  return settings.value(QStringLiteral("library/root"), defaultLibraryRoot()).toString();
+  const QString root = settings.value(QStringLiteral("library/root"), defaultLibraryRoot()).toString();
+  const QString problem = libraryRootProblem(root);
+  if (!problem.isEmpty()) {
+    fatal(QStringLiteral("%1 (%2)").arg(problem, QDir::toNativeSeparators(settings.fileName())));
+  }
+  return root;
 }
 
 }
