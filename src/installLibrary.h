@@ -26,6 +26,11 @@ struct Receipt {
   InstalledPackage client;
   QList<InstalledPackage> tools;
   QMap<QString, OwnedFile> files;
+  // Set for tools attached to the player's own copy of a game: there is no client package, and the folder is theirs.
+  QString attachedGame;
+  QString attachedVariant;
+
+  bool isAttached() const { return !attachedGame.isEmpty(); }
 };
 
 struct LibraryScan {
@@ -41,3 +46,4 @@ QString writeReceipt(const Receipt& receipt);
 std::optional<Receipt> readReceipt(const QString& folder, QString& problem);
 LibraryScan scanLibrary(const QString& root, const QStringList& rememberedFolders);
 const Receipt* receiptForClient(const QList<Receipt>& receipts, const QString& clientName);
+const Receipt* receiptForAttached(const QList<Receipt>& receipts, const QString& game, const QString& variant);

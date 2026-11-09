@@ -175,7 +175,7 @@ AnkhRelease parseRelease(const QJsonObject& object)
 
 Manifest parseManifest(const QJsonObject& object)
 {
-  Manifest manifest{std::nullopt, QString(), false, {}, {}};
+  Manifest manifest{std::nullopt, QString(), false, {}, {}, {}};
   const QJsonObject ankh = objectAt(requiredValue(object, "ankh"));
   if (ankh.contains(QLatin1String("error"))) {
     manifest.ankhProblem = requiredString(ankh, "error");
@@ -189,6 +189,20 @@ Manifest parseManifest(const QJsonObject& object)
     }
     for (const QJsonValue& value : requiredArray(object, "packages")) {
       manifest.packages.append(parsePackage(objectAt(value)));
+    }
+    for (const QJsonValue& value : requiredArray(object, "attachedGames")) {
+      const QJsonObject attached = objectAt(value);
+      const QColor color(requiredString(attached, "color"));
+      const QString executable = requiredString(attached, "executable");
+      if (!color.isValid()) {
+        throw ReplyError{QStringLiteral("the color of an attached game is not a color")};
+      }
+      if (executable.isEmpty() || executable.startsWith(QLatin1Char('/')) || executable.contains(QLatin1Char('\\'))
+          || executable.contains(QLatin1Char(':')) || executable.split(QLatin1Char('/')).contains(QStringLiteral(".."))) {
+        throw ReplyError{QStringLiteral("the executable of an attached game is not a path inside its folder: %1").arg(executable)};
+      }
+      manifest.attachedGames.append({requiredString(attached, "game"), requiredString(attached, "variant"),
+        requiredString(attached, "edition"), color, executable});
     }
   }
   return manifest;

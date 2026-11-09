@@ -131,8 +131,14 @@ QString writeReceipt(const Receipt& receipt)
   for (const InstalledPackage& tool : receipt.tools) {
     tools.append(packageJson(tool));
   }
-  const QJsonObject object{{QStringLiteral("client"), packageJson(receipt.client)}, {QStringLiteral("tools"), tools},
-    {QStringLiteral("files"), files}};
+  QJsonObject object{{QStringLiteral("tools"), tools}, {QStringLiteral("files"), files}};
+  if (receipt.isAttached()) {
+    object.insert(QStringLiteral("client"), QJsonValue::Null);
+    object.insert(QStringLiteral("attached"), QJsonObject{{QStringLiteral("game"), receipt.attachedGame},
+      {QStringLiteral("variant"), receipt.attachedVariant}});
+  } else {
+    object.insert(QStringLiteral("client"), packageJson(receipt.client));
+  }
   const QString path = receiptPath(receipt.folder);
   if (!QDir().mkpath(QFileInfo(path).absolutePath())) {
     return QStringLiteral("Could not create %1.").arg(QDir::toNativeSeparators(QFileInfo(path).absolutePath()));
@@ -160,7 +166,17 @@ std::optional<Receipt> readReceipt(const QString& folder, QString& problem)
   }
   try {
     const QJsonObject object = document.object();
-    Receipt receipt{QDir::toNativeSeparators(QDir(folder).absolutePath()), packageFrom(required(object, "client")), {}, {}};
+    Receipt receipt{QDir::toNativeSeparators(QDir(folder).absolutePath()), {}, {}, {}};
+    if (required(object, "client").isNull()) {
+      const QJsonValue attached = required(object, "attached");
+      if (!attached.isObject()) {
+        throw ReceiptError{QStringLiteral("the field \"attached\" is not an object")};
+      }
+      receipt.attachedGame = requiredText(attached.toObject(), "game");
+      receipt.attachedVariant = requiredText(attached.toObject(), "variant");
+    } else {
+      receipt.client = packageFrom(required(object, "client"));
+    }
     const QJsonValue tools = required(object, "tools");
     if (!tools.isArray()) {
       throw ReceiptError{QStringLiteral("the field \"tools\" is not a list")};
@@ -221,10 +237,20 @@ LibraryScan scanLibrary(const QString& root, const QStringList& rememberedFolder
   return scan;
 }
 
+const Receipt* receiptForAttached(const QList<Receipt>& receipts, const QString& game, const QString& variant)
+{
+  for (const Receipt& receipt : receipts) {
+    if (receipt.isAttached() && receipt.attachedGame == game && receipt.attachedVariant == variant) {
+      return &receipt;
+    }
+  }
+  return nullptr;
+}
+
 const Receipt* receiptForClient(const QList<Receipt>& receipts, const QString& clientName)
 {
   for (const Receipt& receipt : receipts) {
-    if (receipt.client.name == clientName) {
+    if (!receipt.isAttached() && receipt.client.name == clientName) {
       return &receipt;
     }
   }
