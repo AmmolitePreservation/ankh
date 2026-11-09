@@ -44,12 +44,6 @@ UpdateSheet::UpdateSheet(const UpdateOffer& offer, const QString& currentVersion
   status->setWordWrap(true);
   progress->setVisible(false);
   progress->setTextVisible(false);
-  if (installScope() == InstallScope::buildFolder) {
-    status->setText(QStringLiteral("This copy is running from a build folder, so it cannot update itself. Install Ankh with the installer first."));
-    updateButton->setEnabled(false);
-  } else if (installScope() == InstallScope::allUsers) {
-    status->setText(QStringLiteral("Windows will ask for permission to update the all-users install."));
-  }
   updateButton->setObjectName(QStringLiteral("primary"));
   auto* openPage = new QPushButton(QStringLiteral("Open release page"), this);
 
@@ -73,6 +67,7 @@ UpdateSheet::UpdateSheet(const UpdateOffer& offer, const QString& currentVersion
   connect(closeButton, &QPushButton::clicked, this, &QDialog::reject);
   connect(updateButton, &QPushButton::clicked, this, [this] {
     isWorking = true;
+    lastFailure.clear();
     updateButton->setEnabled(false);
     closeButton->setEnabled(false);
     progress->setRange(0, 0);
@@ -89,12 +84,13 @@ UpdateSheet::UpdateSheet(const UpdateOffer& offer, const QString& currentVersion
   });
   connect(installer, &UpdateInstaller::failed, this, [this](const QString& message) {
     isWorking = false;
+    lastFailure = message;
     progress->setVisible(false);
-    status->setText(message);
     updateButton->setText(QStringLiteral("Try again"));
-    updateButton->setEnabled(true);
     closeButton->setEnabled(true);
+    refresh();
   });
+  refresh();
 }
 
 void UpdateSheet::showEvent(QShowEvent* event)
@@ -103,11 +99,44 @@ void UpdateSheet::showEvent(QShowEvent* event)
   QDialog::showEvent(event);
 }
 
+// The installer owns the status line while it works; otherwise the line says the one thing standing between the
+// user and the update, and the button follows it.
+void UpdateSheet::refresh()
+{
+  if (isWorking) {
+    return;
+  }
+  const bool isBuildFolder = installScope() == InstallScope::buildFolder;
+  updateButton->setEnabled(!isBuildFolder && heldFor.isEmpty() && !isChecking);
+  if (isBuildFolder) {
+    status->setText(QStringLiteral("This copy is running from a build folder, so it cannot update itself. Install Ankh with the installer first."));
+  } else if (!heldFor.isEmpty()) {
+    status->setText(QStringLiteral("%1 is still running. Updating Ankh would close it half-way, so wait for it to finish and open this sheet again.")
+      .arg(heldFor));
+  } else if (isChecking) {
+    status->setText(QStringLiteral("Checking for the newest release..."));
+  } else if (!lastFailure.isEmpty()) {
+    status->setText(lastFailure);
+  } else if (!checkProblem.isEmpty()) {
+    status->setText(QStringLiteral("Could not confirm this is the newest release: %1").arg(checkProblem));
+  } else if (installScope() == InstallScope::allUsers) {
+    status->setText(QStringLiteral("Windows will ask for permission to update the all-users install."));
+  } else {
+    status->setText(QString());
+  }
+}
+
 void UpdateSheet::holdFor(const QString& activity)
 {
-  status->setText(QStringLiteral("%1 is still running. Updating Ankh would close it half-way, so wait for it to finish and open this sheet again.")
-    .arg(activity));
-  updateButton->setEnabled(false);
+  heldFor = activity;
+  refresh();
+}
+
+void UpdateSheet::setChecking(bool isCheckingNow, const QString& problem)
+{
+  isChecking = isCheckingNow;
+  checkProblem = problem;
+  refresh();
 }
 
 void UpdateSheet::setOffer(const UpdateOffer& offer)

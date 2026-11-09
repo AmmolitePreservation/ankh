@@ -60,6 +60,13 @@ struct Package {
   std::optional<PackageVersion> latest;
 };
 
+struct ReleaseNote {
+  QString version;
+  QString notes;
+  QString publishedAt;
+};
+
+// The newest release with the files that install it; history holds every listed release, the newest included.
 struct AnkhRelease {
   QString version;
   QString tag;
@@ -67,6 +74,7 @@ struct AnkhRelease {
   QUrl page;
   QString publishedAt;
   QMap<QString, QUrl> assets;
+  QList<ReleaseNote> history;
 };
 
 struct Manifest {

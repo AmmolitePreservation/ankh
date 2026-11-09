@@ -250,6 +250,11 @@ private slots:
     QCOMPARE(manifest->ankh->assets.size(), 3);
     QCOMPARE(manifest->ankh->assets.value(QStringLiteral("manifest.json.sig")),
       QUrl(QStringLiteral("https://github.com/AmmolitePreservation/ankh/releases/download/v2026.11.08.0514/manifest.json.sig")));
+    QCOMPARE(manifest->ankh->history.size(), 2);
+    QCOMPARE(manifest->ankh->history.at(0).version, QStringLiteral("2026.11.08.0514"));
+    QCOMPARE(manifest->ankh->history.at(1).version, QStringLiteral("2026.11.08.0334"));
+    QCOMPARE(manifest->ankh->history.at(1).notes, QStringLiteral("- Alphabetical library"));
+    QCOMPARE(manifest->ankh->history.at(1).publishedAt, QStringLiteral("2026-11-08T03:40:02Z"));
   }
 
   void aSignedInManifestCarriesTheWorldsAndThePackagesOfTheirEditions()
@@ -352,6 +357,19 @@ private slots:
     QCOMPARE(what, QStringLiteral("manifest"));
     QVERIFY2(message.contains(QStringLiteral("\"color\" is missing")), qPrintable(message));
     QVERIFY(!isLoaded);
+  }
+
+  void aReleaseWithoutTheReleaseListIsRefusedByName()
+  {
+    FakeServer server;
+    server.answer(QStringLiteral("GET /api/v1/manifest"), 200, "{\"ankh\":{\"version\":\"2026.11.08.0514\",\"tag\":\"v2026.11.08.0514\","
+      "\"notes\":\"- Library toggles\",\"page\":\"https://example.test/release\",\"publishedAt\":\"2026-11-08T05:18:56Z\",\"assets\":{}}}");
+    AmmoliteClient client(server.url(), QStringLiteral("2026.11.08.0100"));
+    QString message;
+    connect(&client, &AmmoliteClient::requestFailed, this, [&](const QString&, const QString& reason) { message = reason; });
+    client.loadManifest(QByteArray());
+    QTRY_VERIFY_WITH_TIMEOUT(!message.isEmpty(), 5000);
+    QVERIFY2(message.contains(QStringLiteral("\"releases\" is missing")), qPrintable(message));
   }
 
   void aPackageWithAnUnknownRoleIsRefusedByName()

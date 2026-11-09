@@ -156,6 +156,10 @@ AnkhRelease parseRelease(const QJsonObject& object)
   for (auto entry = assetObject.constBegin(); entry != assetObject.constEnd(); ++entry) {
     release.assets.insert(entry.key(), requiredUrl(assetObject, entry.key().toUtf8().constData()));
   }
+  for (const QJsonValue& value : requiredArray(object, "releases")) {
+    const QJsonObject listed = objectAt(value);
+    release.history.append({requiredString(listed, "version"), requiredString(listed, "notes"), requiredString(listed, "publishedAt")});
+  }
   return release;
 }
 

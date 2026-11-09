@@ -2,4 +2,9 @@
   "page":"https://github.com/AmmolitePreservation/ankh/releases/tag/v2026.11.08.0514","publishedAt":"2026-11-08T05:18:56Z",
   "assets":{"ankhSetup-2026.11.08.0514-win64.exe":"https://github.com/AmmolitePreservation/ankh/releases/download/v2026.11.08.0514/ankhSetup-2026.11.08.0514-win64.exe",
             "manifest.json":"https://github.com/AmmolitePreservation/ankh/releases/download/v2026.11.08.0514/manifest.json",
-            "manifest.json.sig":"https://github.com/AmmolitePreservation/ankh/releases/download/v2026.11.08.0514/manifest.json.sig"}}}
+            "manifest.json.sig":"https://github.com/AmmolitePreservation/ankh/releases/download/v2026.11.08.0514/manifest.json.sig"},
+  "releases":[
+    {"version":"2026.11.08.0514","tag":"v2026.11.08.0514","notes":"- Library toggles",
+     "page":"https://github.com/AmmolitePreservation/ankh/releases/tag/v2026.11.08.0514","publishedAt":"2026-11-08T05:18:56Z"},
+    {"version":"2026.11.08.0334","tag":"v2026.11.08.0334","notes":"- Alphabetical library",
+     "page":"https://github.com/AmmolitePreservation/ankh/releases/tag/v2026.11.08.0334","publishedAt":"2026-11-08T03:40:02Z"}]}}

@@ -306,7 +306,12 @@ MainWindow::MainWindow()
   });
   connect(client, &AmmoliteClient::meLoaded, this, &MainWindow::enterSignedInState);
   connect(client, &AmmoliteClient::manifestLoaded, this, &MainWindow::applyManifest);
-  connect(client, &AmmoliteClient::manifestUnchanged, this, [this] { settingsPage->setUpdateStatus(updateStatus); });
+  connect(client, &AmmoliteClient::manifestUnchanged, this, [this] {
+    settingsPage->setUpdateStatus(updateStatus);
+    if (openSheet != nullptr) {
+      openSheet->setChecking(false, QString());
+    }
+  });
   connect(client, &AmmoliteClient::gameAccountsLoaded, gamePage, &GamePage::setGameAccounts);
   connect(client, &AmmoliteClient::requestFailed, this, [this](const QString& what, const QString& message) {
     if (what == QStringLiteral("game accounts")) {
@@ -316,6 +321,9 @@ MainWindow::MainWindow()
     if (what == QStringLiteral("manifest")) {
       updateStatus = QStringLiteral("Could not check for updates: %1").arg(message);
       settingsPage->setUpdateStatus(updateStatus);
+      if (openSheet != nullptr) {
+        openSheet->setChecking(false, message);
+      }
       if (!signOutAction->isVisible() || hasCollection) {
         return;
       }
@@ -397,10 +405,12 @@ void MainWindow::checkManifest()
 void MainWindow::applyManifest(const Manifest& manifest, const QByteArray& etag)
 {
   manifestEtag = etag;
+  QString checkProblem = manifest.ankhProblem;
   if (!manifest.ankh) {
     updateStatus = QStringLiteral("Could not check for updates: %1").arg(manifest.ankhProblem);
   } else {
     const ReleaseCheck check = checkRelease(*manifest.ankh, QString::fromLatin1(appVersion));
+    checkProblem = check.problem;
     if (!check.problem.isEmpty()) {
       updateStatus = QStringLiteral("Could not check for updates: %1").arg(check.problem);
     } else if (check.update) {
@@ -417,6 +427,9 @@ void MainWindow::applyManifest(const Manifest& manifest, const QByteArray& etag)
     }
   }
   settingsPage->setUpdateStatus(updateStatus);
+  if (openSheet != nullptr) {
+    openSheet->setChecking(false, checkProblem);
+  }
   if (manifest.hasCollection) {
     showCollection(manifest.worlds, manifest.packages);
   }
@@ -727,6 +740,9 @@ void MainWindow::openUpdateSheet()
     sheet.holdFor(QStringLiteral("The install of %1").arg(installingLabel));
   }
   openSheet = &sheet;
+  // The offer shown is as old as the last periodic check: ask again now, so Update installs the newest release.
+  sheet.setChecking(true, QString());
+  checkManifest();
   sheet.exec();
   openSheet = nullptr;
 }

@@ -2,7 +2,10 @@
   "page":"https://github.com/AmmolitePreservation/ankh/releases/tag/v2026.11.08.0514","publishedAt":"2026-11-08T05:18:56Z",
   "assets":{"ankhSetup-2026.11.08.0514-win64.exe":"https://github.com/AmmolitePreservation/ankh/releases/download/v2026.11.08.0514/ankhSetup-2026.11.08.0514-win64.exe",
             "manifest.json":"https://github.com/AmmolitePreservation/ankh/releases/download/v2026.11.08.0514/manifest.json",
-            "manifest.json.sig":"https://github.com/AmmolitePreservation/ankh/releases/download/v2026.11.08.0514/manifest.json.sig"}},
+            "manifest.json.sig":"https://github.com/AmmolitePreservation/ankh/releases/download/v2026.11.08.0514/manifest.json.sig"},
+  "releases":[
+    {"version":"2026.11.08.0514","tag":"v2026.11.08.0514","notes":"- Library toggles",
+     "page":"https://github.com/AmmolitePreservation/ankh/releases/tag/v2026.11.08.0514","publishedAt":"2026-11-08T05:18:56Z"}]},
  "worlds":[
   {"serverID":3,"name":"Arcanite","game":"World of Warcraft","variant":"classic","version":"Classic (1.12.1)",
    "eraStart":2004,"eraEnd":2006,"color":"#82b556","emulator":"cmangos","status":"Online, 12 playing",
