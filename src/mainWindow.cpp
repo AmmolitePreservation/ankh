@@ -31,6 +31,7 @@
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPushButton>
+#include <QStandardPaths>
 #include <QStackedWidget>
 #include <QSvgWidget>
 #include <QSysInfo>
@@ -245,6 +246,14 @@ MainWindow::MainWindow()
   connect(settingsPage, &SettingsPage::libraryRootChangeRequested, this, &MainWindow::chooseLibraryRoot);
   connect(gamePage, &GamePage::installRequested, this, &MainWindow::startInstall);
   connect(gamePage, &GamePage::updateRequested, this, &MainWindow::startUpdate);
+  connect(gamePage, &GamePage::toolsApplyRequested, this, &MainWindow::startToolChange);
+  connect(gamePage, &GamePage::screenshotWanted, this, [this](const Package& package) {
+    client->loadScreenshot(package.name, *package.screenshot,
+      QDir(QStandardPaths::writableLocation(QStandardPaths::CacheLocation)).filePath(QStringLiteral("screenshots")));
+  });
+  connect(client, &AmmoliteClient::screenshotLoaded, gamePage,
+    [this](const QString& packageName, const QString&, const QByteArray& image) { gamePage->showScreenshot(packageName, image); });
+  connect(client, &AmmoliteClient::screenshotFailed, gamePage, &GamePage::showScreenshotProblem);
   connect(gamePage, &GamePage::updateCheckRequested, this, &MainWindow::checkManifest);
   connect(gamePage, &GamePage::cancelRequested, this, [this] {
     if (installJob != nullptr) {
@@ -510,11 +519,25 @@ void MainWindow::rescanLibrary()
   }
 }
 
+void MainWindow::refreshToolState()
+{
+  const Receipt* receipt = receiptFor(shownGame);
+  QStringList installedNames;
+  if (receipt != nullptr) {
+    for (const InstalledPackage& tool : receipt->tools) {
+      installedNames.append(tool.name);
+    }
+  }
+  gamePage->setToolState(receipt != nullptr, installedNames,
+    installJob != nullptr ? QStringLiteral("Tools cannot change while an install runs. Try again when it finishes.") : QString());
+}
+
 void MainWindow::refreshInstallState()
 {
   if (shownGame.id.isEmpty()) {
     return;
   }
+  refreshToolState();
   if (installJob != nullptr) {
     if (shownGame.id == installingGameId) {
       gamePage->setInstallState(InstallState::installing, installStepText);
@@ -553,9 +576,24 @@ void MainWindow::refreshInstallState()
 void MainWindow::startInstall(const Game& game)
 {
   QString problem;
-  const std::optional<InstallPlan> plan = planInstall(game, packages, libraryRoot(), problem);
+  const std::optional<InstallPlan> plan = planInstall(game, packages, libraryRoot(), problem, gamePage->chosenOptionalTools());
   if (!plan) {
     gamePage->setInstallState(InstallState::unavailable, problem);
+    return;
+  }
+  runPlan(game, *plan);
+}
+
+void MainWindow::startToolChange(const Game& game, const QStringList& optionalToolNames)
+{
+  const Receipt* receipt = receiptFor(game);
+  if (receipt == nullptr) {
+    return;
+  }
+  QString problem;
+  const std::optional<InstallPlan> plan = planToolChange(game, packages, *receipt, optionalToolNames, problem);
+  if (!plan) {
+    gamePage->setInstallState(InstallState::installed, problem.isEmpty() ? QStringLiteral("Nothing to change.") : problem);
     return;
   }
   runPlan(game, *plan);
@@ -583,9 +621,15 @@ void MainWindow::runPlan(const Game& game, const InstallPlan& startingPlan)
   }
   std::optional<InstallPlan> plan = startingPlan;
   InstallSheet sheet(game, *plan, this);
-  connect(&sheet, &InstallSheet::destinationChosen, this, [this, &sheet, &plan, &game](const QString& parentFolder) {
+  QStringList optionalToolNames;
+  for (const Package& tool : plan->tools) {
+    if (tool.role == QLatin1String("optionalTool")) {
+      optionalToolNames.append(tool.name);
+    }
+  }
+  connect(&sheet, &InstallSheet::destinationChosen, this, [this, &sheet, &plan, &game, optionalToolNames](const QString& parentFolder) {
     QString replanProblem;
-    plan = planInstall(game, packages, parentFolder, replanProblem);
+    plan = planInstall(game, packages, parentFolder, replanProblem, optionalToolNames);
     if (!plan) {
       fatal(QStringLiteral("The install plan changed with its folder: %1").arg(replanProblem));
     }
@@ -616,14 +660,15 @@ void MainWindow::runPlan(const Game& game, const InstallPlan& startingPlan)
       gamePage->showInstallProgress(installStepText, done, total);
     }
   });
-  connect(installJob, &InstallJob::finished, this, [this, isUpdate = plan->isUpdate()](const Receipt& receipt, const ApplySummary& summary) {
+  connect(installJob, &InstallJob::finished, this, [this, isUpdate = plan->isUpdate(), isToolChange = plan->isToolChange](const Receipt& receipt, const ApplySummary& summary) {
     if (!isUpdate) {
       rememberInstalls({receipt.folder});
       finishInstall(QString());
       return;
     }
-    QString note = QStringLiteral("Updated to %1: %2 written, %3 deleted").arg(receipt.client.version)
-      .arg(summary.written).arg(summary.deleted);
+    QString note = isToolChange
+      ? QStringLiteral("Tools changed: %1 written, %2 deleted").arg(summary.written).arg(summary.deleted)
+      : QStringLiteral("Updated to %1: %2 written, %3 deleted").arg(receipt.client.version).arg(summary.written).arg(summary.deleted);
     if (!summary.kept.isEmpty()) {
       QStringList named = summary.kept.mid(0, 3);
       if (summary.kept.size() > 3) {

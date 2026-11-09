@@ -18,6 +18,7 @@
 #include <QSet>
 #include <QStorageInfo>
 #include <QTimer>
+#include <algorithm>
 
 namespace {
 
@@ -173,7 +174,7 @@ int InstallPlan::fileCount() const
 }
 
 std::optional<InstallPlan> planInstall(const Game& game, const QList<Package>& packages, const QString& parentFolder,
-  QString& problem)
+  QString& problem, const QStringList& optionalToolNames)
 {
   problem.clear();
   const QList<Package> attached = packagesFor(game, packages);
@@ -190,17 +191,87 @@ std::optional<InstallPlan> planInstall(const Game& game, const QList<Package>& p
   plan.client = *client;
   plan.fetch.append(*client);
   for (const Package& package : attached) {
-    if (package.role != QLatin1String("requiredTool")) {
+    const bool isRequired = package.role == QLatin1String("requiredTool");
+    if (!isRequired && !(package.role == QLatin1String("optionalTool") && optionalToolNames.contains(package.name))) {
       continue;
     }
     if (!package.latest) {
-      problem = QStringLiteral("The required tool %1 has no version published yet.").arg(package.label);
+      problem = QStringLiteral("The %1 %2 has no version published yet.")
+        .arg(isRequired ? QStringLiteral("required tool") : QStringLiteral("optional tool"), package.label);
       return std::nullopt;
     }
     plan.tools.append(package);
     plan.fetch.append(package);
   }
+  for (const QString& name : optionalToolNames) {
+    const bool isAttached = std::any_of(attached.cbegin(), attached.cend(), [&name](const Package& package) {
+      return package.name == name && package.role == QLatin1String("optionalTool");
+    });
+    if (!isAttached) {
+      problem = QStringLiteral("%1 is not an optional tool of %2 %3.").arg(name, game.title, game.edition);
+      return std::nullopt;
+    }
+  }
   plan.folder = native(QDir(parentFolder).filePath(installFolderNameFor(plan.client)));
+  return plan;
+}
+
+std::optional<InstallPlan> planToolChange(const Game& game, const QList<Package>& packages, const Receipt& receipt,
+  const QStringList& optionalToolNames, QString& problem)
+{
+  problem.clear();
+  const QList<Package> attached = packagesFor(game, packages);
+  const Package* client = clientOf(attached);
+  if (client == nullptr || client->name != receipt.client.name) {
+    problem = QStringLiteral("The client of %1 %2 is not the one installed in %3.").arg(game.title, game.edition, receipt.folder);
+    return std::nullopt;
+  }
+  InstallPlan plan;
+  plan.client = *client;
+  plan.folder = receipt.folder;
+  plan.existing = receipt;
+  plan.isToolChange = true;
+  QSet<QString> installedNames;
+  for (const InstalledPackage& tool : receipt.tools) {
+    installedNames.insert(tool.name);
+  }
+  QSet<QString> attachedNames;
+  for (const Package& package : attached) {
+    attachedNames.insert(package.name);
+    const bool isRequired = package.role == QLatin1String("requiredTool");
+    if (package.role == QLatin1String("client")) {
+      continue;
+    }
+    const bool isWanted = isRequired || optionalToolNames.contains(package.name);
+    const bool isInstalled = installedNames.contains(package.name);
+    if (isWanted && !isInstalled && !package.latest) {
+      problem = QStringLiteral("The %1 %2 has no version published yet.")
+        .arg(isRequired ? QStringLiteral("required tool") : QStringLiteral("optional tool"), package.label);
+      return std::nullopt;
+    }
+    if (isWanted) {
+      plan.tools.append(package);
+      if (!isInstalled) {
+        plan.fetch.append(package);
+      }
+    } else if (isInstalled) {
+      plan.removed.append(package.name);
+    }
+  }
+  for (const QString& name : optionalToolNames) {
+    if (!attachedNames.contains(name)) {
+      problem = QStringLiteral("%1 is not a tool of %2 %3.").arg(name, game.title, game.edition);
+      return std::nullopt;
+    }
+  }
+  for (const InstalledPackage& tool : receipt.tools) {
+    if (!attachedNames.contains(tool.name)) {
+      plan.removed.append(tool.name);
+    }
+  }
+  if (plan.fetch.isEmpty() && plan.removed.isEmpty()) {
+    return std::nullopt;
+  }
   return plan;
 }
 
@@ -695,9 +766,14 @@ void InstallJob::applyUpdate()
   const QSet<QString> removedNames(installPlan.removed.cbegin(), installPlan.removed.cend());
   QMap<QString, OwnedFile> files;
   QStringList toDelete;
+  ApplySummary summary;
   for (auto entry = old.files.constBegin(); entry != old.files.constEnd(); ++entry) {
     const QString& owner = entry.value().package;
-    if (removedNames.contains(owner) || (fetchedNames.contains(owner) && !ownedFiles.contains(entry.key()))) {
+    if (removedNames.contains(owner) && entry.value().isWriteOnce) {
+      if (QFile::exists(folder.filePath(entry.key()))) {
+        summary.kept.append(entry.key());
+      }
+    } else if (removedNames.contains(owner) || (fetchedNames.contains(owner) && !ownedFiles.contains(entry.key()))) {
       toDelete.append(entry.key());
     } else if (!fetchedNames.contains(owner)) {
       files.insert(entry.key(), entry.value());
@@ -705,7 +781,6 @@ void InstallJob::applyUpdate()
   }
   const qint64 total = toDelete.size() + ownedFiles.size();
   qint64 done = 0;
-  ApplySummary summary;
   for (const QString& path : toDelete) {
     const QString target = folder.filePath(path);
     if (QFile::exists(target)) {

@@ -83,6 +83,8 @@ private:
   void refreshInstallState();
   void startInstall(const Game& game);
   void startUpdate(const Game& game);
+  void startToolChange(const Game& game, const QStringList& optionalToolNames);
+  void refreshToolState();
   void runPlan(const Game& game, const InstallPlan& plan);
   void finishInstall(const QString& note);
   void chooseLibraryRoot();

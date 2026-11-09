@@ -28,6 +28,7 @@ struct InstallPlan {
   QList<Package> fetch;
   QStringList removed;
   std::optional<Receipt> existing;
+  bool isToolChange = false;
 
   bool isUpdate() const;
   qint64 downloadBytes() const;
@@ -41,8 +42,14 @@ struct ApplySummary {
   QStringList kept;
 };
 
+// optionalToolNames are the optional tools installed with the game; every required tool always is.
 std::optional<InstallPlan> planInstall(const Game& game, const QList<Package>& packages, const QString& parentFolder,
-  QString& problem);
+  QString& problem, const QStringList& optionalToolNames = {});
+// Brings the installed optional tools to exactly optionalToolNames: missing ones are fetched, unwanted ones removed
+// (their write-once files stay). The client and the tools already installed are left at the versions they have; a
+// required tool that is missing is fetched. Nothing to do is nullopt with an empty problem.
+std::optional<InstallPlan> planToolChange(const Game& game, const QList<Package>& packages, const Receipt& receipt,
+  const QStringList& optionalToolNames, QString& problem);
 std::optional<InstallPlan> planUpdate(const Game& game, const QList<Package>& packages, const Receipt& receipt,
   QString& problem);
 QString stagingRootFor(const InstallPlan& plan);

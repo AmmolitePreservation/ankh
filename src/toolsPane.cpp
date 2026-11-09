@@ -1,0 +1,340 @@
+#include "toolsPane.h"
+
+#include <QFrame>
+#include <QHBoxLayout>
+#include <QLabel>
+#include <QListWidget>
+#include <QLocale>
+#include <QPushButton>
+#include <QSet>
+#include <QStyle>
+#include <QVBoxLayout>
+
+namespace {
+
+constexpr int helpWidth = 380;
+constexpr int helpMargin = 18;
+
+QLabel* makeLabel(const QString& text, const char* property, QWidget* parent)
+{
+  auto* label = new QLabel(text, parent);
+  if (property != nullptr) {
+    label->setProperty(property, true);
+  }
+  label->setWordWrap(true);
+  return label;
+}
+
+QString sizeText(qint64 bytes)
+{
+  return QLocale().formattedDataSize(bytes, 1, QLocale::DataSizeTraditionalFormat);
+}
+
+bool isRequired(const Package& package)
+{
+  return package.role == QLatin1String("requiredTool");
+}
+
+QString dot()
+{
+  return QString(QChar(0x00B7));
+}
+
+void setSecondary(QLabel* label, bool isSecondary)
+{
+  label->setProperty("secondary", isSecondary);
+  label->style()->unpolish(label);
+  label->style()->polish(label);
+}
+
+}
+
+ToolsPane::ToolsPane(QWidget* parent)
+  : QWidget(parent),
+    intro(makeLabel(QString(), "secondary", this)),
+    list(new QListWidget(this)),
+    applyButton(new QPushButton(QStringLiteral("Apply changes"), this)),
+    resetButton(new QPushButton(QStringLiteral("Reset"), this)),
+    helpTitle(makeLabel(QString(), "statusTitle", this)),
+    helpRole(makeLabel(QString(), "secondary", this)),
+    helpDescription(makeLabel(QString(), nullptr, this)),
+    helpScreenshot(new QLabel(this))
+{
+  list->setObjectName(QStringLiteral("toolList"));
+  list->setSelectionMode(QAbstractItemView::SingleSelection);
+  list->setFocusPolicy(Qt::StrongFocus);
+  list->setAccessibleName(QStringLiteral("Client tools"));
+  applyButton->setObjectName(QStringLiteral("primary"));
+  applyButton->setAccessibleName(QStringLiteral("Apply tool changes"));
+  resetButton->setAccessibleName(QStringLiteral("Reset tool choices"));
+  helpDescription->setTextInteractionFlags(Qt::TextSelectableByMouse);
+  helpScreenshot->setAlignment(Qt::AlignLeft | Qt::AlignTop);
+  helpScreenshot->setWordWrap(true);
+  helpScreenshot->setProperty("secondary", true);
+
+  auto* buttons = new QHBoxLayout;
+  buttons->setSpacing(8);
+  buttons->addStretch(1);
+  buttons->addWidget(resetButton);
+  buttons->addWidget(applyButton);
+
+  auto* left = new QVBoxLayout;
+  left->setSpacing(12);
+  left->addWidget(intro);
+  left->addWidget(list, 1);
+  left->addLayout(buttons);
+
+  auto* help = new QFrame(this);
+  help->setObjectName(QStringLiteral("helpBox"));
+  help->setFixedWidth(helpWidth);
+  auto* helpLayout = new QVBoxLayout(help);
+  helpLayout->setContentsMargins(helpMargin, 16, helpMargin, 16);
+  helpLayout->setSpacing(10);
+  helpLayout->addWidget(helpTitle);
+  helpLayout->addWidget(helpRole);
+  helpLayout->addWidget(helpDescription);
+  helpLayout->addWidget(helpScreenshot);
+  helpLayout->addStretch(1);
+
+  auto* layout = new QHBoxLayout(this);
+  layout->setContentsMargins(30, 14, 30, 16);
+  layout->setSpacing(24);
+  layout->addLayout(left, 1);
+  layout->addWidget(help, 0);
+
+  connect(list, &QListWidget::currentItemChanged, this, [this](QListWidgetItem* current) { showHelp(packageOf(current)); });
+  connect(list, &QListWidget::itemChanged, this, [this] {
+    if (isRebuilding) {
+      return;
+    }
+    refreshRows();
+    refreshButtons();
+    emit choiceChanged();
+  });
+  connect(resetButton, &QPushButton::clicked, this, [this] {
+    rebuild();
+    emit choiceChanged();
+  });
+  connect(applyButton, &QPushButton::clicked, this, [this] { emit applyRequested(stagedOptionalTools()); });
+  refreshButtons();
+  showHelp(nullptr);
+}
+
+const Package* ToolsPane::packageOf(QListWidgetItem* item) const
+{
+  if (item == nullptr) {
+    return nullptr;
+  }
+  return &tools.at(item->data(Qt::UserRole).toInt());
+}
+
+void ToolsPane::showTools(const QList<Package>& newTools, bool newIsInstalled, const QStringList& newInstalledNames,
+  const QString& newBusyReason)
+{
+  QStringList signature;
+  for (const Package& package : newTools) {
+    signature.append(QStringLiteral("%1/%2/%3/%4").arg(package.name, package.latest ? package.latest->version : QString(),
+      package.description, package.screenshot ? package.screenshot->sha256 : QString()));
+  }
+  signature.append(newIsInstalled ? QStringLiteral("installed") : QStringLiteral("not installed"));
+  signature.append(newInstalledNames.join(QLatin1Char(',')));
+  signature.append(newBusyReason);
+  const QString joined = signature.join(QLatin1Char('|'));
+  tools = newTools;
+  isInstalled = newIsInstalled;
+  installedNames = newInstalledNames;
+  busyReason = newBusyReason;
+  if (joined == shownSignature) {
+    return;
+  }
+  shownSignature = joined;
+  rebuild();
+}
+
+void ToolsPane::rebuild()
+{
+  isRebuilding = true;
+  const QString keepSelected = list->currentItem() != nullptr ? packageOf(list->currentItem())->name : QString();
+  list->clear();
+  for (int index = 0; index < tools.size(); ++index) {
+    const Package& package = tools.at(index);
+    auto* item = new QListWidgetItem(list);
+    item->setData(Qt::UserRole, index);
+    item->setSizeHint(QSize(0, 62));
+    Qt::ItemFlags flags = Qt::ItemIsEnabled | Qt::ItemIsSelectable;
+    if (busyReason.isEmpty() && package.latest.has_value() && !isRequired(package)) {
+      flags |= Qt::ItemIsUserCheckable;
+    }
+    item->setFlags(flags);
+    const bool isChecked = isRequired(package) || installedNames.contains(package.name);
+    item->setCheckState(isChecked ? Qt::Checked : Qt::Unchecked);
+  }
+  refreshRows();
+  isRebuilding = false;
+  refreshButtons();
+  int select = 0;
+  for (int index = 0; index < tools.size(); ++index) {
+    if (tools.at(index).name == keepSelected) {
+      select = index;
+    }
+  }
+  if (tools.isEmpty()) {
+    showHelp(nullptr);
+  } else {
+    list->setCurrentRow(select);
+  }
+}
+
+void ToolsPane::refreshRows()
+{
+  const bool wasRebuilding = isRebuilding;
+  isRebuilding = true;
+  for (int row = 0; row < list->count(); ++row) {
+    QListWidgetItem* item = list->item(row);
+    const Package& package = *packageOf(item);
+    const bool isChecked = item->checkState() == Qt::Checked;
+    const bool wasInstalled = installedNames.contains(package.name);
+    QString status;
+    if (!package.latest) {
+      status = QStringLiteral("No version published yet");
+    } else {
+      const QString version = package.latest->version;
+      const QString download = sizeText(package.latest->byteSize);
+      if (isRequired(package)) {
+        status = isInstalled && wasInstalled ? QStringLiteral("%1  %2  installed, required").arg(version, dot())
+          : QStringLiteral("%1  %2  installs with the game, required").arg(version, dot());
+      } else if (isInstalled && isChecked && !wasInstalled) {
+        status = QStringLiteral("%1  %2  will be installed, %3 download").arg(version, dot(), download);
+      } else if (isInstalled && !isChecked && wasInstalled) {
+        status = QStringLiteral("will be removed");
+      } else if (wasInstalled) {
+        status = QStringLiteral("%1  %2  installed").arg(version, dot());
+      } else if (isChecked) {
+        status = QStringLiteral("%1  %2  installs with the game, %3 download").arg(version, dot(), download);
+      } else {
+        status = QStringLiteral("%1  %2  %3 download").arg(version, dot(), download);
+      }
+    }
+    item->setText(QStringLiteral("%1\n%2").arg(package.label, status));
+  }
+  isRebuilding = wasRebuilding;
+}
+
+QStringList ToolsPane::stagedOptionalTools() const
+{
+  QStringList names;
+  for (int row = 0; row < list->count(); ++row) {
+    const Package& package = *packageOf(list->item(row));
+    if (!isRequired(package) && list->item(row)->checkState() == Qt::Checked) {
+      names.append(package.name);
+    }
+  }
+  return names;
+}
+
+QStringList ToolsPane::installedOptionalTools() const
+{
+  QStringList names;
+  for (const Package& package : tools) {
+    if (!isRequired(package) && installedNames.contains(package.name)) {
+      names.append(package.name);
+    }
+  }
+  return names;
+}
+
+QStringList ToolsPane::chosenOptionalTools() const
+{
+  return stagedOptionalTools();
+}
+
+void ToolsPane::refreshButtons()
+{
+  const QStringList staged = stagedOptionalTools();
+  const QStringList installed = installedOptionalTools();
+  const bool hasChanges = QSet<QString>(staged.cbegin(), staged.cend()) != QSet<QString>(installed.cbegin(), installed.cend());
+  applyButton->setVisible(isInstalled);
+  resetButton->setVisible(true);
+  applyButton->setEnabled(isInstalled && hasChanges && busyReason.isEmpty());
+  applyButton->setToolTip(busyReason);
+  resetButton->setEnabled(busyReason.isEmpty() && (isInstalled ? hasChanges : !staged.isEmpty()));
+  if (tools.isEmpty()) {
+    intro->setText(QStringLiteral("This edition has no tools."));
+  } else if (!busyReason.isEmpty()) {
+    intro->setText(busyReason);
+  } else if (isInstalled) {
+    intro->setText(QStringLiteral("Tick the optional tools you want and press Apply changes. Unticking an installed tool removes it; "
+      "files it keeps for your settings stay."));
+  } else {
+    intro->setText(QStringLiteral("Required tools install with the game. Tick any optional tools you want installed with it too."));
+  }
+}
+
+void ToolsPane::showHelp(const Package* package)
+{
+  if (package == nullptr) {
+    helpTitle->setText(QStringLiteral("Tools"));
+    helpRole->clear();
+    helpDescription->setText(QStringLiteral("Select a tool to see what it does."));
+    setSecondary(helpDescription, true);
+    helpScreenshot->clear();
+    helpScreenshot->setVisible(false);
+    return;
+  }
+  helpTitle->setText(package->label);
+  QString role = isRequired(*package) ? QStringLiteral("Required tool") : QStringLiteral("Optional tool");
+  if (package->latest) {
+    role += QStringLiteral("  %1  %2").arg(dot(), package->latest->version);
+  }
+  helpRole->setText(role);
+  helpDescription->setText(package->description.isEmpty() ? QStringLiteral("No description yet.") : package->description);
+  setSecondary(helpDescription, package->description.isEmpty());
+  if (!package->screenshot) {
+    helpScreenshot->clear();
+    helpScreenshot->setVisible(false);
+    return;
+  }
+  helpScreenshot->setVisible(true);
+  if (screenshots.contains(package->name)) {
+    helpScreenshot->setWordWrap(false);
+    helpScreenshot->setPixmap(screenshots.value(package->name));
+    return;
+  }
+  helpScreenshot->setPixmap(QPixmap());
+  helpScreenshot->setWordWrap(true);
+  if (screenshotProblems.contains(package->name)) {
+    helpScreenshot->setText(QStringLiteral("The screenshot could not be loaded: %1").arg(screenshotProblems.value(package->name)));
+    return;
+  }
+  helpScreenshot->setText(QStringLiteral("Loading screenshot..."));
+  if (!screenshotRequested.value(package->name)) {
+    screenshotRequested.insert(package->name, true);
+    emit screenshotWanted(*package);
+  }
+}
+
+void ToolsPane::showScreenshot(const QString& packageName, const QByteArray& image)
+{
+  QPixmap pixmap;
+  if (!pixmap.loadFromData(image)) {
+    showScreenshotProblem(packageName, QStringLiteral("the image could not be read"));
+    return;
+  }
+  const qreal ratio = devicePixelRatioF();
+  QPixmap scaled = pixmap.scaledToWidth(qRound((helpWidth - 2 * helpMargin) * ratio), Qt::SmoothTransformation);
+  scaled.setDevicePixelRatio(ratio);
+  screenshots.insert(packageName, scaled);
+  const Package* shown = packageOf(list->currentItem());
+  if (shown != nullptr && shown->name == packageName) {
+    showHelp(shown);
+  }
+}
+
+void ToolsPane::showScreenshotProblem(const QString& packageName, const QString& message)
+{
+  screenshotProblems.insert(packageName, message);
+  const Package* shown = packageOf(list->currentItem());
+  if (shown != nullptr && shown->name == packageName) {
+    showHelp(shown);
+  }
+}
