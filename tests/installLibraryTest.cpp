@@ -113,6 +113,17 @@ private slots:
     QVERIFY(receiptForClient(scan.receipts, QStringLiteral("everquest")) == nullptr);
   }
 
+  void onlyARootedPathIsALibraryFolder()
+  {
+    QCOMPARE(libraryRootProblem(QStringLiteral("C:\\Games\\Ankh")), QString());
+    QCOMPARE(libraryRootProblem(QStringLiteral("D:/clients")), QString());
+    QCOMPARE(libraryRootProblem(QStringLiteral("\\\\zircon\\Media\\ankh")), QString());
+    QVERIFY(libraryRootProblem(QStringLiteral("C:amesnkh")).startsWith(QStringLiteral("The library folder C:amesnkh is not an absolute path")));
+    QVERIFY(libraryRootProblem(QStringLiteral("clients")).startsWith(QStringLiteral("The library folder clients is not an absolute path")));
+    QVERIFY(libraryRootProblem(QStringLiteral("\\clients")).contains(QStringLiteral("not an absolute path")));
+    QCOMPARE(libraryRootProblem(QStringLiteral("  ")), QStringLiteral("The library folder setting is empty."));
+  }
+
   void aMissingLibraryScansEmpty()
   {
     const LibraryScan scan = scanLibrary(QStringLiteral("C:/definitely/not/here/ankh"));

@@ -7,6 +7,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QRegularExpression>
 #include <QSaveFile>
 
 namespace {
@@ -74,6 +75,21 @@ QJsonObject packageJson(const InstalledPackage& package)
 QString defaultLibraryRoot()
 {
   return QDir::toNativeSeparators(QDir(installFolder()).filePath(QStringLiteral("clients")));
+}
+
+// A drive-relative "C:folder" or a bare name would resolve against the working directory, so only a rooted path
+// is a library.
+QString libraryRootProblem(const QString& root)
+{
+  static const QRegularExpression rooted(QStringLiteral("^(?:[A-Za-z]:[\\\\/]|\\\\\\\\[^\\\\/]+[\\\\/][^\\\\/]+)"));
+  if (root.trimmed().isEmpty()) {
+    return QStringLiteral("The library folder setting is empty.");
+  }
+  if (!rooted.match(root).hasMatch()) {
+    return QStringLiteral("The library folder %1 is not an absolute path such as C:\\Games\\Ankh. Fix library/root in the "
+      "settings file or remove it to use the default.").arg(root);
+  }
+  return QString();
 }
 
 QString installFolderNameFor(const Package& client)

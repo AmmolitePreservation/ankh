@@ -34,6 +34,7 @@ struct LibraryScan {
 };
 
 QString defaultLibraryRoot();
+QString libraryRootProblem(const QString& root);
 QString installFolderNameFor(const Package& client);
 QString receiptPath(const QString& folder);
 QString writeReceipt(const Receipt& receipt);
