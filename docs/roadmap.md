@@ -9,7 +9,7 @@ World of Warcraft Classic is the first game through the login model and EverQues
 - A game server is modified only in a copy the AmmolitePreservation organization holds: public fork for a GitHub upstream, private repository otherwise.
 - Server changes are proven on a test server and never on the production one until released. EverQuest has peridothousing and peridotguids; every other game gets a clone of its server before its phase starts.
 - Nothing a production server's players use is removed before that server runs the new model.
-- Plugins reach a game folder only as versions of an Ammolite package applied by Ankh.
+- Plugins reach a game folder Ankh manages only as versions of an Ammolite package applied by Ankh; development builds go to a separate copy of the game that Ankh does not manage.
 - Group B's TLO work on the DDO tools is not interrupted: the repository rename keeps their clones working and the move to `games/ddo` happens at a point agreed with them.
 
 ## Phase 0: names and the plugin repository
@@ -26,10 +26,10 @@ Alongside, the ground Phase 2 stands on:
 
 ## Phase 1: accounts on Ammolite
 
-- Added beside what exists: account verbs on the server handlers; one account per player per server; `moveCharacter` and the reversible merge that moves a player's characters into that account; `POST /api/v1/servers/<id>/credential`, which sets the account's password through the handler and returns it once.
+- Added beside what exists: account verbs on the server handlers; one account per player per server; `moveCharacter` and the reversible merge that moves a player's characters into that account; `POST /api/v1/servers/<id>/credential`, which returns the account's password for the current login window: set through the handler by the first login to ask, shared by every login that asks while it lives, and scrambled once a minute passes with no login asking.
 - The cmangos handler carries the new verbs first (`moveCharacter` is `characters.account`); every other handler gains them in its game's phase.
 - Account domains, the claim flow, the account pages, `GET /me/gameAccounts` and Ankh's Account list keep serving every server that has not moved; each server sheds them at its own release.
-- Exit: on the WoW test realm, a player's test accounts merge into one and back again; a credential logs a stock client in and is dead afterwards.
+- Exit: on the WoW test realm, a player's test accounts merge into one and back again; a credential logs two stock clients in inside its window and is dead a minute after the last of them asked.
 
 ## Phase 2: World of Warcraft Classic
 
@@ -70,7 +70,6 @@ In this order, each with its test server cloned first:
 
 ## Open decisions
 
-- How long a credential lives. A password replaced on every login cancels a login still in flight, which launch-all produces by the dozen; the proposal is one credential valid for a minute and shared by the logins inside it.
 - Whether launch-to-character presses Enter World itself.
 - Release timing for each production server after its test server passes.
 - Talasite, Saronite, Kyber and Carbonite are listed on Ammolite and named in no phase.
