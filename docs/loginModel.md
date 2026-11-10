@@ -33,16 +33,14 @@ The AmmolitePreservation organization holds a copy of every server we modify: a 
 
 ## Migration
 
-Each phase ships on its own and leaves the site working.
+`roadmap.md` holds the order: World of Warcraft Classic first, EverQuest last, each game proven on a test server before its production server changes. The pieces:
 
-1. **Ammolite: one account per server.** Delete `accountDomain`, its pages, forms and API; move the account verbs onto the server handler; the server record keeps the connection configuration. Add `moveCharacter` to each handler (EQEmu `character_data.account_id`, cmangos `characters.account`, and the equivalents) and a merge that moves every character of a player's old game accounts into one account per server, reversible by the same verb. Peridot's 72 become one. The account pages, the claim flow, Ankh's Account list and `GET /me/gameAccounts` go.
-2. **Ammolite: credentials.** `POST /api/v1/servers/<id>/credential` rotates the player's account password through the handler and returns it once. Every login mints a fresh one, so a used credential is dead.
-3. **EQEmu (branch after `guids` in the owner's order):** characters per account unlimited; several sessions per account with the lock per character (world's and the login server's duplicate-login handling); review of account-keyed state; proven on peridotguids or peridothousing, never Peridot.
-4. **RoF2 tool set** (loader pattern as the DDO tools and thorium; claudelink stays a MacroQuest research tool) with the login module: the Login-button swap, the character-screen capacity, search and filter, the server address from the launch.
-5. **Ankh Play for museum games.** Start the installed client aimed at the chosen server; Account list gone; the Characters tab lists the account's characters and offers launch-to-character.
-6. **WoW Classic:** cmangos session and cap changes, the thorium port of the module.
-7. **Asheron's Call, Motor City Online, City of Heroes:** ACE, Rusty Motors and Ourodev changes; scarab, clearcoat and the Impervium tools ports.
-8. **Remove the rest:** `gameAccount` tables and Ankh's account domain fields.
+- **Ammolite, one account per server.** The account verbs move onto the server handler and the server record keeps the connection configuration. Each handler gains `moveCharacter` (cmangos `characters.account`, EQEmu `character_data.account_id`, and the equivalents), and a merge moves every character of a player's old game accounts into one account per server, reversible by the same verb. Peridot's 72 become one when EverQuest's turn comes.
+- **Ammolite, credentials.** `POST /api/v1/servers/<id>/credential` sets the player's account password through the handler and returns it once.
+- **Each emulator, in the organization's copy:** characters per account unlimited; several sessions per account with the lock per character; every rule the server keys by account decided rather than inherited.
+- **Each game's plugin set** with the login module: the Login-button swap, the character-screen capacity with search and filter, the server address from the launch. EverQuest's is new, on the loader pattern of the DDO tools and thorium; claudelink stays a MacroQuest research tool.
+- **Ankh Play for museum games.** Start the installed client aimed at the chosen server; the Characters tab lists the account's characters and offers launch-to-character.
+- **Removal, per server at its release:** `accountDomain` with its pages, forms and API, the account pages, the claim flow, Ankh's Account list and `GET /me/gameAccounts`. The `gameAccount` tables and Ankh's account domain fields go once no server needs them.
 
 Independent of these: multiboxing profiles and the Sessions board (DDO first), window layouts and per-instance settings files in the shared core.
 
@@ -56,6 +54,7 @@ Independent of these: multiboxing profiles and the Sessions board (DDO first), w
 
 ## Open
 
-- Where the EQEmu login work sits in the branch order (`rof2`, `guids`, `housing`, bots); the owner decides.
+- How long a credential lives when many clients log in at once: a password replaced on every login cancels a login still in flight (cmangos keeps one verifier and one session key per account).
+- Where the EQEmu login work sits in the branch order (`rof2`, `guids`, `housing`, bots); the owner decides when EverQuest's turn comes.
 - Whether the module presses Enter World itself after a launch-to-character pick, or leaves the player on the select screen.
 - Per-IP session caps on each server (EQEmu `MaxClientsPerIP`, ACE `MaximumAllowedSessionsPerIPAddress`) for households with many clients.
