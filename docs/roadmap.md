@@ -32,16 +32,18 @@ Running on Arcanite, from the `claude` branch of the organization's mangos-class
 
 - A session per login with the lock on the character: characters of one account are in the world together, a character already in the world is refused a second time, and a character whose client dropped is taken over by its next login.
 - `CharactersPerRealm` and `CharactersPerAccount` accept 50.
+- `account.sessionkey` holds the keys of the account's last 200 logins, newest first. The world server and realmd's reconnect accept any of them, so a login leaves the account's other clients their keys. Ten stock clients logging one account in within the same second all reach the character list.
+- Session keys are hashed on the client's 40 bytes at the world login, the reconnect proof and Warden, and realmd's reconnect goes on to serve the realm list, both as upstream has them. A protocol test run on Arcanite covers a reconnect and a world login by the newest key, the oldest key, a key with a zero top byte and a key that is not in the list.
 - Measured with stock 1.12.1 clients on one account of 50 characters: 40 in the world at once and in one raid group, the server's load average under 0.3. On the client PC a client takes about 365 MB of memory, 105 MB of video memory and 0.2 core at 10 frames per second; 40 of them take 9 of onyx's 16 threads.
 - The stock client fails a character list longer than 10 at one compare in its character list handler. A one-byte patch lifts it (thorium's `login` tool, branch `claude`, unreleased). The screen still draws 10 buttons; the rest are reached with the arrow keys.
 
 Left on the server:
 
-- A session key per login in realmd. Today one `account.sessionkey` is overwritten by every login, so a login made before the previous client reaches its character list breaks that client, and an earlier client cannot reconnect.
+- Merge upstream cmangos master. The fork stands at upstream `8ec338a17`; upstream has since reworked and hardened realmd's authentication (`4ad703442`, `2f390f546`, `933d18ee2`, `57cc05969`, `c98484f8b`, `42305c790`). Conflicts to expect in `WorldSocket.cpp`: upstream requires one 80-character key and reconnects to the account's one session, against the key list and a session per login.
 - The AFK logout (`WorldSession::ShouldAfkDisconnect`): stock cmangos returns a client to the character list 20 minutes after its last input, which empties an idle team. See Open decisions.
 - Account state that sessions now share or overwrite: account data and tutorial flags, `active_realm_id`, mute and antispam flags (they reach one session), the one online character the account list commands show (`ShowAccountListHelper`), the script ban in `Player::BanPlayer`.
 - Rules keyed by account, each to be decided rather than inherited: bids on the account's own auctions, one guild charter signature per account, the two-faction rule on PvP realms, the bundled PlayerBot's master lookup and same-account tests.
-- Login paths not yet exercised or known wrong: a second login for a character whose first is still loading; logins of one account within the same second; the build without playerbots, whose logout marks every character of the account offline and whose login callback leaks the load when the session is gone; the playerbot takeover with no account check.
+- Login paths not yet exercised or known wrong: a second login for a character whose first is still loading; a stock client's own reconnect to realmd (Change Realm from the character list), which only the protocol test has exercised; the build without playerbots, whose logout marks every character of the account offline and whose login callback leaks the load when the session is gone; the playerbot takeover with no account check.
 - Log noise: a `CMSG_CANCEL_TRADE` error line after a refused login or a return from the character list; an offline session's logout logged with "IP: bot".
 
 Left on the client:
