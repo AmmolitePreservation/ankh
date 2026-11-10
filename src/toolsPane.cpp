@@ -112,7 +112,7 @@ ToolsPane::ToolsPane(QWidget* parent)
     emit choiceChanged();
   });
   connect(resetButton, &QPushButton::clicked, this, [this] {
-    rebuild();
+    rebuild(selectedName());
     emit choiceChanged();
   });
   connect(applyButton, &QPushButton::clicked, this, [this] { emit applyRequested(stagedOptionalTools()); });
@@ -128,6 +128,12 @@ const Package* ToolsPane::packageOf(QListWidgetItem* item) const
   return &tools.at(item->data(Qt::UserRole).toInt());
 }
 
+QString ToolsPane::selectedName() const
+{
+  const Package* selected = packageOf(list->currentItem());
+  return selected != nullptr ? selected->name : QString();
+}
+
 void ToolsPane::showTools(const QList<Package>& newTools, bool newIsInstalled, const QStringList& newInstalledNames,
   const QString& newBusyReason)
 {
@@ -140,6 +146,7 @@ void ToolsPane::showTools(const QList<Package>& newTools, bool newIsInstalled, c
   signature.append(newInstalledNames.join(QLatin1Char(',')));
   signature.append(newBusyReason);
   const QString joined = signature.join(QLatin1Char('|'));
+  const QString keepSelected = selectedName();
   tools = newTools;
   isInstalled = newIsInstalled;
   installedNames = newInstalledNames;
@@ -148,13 +155,12 @@ void ToolsPane::showTools(const QList<Package>& newTools, bool newIsInstalled, c
     return;
   }
   shownSignature = joined;
-  rebuild();
+  rebuild(keepSelected);
 }
 
-void ToolsPane::rebuild()
+void ToolsPane::rebuild(const QString& keepSelected)
 {
   isRebuilding = true;
-  const QString keepSelected = list->currentItem() != nullptr ? packageOf(list->currentItem())->name : QString();
   list->clear();
   for (int index = 0; index < tools.size(); ++index) {
     const Package& package = tools.at(index);

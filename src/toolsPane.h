@@ -34,11 +34,12 @@ signals:
   void screenshotWanted(const Package& package);
 
 private:
-  void rebuild();
+  void rebuild(const QString& keepSelected);
   void refreshRows();
   void refreshButtons();
   void showHelp(const Package* package);
   const Package* packageOf(QListWidgetItem* item) const;
+  QString selectedName() const;
   QStringList stagedOptionalTools() const;
   QStringList installedOptionalTools() const;
 
