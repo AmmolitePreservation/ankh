@@ -26,10 +26,10 @@ Alongside, the ground Phase 2 stands on:
 
 ## Phase 1: accounts on Ammolite
 
-- Added beside what exists: account verbs on the server handlers; one account per player per server; `moveCharacter` and the reversible merge that moves a player's characters into that account; `POST /api/v1/servers/<id>/credential`, which returns the account's password for the current login window: set through the handler by the first login to ask, shared by every login that asks while it lives, and scrambled once a minute passes with no login asking.
+- Added beside what exists: account verbs on the server handlers; one account per player per server; `moveCharacter` and the reversible merge that moves a player's characters into that account; the account's random password, set through the handler when the account is created, kept encrypted, and replaced only when access is removed or a reset is asked for; `GET /api/v1/servers/<id>/credential`, which returns that password to the signed-in player.
 - The cmangos handler carries the new verbs first (`moveCharacter` is `characters.account`); every other handler gains them in its game's phase.
 - Account domains, the claim flow, the account pages, `GET /me/gameAccounts` and Ankh's Account list keep serving every server that has not moved; each server sheds them at its own release.
-- Exit: on the WoW test realm, a player's test accounts merge into one and back again; a credential logs two stock clients in inside its window and is dead a minute after the last of them asked.
+- Exit: on the WoW test realm, a player's test accounts merge into one and back again; the password Ammolite returns logs a stock client in, and stops doing so once the player's access is removed.
 
 ## Phase 2: World of Warcraft Classic
 
@@ -40,7 +40,7 @@ Alongside, the ground Phase 2 stands on:
   - every rule keyed by account decided rather than inherited: bids on the account's own auctions, one guild charter signature per account, tutorial flags, the two-faction rule on PvP realms, bans and mutes, online counts, the bundled PlayerBot's same-account test.
 - `games/wow`: the 1.12 loader and thorium's tools as generic plugins, thorium's shared code reconciled into `core/`; plus `login` (Login-button credential swap, realm address from the launch, character screen capacity with sort, search and filter) and `sessionReport`.
 - Ankh: Play for museum games starts the installed client aimed at the chosen server; the Characters tab lists the account's characters and offers launch-to-character.
-- Exit, the 50-character test on the test realm: Play, Login with no typing; 50 characters on one account shown and searchable; 40 of them in the world at once and in one raid group; the same character refused a second time; the other ten launched as far as onyx's memory carries, with clients per gigabyte recorded; the account-keyed rules behaving as decided; a client without the plugins refused.
+- Exit, the 50-character test on the test realm: Play, Login with no typing; 50 characters on one account shown and searchable; 40 of them in the world at once and in one raid group; the same character refused a second time; the other ten launched as far as onyx's memory carries, with clients per gigabyte recorded; the account-keyed rules behaving as decided.
 
 ## Phase 3: multiboxing
 
