@@ -33,7 +33,7 @@ The AmmolitePreservation organization holds a copy of every server we modify: a 
 
 ## Migration
 
-`roadmap.md` holds the order: World of Warcraft Classic first, EverQuest last, each game proven on a test server before its production server changes. The pieces:
+`roadmap.md` holds the order: World of Warcraft Classic first, EverQuest last, and where each game's server changes are proven. The pieces:
 
 - **Ammolite, one account per server.** The account verbs move onto the server handler and the server record keeps the connection configuration. Each handler gains `moveCharacter` (cmangos `characters.account`, EQEmu `character_data.account_id`, and the equivalents), and a merge moves every character of a player's old game accounts into one account per server, reversible by the same verb. Peridot's 72 become one when EverQuest's turn comes.
 - **Ammolite, credentials.** Ammolite sets a random password through the handler when it creates the account and keeps it encrypted. `GET /api/v1/servers/<id>/credential` returns it to the signed-in player whose account it is. Ammolite replaces it only when the player's access is removed or a reset is asked for. The emulator checks it as it checks any password.

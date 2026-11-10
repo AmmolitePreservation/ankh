@@ -7,7 +7,7 @@ World of Warcraft Classic is the first game through the login model and EverQues
 ## Standing rules
 
 - A game server is modified only in a copy the AmmolitePreservation organization holds: public fork for a GitHub upstream, private repository otherwise.
-- Server changes are proven on a test server and never on the production one until released. EverQuest has peridothousing and peridotguids; every other game gets a clone of its server before its phase starts.
+- Where a server's changes are proven is set per game. EverQuest: on peridothousing and peridotguids, never on Peridot. World of Warcraft: on Arcanite itself, built from the fork's `claude` branch, with no clone and restarts as the work needs. The Phase 5 games are decided at their turn.
 - Nothing a production server's players use is removed before that server runs the new model.
 - Plugins reach a game folder Ankh manages only as versions of an Ammolite package applied by Ankh; development builds go to a separate copy of the game that Ankh does not manage.
 - Group B's TLO work on the DDO tools is not interrupted: the repository rename keeps their clones working and the move to `games/ddo` happens at a point agreed with them.
@@ -19,28 +19,38 @@ World of Warcraft Classic is the first game through the login model and EverQues
 - ddo-client-tools renamed to `ankh-plugins`. Layout `core/` (hooks, settings, logs, pipe, loader base, build check, Ammolite client), `plugins/` (generic, written once), `games/<game>/` (loader, offsets, ports, the rare game-specific plugin). DDO moved to `games/ddo` with `git mv`; its build and `package.ps1` produce the same nine DLLs, one package per plugin.
 - Exit: DDO installs from the new packages through Ankh and plays as before.
 
-Alongside, the ground Phase 2 stands on:
-
-- A WoW test realm: a clone of arcanite, as peridothousing is of Peridot. None exists today.
-- Two spikes on it, before anything is built on their answers: a 1.12 client whose character screen shows more than ten characters, and two clients in the world at once on one cmangos account.
-
 ## Phase 1: accounts on Ammolite
 
 - Added beside what exists: account verbs on the server handlers; one account per player per server; `moveCharacter` and the reversible merge that moves a player's characters into that account; the account's random password, set through the handler when the account is created, kept encrypted, and replaced only when access is removed or a reset is asked for; `GET /api/v1/servers/<id>/credential`, which returns that password to the signed-in player.
 - The cmangos handler carries the new verbs first (`moveCharacter` is `characters.account`); every other handler gains them in its game's phase.
 - Account domains, the claim flow, the account pages, `GET /me/gameAccounts` and Ankh's Account list keep serving every server that has not moved; each server sheds them at its own release.
-- Exit: on the WoW test realm, a player's test accounts merge into one and back again; the password Ammolite returns logs a stock client in, and stops doing so once the player's access is removed.
+- Exit: on Arcanite, a player's test accounts merge into one and back again; the password Ammolite returns logs a stock client in, and stops doing so once the player's access is removed.
 
 ## Phase 2: World of Warcraft Classic
 
-- cmangos, in the organization's mangos-classic fork:
-  - sessions held per login with the lock on the character (today `World::m_sessions` holds one session per account and a second login kicks the first);
-  - a session key per login in realmd (today one `account.sessionkey`, overwritten by every login);
-  - the ten-per-realm character limit lifted (`CharactersPerRealm` is clamped to 10);
-  - every rule keyed by account decided rather than inherited: bids on the account's own auctions, one guild charter signature per account, tutorial flags, the two-faction rule on PvP realms, bans and mutes, online counts, the bundled PlayerBot's same-account test.
+Running on Arcanite, from the `claude` branch of the organization's mangos-classic fork:
+
+- A session per login with the lock on the character: characters of one account are in the world together, a character already in the world is refused a second time, and a character whose client dropped is taken over by its next login.
+- `CharactersPerRealm` and `CharactersPerAccount` accept 50.
+- Measured with stock 1.12.1 clients on one account of 50 characters: 40 in the world at once and in one raid group, the server's load average under 0.3. On the client PC a client takes about 365 MB of memory, 105 MB of video memory and 0.2 core at 10 frames per second; 40 of them take 9 of onyx's 16 threads.
+- The stock client fails a character list longer than 10 at one compare in its character list handler. A one-byte patch lifts it (thorium's `login` tool, branch `claude`, unreleased). The screen still draws 10 buttons; the rest are reached with the arrow keys.
+
+Left on the server:
+
+- A session key per login in realmd. Today one `account.sessionkey` is overwritten by every login, so a login made before the previous client reaches its character list breaks that client, and an earlier client cannot reconnect.
+- The AFK logout (`WorldSession::ShouldAfkDisconnect`): stock cmangos returns a client to the character list 20 minutes after its last input, which empties an idle team. See Open decisions.
+- Account state that sessions now share or overwrite: account data and tutorial flags, `active_realm_id`, mute and antispam flags (they reach one session), the one online character the account list commands show (`ShowAccountListHelper`), the script ban in `Player::BanPlayer`.
+- Rules keyed by account, each to be decided rather than inherited: bids on the account's own auctions, one guild charter signature per account, the two-faction rule on PvP realms, the bundled PlayerBot's master lookup and same-account tests.
+- Login paths not yet exercised or known wrong: a second login for a character whose first is still loading; logins of one account within the same second; the build without playerbots, whose logout marks every character of the account offline and whose login callback leaks the load when the session is gone; the playerbot takeover with no account check.
+- Log noise: a `CMSG_CANCEL_TRADE` error line after a refused login or a return from the character list; an offline session's logout logged with "IP: bot".
+
+Left on the client:
+
 - `games/wow`: the 1.12 loader and thorium's tools as generic plugins, thorium's shared code reconciled into `core/`; plus `login` (Login-button credential swap, realm address from the launch, character screen capacity with sort, search and filter) and `sessionReport`.
+- The character screen past 10 buttons: scrolling, as part of `login`.
+- `WTF\Config.wtf` is shared by every client of an install and rewritten at each Enter World, so a starting client can read another's last character; the per-instance settings files of Phase 3 answer it.
 - Ankh: Play for museum games starts the installed client aimed at the chosen server; the Characters tab lists the account's characters and offers launch-to-character.
-- Exit, the 50-character test on the test realm: Play, Login with no typing; 50 characters on one account shown and searchable; 40 of them in the world at once and in one raid group; the same character refused a second time; the other ten launched as far as onyx's memory carries, with clients per gigabyte recorded; the account-keyed rules behaving as decided.
+- Exit: Play, Login with no typing; 50 characters on one account shown and searchable; 40 of them in the world at once and in one raid group; the same character refused a second time; the account-keyed rules behaving as decided.
 
 ## Phase 3: multiboxing
 
@@ -56,7 +66,7 @@ Alongside, the ground Phase 2 stands on:
 
 ## Phase 5: the other games
 
-In this order, each with its test server cloned first:
+In this order:
 
 - Asheron's Call: ACE changes; `games/ac` with the generic plugins, `multibox` and the one named plugin, `scarab`, the ThwargLauncher replacement that keeps what AC players rely on inside the client (`/tf` team commands, ThwargFilter compatibility); directConnect deleted once Ankh covers its launch and swarm.
 - Motor City Online: Rusty Motors changes; `games/mco` from clearcoat.
@@ -71,5 +81,8 @@ In this order, each with its test server cloned first:
 ## Open decisions
 
 - Whether launch-to-character presses Enter World itself.
-- Release timing for each production server after its test server passes.
+- The AFK logout for multiboxed clients: lifted in the server (one condition in `ShouldAfkDisconnect`), or answered by a keep-alive in the `login` plugin.
+- Whether the raid test also means entering a raid instance; so far it is a raid group in the open world.
+- Where the Phase 5 games' server changes are proven: on the server itself, as with Arcanite, or on a copy.
+- When the account model reaches players on each server.
 - Talasite, Saronite, Kyber and Carbonite are listed on Ammolite and named in no phase.
