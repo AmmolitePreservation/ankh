@@ -214,6 +214,35 @@ private slots:
     QCOMPARE(listOf(pane)->count(), 0);
   }
 
+  void aShorterListReplacesALongerOneWhateverRowWasSelected()
+  {
+    ToolsPane pane;
+    pane.showTools(editionTools(), false, {}, QString());
+    listOf(pane)->setCurrentRow(3);
+    pane.showTools({tool(QStringLiteral("beta-tools"), QStringLiteral("Beta tools"), QStringLiteral("requiredTool"), QStringLiteral("Starts the beta client."))},
+      false, {}, QString());
+    QCOMPARE(listOf(pane)->count(), 1);
+    QCOMPARE(listOf(pane)->currentRow(), 0);
+    QVERIFY(labelWith(pane, QStringLiteral("Starts the beta client.")) != nullptr);
+
+    pane.showTools({}, false, {}, QString());
+    QCOMPARE(listOf(pane)->count(), 0);
+    QVERIFY(labelWith(pane, QStringLiteral("This edition has no tools.")) != nullptr);
+    QVERIFY(labelWith(pane, QStringLiteral("Select a tool to see what it does.")) != nullptr);
+    QVERIFY(labelWith(pane, QStringLiteral("Starts the beta client.")) == nullptr);
+  }
+
+  void theSelectedToolStaysSelectedWhenItsRowMoves()
+  {
+    ToolsPane pane;
+    pane.showTools(editionTools(), false, {}, QString());
+    listOf(pane)->setCurrentRow(2);
+    const QList<Package> shown = editionTools();
+    pane.showTools({shown.at(2), shown.at(0), shown.at(1)}, false, {}, QString());
+    QCOMPARE(listOf(pane)->currentRow(), 0);
+    QVERIFY(listOf(pane)->item(0)->text().startsWith(QStringLiteral("Alpha bars")));
+  }
+
   void renderedPaneCanBeSavedForReview()
   {
     const QString target = qEnvironmentVariable("ANKH_TOOLS_PANE_PNG");
