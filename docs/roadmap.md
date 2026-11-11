@@ -13,10 +13,11 @@ World of Warcraft Classic is the first game through the login model and EverQues
 
 ## Phase 0: names and the plugin repository
 
-- Ammolite: package roles `client`, `requiredPlugin`, `optionalPlugin`; plugin category (Login, Compatibility, Display, Interface, Multiboxing, Research) on every package; migration, admin form, API, manifest.
-- Ankh: the Client tools tab becomes Plugins, grouped by category, Research behind a Settings switch; the Play page summary line follows.
-- The plugins live in two repositories, which replace the per-game tool repositories: `ankh-plugins` (public: the loader, the shared source and the plugins that know no online game) and a private one that carries it as a submodule and adds every online game. Layout in both: `core/`, `plugins/` (written once, for every game), `games/<game>/` (settings, the game's handlers for a plugin, the rare plugin only it needs). World of Warcraft, Motor City Online, Asheron's Call and Dungeons & Dragons Online build and run from it; each game's plugins are one Ammolite package (`wow-plugins`, `mco-plugins`, `ac-plugins`, `ddo-plugins`).
-- Exit: each game installs from its new package through Ankh and plays as before. Not yet checked through Ankh; each was checked from a development copy.
+- Ammolite: package roles `client`, `requiredPlugin`, `optionalPlugin`; a category on every plugin package (Stability, Display, Login, Portability, Automation, Research); migration, admin form, API, manifest.
+- Ankh: the Plugins tab lists a game's plugins under their categories, the Research ones only while the Settings switch is on; the Play page summary line follows.
+- The plugins live in two repositories: `ankh-plugins` (public: the loader, the shared source and the plugins that know no online game) and a private one that carries it as a submodule and adds every online game. Layout in both: `core/`, `plugins/` (written once, for every game), `games/<game>/` (settings, the game's handlers for a plugin, the rare plugin only it needs). World of Warcraft, Motor City Online, Asheron's Call and Dungeons & Dragons Online build and run from it.
+- Every plugin of a game is an Ammolite package of its own, `<game>-<plugin>`, beside the game's loader, `<game>-loader`. The packages a game cannot run without are required and install with it; every other one installs when the player ticks it.
+- Exit: each game installs from its packages through Ankh and plays as before. Not yet checked through Ankh; each was checked from a development copy.
 
 ## Phase 1: accounts on Ammolite
 
@@ -55,7 +56,7 @@ Left on the client:
 
 ## Phase 3: multiboxing
 
-- Ankh: character sets (profiles: members, per-member launch-to-character or stop at the screen, placement, plugins), the Sessions page (every running client, state from `sessionReport`, bring to front, close, relaunch), launch-all with staggering and the login queue, healing as scarab's directConnect did it (relaunch a game that dies before it claims its place, end a frozen one after the stability dump, end one the server has gone silent on, retry a refused sign-in while the server still holds a dead session). DDO joins through its saved logins; WoW through Phase 2.
+- Ankh: character sets (profiles: members, per-member launch-to-character or stop at the screen, placement, plugins), the Sessions page (every running client, state from `sessionReport`, bring to front, close, relaunch), launch-all with staggering and the login queue, healing as the `scarab` plugin does it (relaunch a game that dies before it claims its place, end a frozen one after the stability dump, end one the server has gone silent on, retry a refused sign-in while the server still holds a dead session). DDO joins through its saved logins; WoW through Phase 2.
 - `plugins/`: `sessionReport` for every game; window layouts (main plus thumbnails, swap on a hotkey, placement saved per member, no focus theft); per-instance settings files redirected by the loader so one install serves the team.
 - Exit: the fifty launch from one profile to a layout, the board shows every member in the world, and a crashed member comes back by itself.
 

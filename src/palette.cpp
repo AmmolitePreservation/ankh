@@ -53,10 +53,10 @@ QPushButton[navigation="true"]:checked { border-bottom: 3px solid @accent@; colo
 QPushButton[settingsNavigation="true"] { border: none; border-radius: 4px; padding: 10px 14px; text-align: left; min-height: 28px; font-size: 18px; }
 QPushButton[settingsNavigation="true"]:checked { background: @border@; }
 QListView { background: transparent; border: none; outline: none; }
-QListWidget#toolList::item { padding: 8px 10px; border-radius: 4px; }
-QListWidget#toolList::item:selected { background: @border@; }
-QListWidget#toolList::indicator { width: 18px; height: 18px; border: 1px solid @secondary@; border-radius: 3px; background: @raised@; }
-QListWidget#toolList::indicator:checked { background: @accent@; border-color: @accent@; image: url(:/glyphs/check.svg); }
+QListWidget#pluginList::item { padding: 8px 10px; border-radius: 4px; }
+QListWidget#pluginList::item:selected { background: @border@; }
+QListWidget#pluginList::indicator { width: 18px; height: 18px; border: 1px solid @secondary@; border-radius: 3px; background: @raised@; }
+QListWidget#pluginList::indicator:checked { background: @accent@; border-color: @accent@; image: url(:/glyphs/check.svg); }
 QFrame#helpBox { background: @raised@; border: 1px solid @border@; border-radius: 6px; }
 QTabBar { background: transparent; }
 QTabBar::tab { background: transparent; border: none; border-bottom: 3px solid transparent; padding: 10px 24px; font-size: 19px; color: @text@; }

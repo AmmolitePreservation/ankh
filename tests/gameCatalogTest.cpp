@@ -52,8 +52,8 @@ private slots:
     const QList<Package> packages = {
       {QStringLiteral("wow-classic"), QStringLiteral("Classic client"), QStringLiteral("client"), {classic}, std::nullopt},
       {QStringLiteral("wow-tbc"), QStringLiteral("Outland client"), QStringLiteral("client"), {tbc}, std::nullopt},
-      {QStringLiteral("thorium"), QStringLiteral("thorium tools"), QStringLiteral("requiredTool"), {classic, tbc, pop}, std::nullopt},
-      {QStringLiteral("loose"), QStringLiteral("Unattached"), QStringLiteral("optionalTool"), {}, std::nullopt},
+      {QStringLiteral("wow-login"), QStringLiteral("Login"), QStringLiteral("requiredPlugin"), {classic, tbc, pop}, std::nullopt},
+      {QStringLiteral("loose"), QStringLiteral("Unattached"), QStringLiteral("optionalPlugin"), {}, std::nullopt},
     };
     Game game = gameFromWorld(World{3, QStringLiteral("Arcanite"), QStringLiteral("World of Warcraft"), QStringLiteral("classic"),
       QStringLiteral("Classic (1.12.1)"), QColor("#82b556"), 2004, 2006, QString(), std::nullopt, QString()});
@@ -61,7 +61,7 @@ private slots:
     for (const Package& package : packagesFor(game, packages)) {
       names.append(package.name);
     }
-    QCOMPARE(names, QStringList({QStringLiteral("wow-classic"), QStringLiteral("thorium")}));
+    QCOMPARE(names, QStringList({QStringLiteral("wow-classic"), QStringLiteral("wow-login")}));
     game.variant = QStringLiteral("wotlk");
     QVERIFY(packagesFor(game, packages).isEmpty());
   }
@@ -69,8 +69,8 @@ private slots:
   void rolesHaveTheirGroupLabels()
   {
     QCOMPARE(roleLabel(QStringLiteral("client")), QStringLiteral("Client"));
-    QCOMPARE(roleLabel(QStringLiteral("requiredTool")), QStringLiteral("Required tools"));
-    QCOMPARE(roleLabel(QStringLiteral("optionalTool")), QStringLiteral("Optional tools"));
+    QCOMPARE(roleLabel(QStringLiteral("requiredPlugin")), QStringLiteral("Required plugins"));
+    QCOMPARE(roleLabel(QStringLiteral("optionalPlugin")), QStringLiteral("Optional plugins"));
   }
 };
 

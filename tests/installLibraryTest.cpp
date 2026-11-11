@@ -15,11 +15,11 @@ Package clientFor(const QList<Edition>& editions)
 Receipt sampleReceipt(const QString& folder)
 {
   Receipt receipt{folder, {QStringLiteral("wow-classic"), QStringLiteral("2026.10.13"), QStringLiteral("d298")}, {}, {}};
-  receipt.tools.append({QStringLiteral("thorium"), QStringLiteral("2026.11.01-abc1234"), QStringLiteral("5580")});
+  receipt.plugins.append({QStringLiteral("wow-login"), QStringLiteral("2026.11.01-abc1234"), QStringLiteral("5580")});
   receipt.files.insert(QStringLiteral("WoW.exe"), {QStringLiteral("wow-classic"), 5335826980, 0xDEADBEEFu, false});
   receipt.files.insert(QStringLiteral("Data/common.MPQ"), {QStringLiteral("wow-classic"), 12, 7u, false});
   receipt.files.insert(QStringLiteral("WTF/Config.wtf"), {QStringLiteral("wow-classic"), 40, 8u, true});
-  receipt.files.insert(QStringLiteral("thorium/thorium.dll"), {QStringLiteral("thorium"), 3, 9u, false});
+  receipt.files.insert(QStringLiteral("ankh-plugins/login.dll"), {QStringLiteral("wow-login"), 3, 9u, false});
   return receipt;
 }
 
@@ -66,22 +66,22 @@ private slots:
     QCOMPARE(read->client.name, QStringLiteral("wow-classic"));
     QCOMPARE(read->client.version, QStringLiteral("2026.10.13"));
     QCOMPARE(read->client.sha256, QStringLiteral("d298"));
-    QCOMPARE(read->tools.size(), 1);
-    QCOMPARE(read->tools.first().name, QStringLiteral("thorium"));
+    QCOMPARE(read->plugins.size(), 1);
+    QCOMPARE(read->plugins.first().name, QStringLiteral("wow-login"));
     QCOMPARE(read->files.size(), 4);
     QCOMPARE(read->files.value(QStringLiteral("WoW.exe")).byteSize, qint64(5335826980));
     QCOMPARE(read->files.value(QStringLiteral("WoW.exe")).crc32, 0xDEADBEEFu);
     QCOMPARE(read->files.value(QStringLiteral("WoW.exe")).isWriteOnce, false);
     QCOMPARE(read->files.value(QStringLiteral("WTF/Config.wtf")).isWriteOnce, true);
-    QCOMPARE(read->files.value(QStringLiteral("thorium/thorium.dll")).package, QStringLiteral("thorium"));
+    QCOMPARE(read->files.value(QStringLiteral("ankh-plugins/login.dll")).package, QStringLiteral("wow-login"));
   }
 
   void anAttachedReceiptHasNoClientAndIsFoundByItsGame()
   {
     QTemporaryDir folder;
     Receipt receipt{QDir::toNativeSeparators(folder.path()), {}, {}, {}, QStringLiteral("Dungeons & Dragons Online"), QStringLiteral("live")};
-    receipt.tools.append({QStringLiteral("ddo-tools"), QStringLiteral("2026.11.09"), QStringLiteral("aa11")});
-    receipt.files.insert(QStringLiteral("x64/version.dll"), {QStringLiteral("ddo-tools"), 10, 5u, false});
+    receipt.plugins.append({QStringLiteral("ddo-plugins"), QStringLiteral("2026.11.09"), QStringLiteral("aa11")});
+    receipt.files.insert(QStringLiteral("x64/version.dll"), {QStringLiteral("ddo-plugins"), 10, 5u, false});
     QCOMPARE(writeReceipt(receipt), QString());
     QFile stored(receiptPath(folder.path()));
     QVERIFY(stored.open(QIODevice::ReadOnly));
@@ -97,7 +97,7 @@ private slots:
     QCOMPARE(read->attachedGame, QStringLiteral("Dungeons & Dragons Online"));
     QCOMPARE(read->attachedVariant, QStringLiteral("live"));
     QCOMPARE(read->client.name, QString());
-    QCOMPARE(read->tools.size(), 1);
+    QCOMPARE(read->plugins.size(), 1);
 
     QTemporaryDir museumFolder;
     const Receipt museum = sampleReceipt(QDir::toNativeSeparators(museumFolder.path()));
@@ -115,7 +115,7 @@ private slots:
     QVERIFY(QDir(folder.path()).mkpath(QStringLiteral(".ankh")));
     QFile file(receiptPath(folder.path()));
     QVERIFY(file.open(QIODevice::WriteOnly));
-    file.write("{\"client\": null, \"tools\": [], \"files\": {}}");
+    file.write("{\"client\": null, \"plugins\": [], \"files\": {}}");
     file.close();
     QString problem;
     QVERIFY(!readReceipt(folder.path(), problem).has_value());
@@ -129,7 +129,7 @@ private slots:
     QVERIFY(QDir().mkpath(folder + QStringLiteral("/.ankh")));
     QFile old(QDir(folder).filePath(QStringLiteral(".ankh/receipt.json")));
     QVERIFY(old.open(QIODevice::WriteOnly));
-    old.write("{\"client\": {\"name\": \"a\", \"version\": \"1\", \"sha256\": \"b\"}, \"tools\": [], "
+    old.write("{\"client\": {\"name\": \"a\", \"version\": \"1\", \"sha256\": \"b\"}, \"plugins\": [], "
       "\"files\": {\"a.exe\": {\"package\": \"a\", \"byteSize\": 1, \"crc32\": 2}}}");
     old.close();
     QString problem;
@@ -146,7 +146,7 @@ private slots:
     QVERIFY(root.mkpath(QStringLiteral("EverQuest/.ankh")));
     QFile broken(root.filePath(QStringLiteral("EverQuest/.ankh/receipt.json")));
     QVERIFY(broken.open(QIODevice::WriteOnly));
-    broken.write("{\"client\": {\"name\": \"everquest\"}, \"tools\": [], \"files\": {}}");
+    broken.write("{\"client\": {\"name\": \"everquest\"}, \"plugins\": [], \"files\": {}}");
     broken.close();
     QVERIFY(root.mkpath(QStringLiteral("Not an install")));
     QVERIFY(root.mkpath(QStringLiteral(".staging")));

@@ -1,6 +1,6 @@
 # ankh
 
-A minimalist, robust game management application for a private collection of preserved games. It starts as a download-and-play launcher and grows, only for those who want it, into client tools, mixed-game sessions, automation, server-side bots, and MCP access.
+A minimalist, robust game management application for a private collection of preserved games. It starts as a download-and-play launcher and grows, only for those who want it, into plugins, mixed-game sessions, automation, server-side bots, and MCP access.
 
 - Product and interface specification: [docs/launcherSpec.md](docs/launcherSpec.md)
 - Release process and version format: [docs/releases.md](docs/releases.md)
@@ -40,7 +40,7 @@ Vector first. Glyphs live in `assets/glyphs` as SVG with `currentColor` and are 
 
 1. Play: catalog, download, import, required setup, update, launch, accounts.
 2. Characters and required compatibility.
-3. Optional client tools.
+3. Optional plugins.
 4. Sessions.
 5. Automation.
 6. Server bots.
@@ -50,9 +50,9 @@ Layers 1 to 3 are the product; 4 to 7 are independently enabled features. See th
 
 ## Current state
 
-Built and tested: the shell, Ammolite sign-in and the manifest-driven library, the game page with its edition's packages, game installs and updates (client plus required tools, verified, resumable, receipted; updates diff the receipt against the new listings and honor write-once files), settings (Account, Games, About Ankh, attributions), the installer (per-user or all-users, silent flags), and in-app updating (signed manifest check, verified download, silent install, relaunch). Releases are made by `release.ps1`, run locally or by `.github/workflows/release.yml`.
+Built and tested: the shell, Ammolite sign-in and the manifest-driven library, the game page with its edition's packages, game installs and updates (client plus required plugins, verified, resumable, receipted; updates diff the receipt against the new listings and honor write-once files), settings (Account, Games, About Ankh, attributions), the installer (per-user or all-users, silent flags), and in-app updating (signed manifest check, verified download, silent install, relaunch). Releases are made by `release.ps1`, run locally or by `.github/workflows/release.yml`.
 
-Launching and repairing games, and optional tools, are not built.
+Launching and repairing games, and optional plugins, are not built.
 
 ## Tests
 

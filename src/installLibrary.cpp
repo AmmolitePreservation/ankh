@@ -127,11 +127,11 @@ QString writeReceipt(const Receipt& receipt)
       {QStringLiteral("byteSize"), entry.value().byteSize}, {QStringLiteral("crc32"), static_cast<qint64>(entry.value().crc32)},
       {QStringLiteral("writeOnce"), entry.value().isWriteOnce}});
   }
-  QJsonArray tools;
-  for (const InstalledPackage& tool : receipt.tools) {
-    tools.append(packageJson(tool));
+  QJsonArray plugins;
+  for (const InstalledPackage& plugin : receipt.plugins) {
+    plugins.append(packageJson(plugin));
   }
-  QJsonObject object{{QStringLiteral("tools"), tools}, {QStringLiteral("files"), files}};
+  QJsonObject object{{QStringLiteral("plugins"), plugins}, {QStringLiteral("files"), files}};
   if (receipt.isAttached()) {
     object.insert(QStringLiteral("client"), QJsonValue::Null);
     object.insert(QStringLiteral("attached"), QJsonObject{{QStringLiteral("game"), receipt.attachedGame},
@@ -177,12 +177,12 @@ std::optional<Receipt> readReceipt(const QString& folder, QString& problem)
     } else {
       receipt.client = packageFrom(required(object, "client"));
     }
-    const QJsonValue tools = required(object, "tools");
-    if (!tools.isArray()) {
-      throw ReceiptError{QStringLiteral("the field \"tools\" is not a list")};
+    const QJsonValue plugins = required(object, "plugins");
+    if (!plugins.isArray()) {
+      throw ReceiptError{QStringLiteral("the field \"plugins\" is not a list")};
     }
-    for (const QJsonValue& tool : tools.toArray()) {
-      receipt.tools.append(packageFrom(tool));
+    for (const QJsonValue& plugin : plugins.toArray()) {
+      receipt.plugins.append(packageFrom(plugin));
     }
     const QJsonValue files = required(object, "files");
     if (!files.isObject()) {

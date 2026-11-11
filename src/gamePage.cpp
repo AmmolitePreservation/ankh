@@ -1,7 +1,7 @@
 #include "gamePage.h"
 
 #include "icons.h"
-#include "toolsPane.h"
+#include "pluginsPane.h"
 
 #include <QComboBox>
 #include <QFrame>
@@ -85,11 +85,11 @@ GamePage::GamePage(QWidget* parent)
     upToDateIcon(makeFixedLabel(30, this)),
     upToDateLabel(makeLabel(QStringLiteral("Up to date"), nullptr, this)),
     compatibilityIcon(makeFixedLabel(30, this)),
-    optionalToolsIcon(makeFixedLabel(30, this)),
-    optionalToolsSummary(makeLabel(QStringLiteral("%1   None enabled").arg(QChar(0x00B7)), "bodySecondary", this)),
-    toolsPane(new ToolsPane(this)),
+    optionalPluginsIcon(makeFixedLabel(30, this)),
+    optionalPluginsSummary(makeLabel(QStringLiteral("%1   None enabled").arg(QChar(0x00B7)), "bodySecondary", this)),
+    pluginsPane(new PluginsPane(this)),
     checkForUpdates(new QPushButton(QStringLiteral("Check for updates"), this)),
-    clientToolsLink(new QPushButton(QStringLiteral("Client tools"), this)),
+    pluginsLink(new QPushButton(QStringLiteral("Plugins"), this)),
     statusDot(makeFixedLabel(28, this)),
     statusTitle(makeLabel(QString(), "statusTitle", this)),
     statusDetail(makeLabel(QString(), "secondary", this)),
@@ -108,7 +108,7 @@ GamePage::GamePage(QWidget* parent)
   optionsMenu->addAction(QStringLiteral("Uninstall"))->setEnabled(false);
   gameOptions->setMenu(optionsMenu);
 
-  for (const QString& name : {QStringLiteral("Play"), QStringLiteral("Characters"), QStringLiteral("Client tools"), QStringLiteral("Media"), QStringLiteral("About")}) {
+  for (const QString& name : {QStringLiteral("Play"), QStringLiteral("Characters"), QStringLiteral("Plugins"), QStringLiteral("Media"), QStringLiteral("About")}) {
     tabs->addTab(name);
   }
   tabs->setExpanding(false);
@@ -135,8 +135,8 @@ GamePage::GamePage(QWidget* parent)
   checkForUpdates->setToolTip(QStringLiteral("Ask Ammolite for the newest packages now."));
   upToDateLabel->setWordWrap(false);
   upToDateLabel->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
-  clientToolsLink->setProperty("link", true);
-  clientToolsLink->setLayoutDirection(Qt::RightToLeft);
+  pluginsLink->setProperty("link", true);
+  pluginsLink->setLayoutDirection(Qt::RightToLeft);
   realmChoice->setAccessibleName(QStringLiteral("Realm"));
   accountChoice->setAccessibleName(QStringLiteral("Account"));
   realmChoice->setMinimumHeight(42);
@@ -184,14 +184,14 @@ GamePage::GamePage(QWidget* parent)
   statusRow->addSpacing(20);
   statusRow->addWidget(checkForUpdates);
 
-  auto* toolsRow = new QHBoxLayout;
-  toolsRow->setSpacing(12);
-  toolsRow->addWidget(optionalToolsIcon);
-  toolsRow->addWidget(makeLabel(QStringLiteral("Optional tools"), nullptr, installedSection));
-  optionalToolsSummary->setParent(installedSection);
-  toolsRow->addWidget(optionalToolsSummary);
-  toolsRow->addStretch(1);
-  toolsRow->addWidget(clientToolsLink);
+  auto* pluginsRow = new QHBoxLayout;
+  pluginsRow->setSpacing(12);
+  pluginsRow->addWidget(optionalPluginsIcon);
+  pluginsRow->addWidget(makeLabel(QStringLiteral("Optional plugins"), nullptr, installedSection));
+  optionalPluginsSummary->setParent(installedSection);
+  pluginsRow->addWidget(optionalPluginsSummary);
+  pluginsRow->addStretch(1);
+  pluginsRow->addWidget(pluginsLink);
 
   auto* installedLayout = new QVBoxLayout(installedSection);
   installedLayout->setContentsMargins(0, 0, 0, 0);
@@ -199,7 +199,7 @@ GamePage::GamePage(QWidget* parent)
   installedLayout->addWidget(makeLabel(QStringLiteral("Installed client"), "sectionHeading", installedSection));
   installedLayout->addLayout(statusRow);
   installedLayout->addWidget(makeDivider(installedSection));
-  installedLayout->addLayout(toolsRow);
+  installedLayout->addLayout(pluginsRow);
   installedLayout->addWidget(makeDivider(installedSection));
 
   auto* playContent = new QWidget(this);
@@ -226,7 +226,7 @@ GamePage::GamePage(QWidget* parent)
   pages->addWidget(playScroll);
   for (int index = 1; index < tabs->count(); ++index) {
     if (index == 2) {
-      pages->addWidget(toolsPane);
+      pages->addWidget(pluginsPane);
       continue;
     }
     auto* unavailable = makeLabel(QStringLiteral("Not available in this build."), "secondary", this);
@@ -285,10 +285,10 @@ GamePage::GamePage(QWidget* parent)
   layout->addWidget(bottomBar);
 
   connect(tabs, &QTabBar::currentChanged, pages, &QStackedWidget::setCurrentIndex);
-  connect(toolsPane, &ToolsPane::applyRequested, this, [this](const QStringList& names) { emit toolsApplyRequested(game, names); });
-  connect(toolsPane, &ToolsPane::choiceChanged, this, &GamePage::toolChoiceChanged);
-  connect(toolsPane, &ToolsPane::screenshotWanted, this, &GamePage::screenshotWanted);
-  connect(clientToolsLink, &QPushButton::clicked, this, [this] { tabs->setCurrentIndex(2); });
+  connect(pluginsPane, &PluginsPane::applyRequested, this, [this](const QStringList& names) { emit pluginsApplyRequested(game, names); });
+  connect(pluginsPane, &PluginsPane::choiceChanged, this, &GamePage::pluginChoiceChanged);
+  connect(pluginsPane, &PluginsPane::screenshotWanted, this, &GamePage::screenshotWanted);
+  connect(pluginsLink, &QPushButton::clicked, this, [this] { tabs->setCurrentIndex(2); });
   connect(checkForUpdates, &QPushButton::clicked, this, &GamePage::updateCheckRequested);
   connect(launchSettingsToggle, &QPushButton::toggled, this, [this](bool isShown) {
     launchSettingsNote->setVisible(isShown);
@@ -337,11 +337,11 @@ void GamePage::refreshIcons()
   const qreal ratio = devicePixelRatioF();
   upToDateIcon->setPixmap(iconPixmap(IconKind::checkBadge, 30, QColor(), ratio));
   compatibilityIcon->setPixmap(iconPixmap(IconKind::checkBadge, 30, QColor(), ratio));
-  optionalToolsIcon->setPixmap(iconPixmap(IconKind::settings, 28, colors.text, ratio));
+  optionalPluginsIcon->setPixmap(iconPixmap(IconKind::settings, 28, colors.text, ratio));
   statusDot->setPixmap(iconPixmap(IconKind::statusDot, 28, game.status.startsWith(QStringLiteral("Online")) ? colors.success : colors.secondary, ratio));
   gameOptions->setIcon(makeIcon(IconKind::chevronDown, 18, colors.text));
   checkForUpdates->setIcon(makeIcon(IconKind::chevronDown, 18, colors.text));
-  clientToolsLink->setIcon(makeIcon(IconKind::chevronRight, 18, colors.accent));
+  pluginsLink->setIcon(makeIcon(IconKind::chevronRight, 18, colors.accent));
   launchSettingsToggle->setIcon(makeIcon(launchSettingsToggle->isChecked() ? IconKind::chevronDown : IconKind::chevronRight, 18, colors.text));
   primaryButton->setIcon(installState == InstallState::installed ? makeIcon(IconKind::play, 22, QColor("#16120A")) : QIcon());
 
@@ -360,7 +360,7 @@ void GamePage::updateStatus()
 {
   statusTitle->setText(game.isAttached ? QStringLiteral("Your own copy of the game")
     : game.status.isEmpty() ? QStringLiteral("Status not reported") : game.status);
-  const QString installVerb = game.isAttached ? QStringLiteral("Add tools") : QStringLiteral("Install");
+  const QString installVerb = game.isAttached ? QStringLiteral("Add plugins") : QStringLiteral("Install");
   const bool isInstalled = installState == InstallState::installed || installState == InstallState::updateAvailable
     || (installState == InstallState::installing && game.isInstalled);
   installedSection->setVisible(isInstalled);
@@ -399,7 +399,7 @@ void GamePage::updateStatus()
     break;
   case InstallState::notInstalled:
     statusDetail->setText(!installDetail.isEmpty() ? installDetail
-      : game.isAttached ? QStringLiteral("Point Ankh at your copy of the game to add its tools.") : QStringLiteral("Not installed."));
+      : game.isAttached ? QStringLiteral("Point Ankh at your copy of the game to add its plugins.") : QStringLiteral("Not installed."));
     primaryButton->setText(installVerb);
     break;
   case InstallState::unavailable:
@@ -511,7 +511,7 @@ void GamePage::setPackages(const QList<Package>& newPackages)
 {
   packages = newPackages;
   showDownloads();
-  refreshTools();
+  refreshPlugins();
 }
 
 void GamePage::setAttachedWorlds(const QStringList& worlds, const QString& selected, const QString& problem)
@@ -564,44 +564,50 @@ QString GamePage::selectedAccount() const
   return accountChoice->isEnabled() ? accountChoice->currentText() : QString();
 }
 
-void GamePage::setToolState(bool isInstalled, const QStringList& installedNames, const QString& busyReason)
+void GamePage::setPluginState(bool isInstalled, const QStringList& installedNames, const QString& busyReason)
 {
-  toolsInstalled = isInstalled;
-  toolsInstalledNames = installedNames;
-  toolsBusyReason = busyReason;
-  refreshTools();
+  pluginsInstalled = isInstalled;
+  pluginsInstalledNames = installedNames;
+  pluginsBusyReason = busyReason;
+  refreshPlugins();
 }
 
-QStringList GamePage::chosenOptionalTools() const
+void GamePage::setResearchPluginsShown(bool isShown)
 {
-  return toolsPane->chosenOptionalTools();
+  researchPluginsShown = isShown;
+  refreshPlugins();
+}
+
+QStringList GamePage::chosenOptionalPlugins() const
+{
+  return pluginsPane->chosenOptionalPlugins();
 }
 
 void GamePage::showScreenshot(const QString& packageName, const QByteArray& image)
 {
-  toolsPane->showScreenshot(packageName, image);
+  pluginsPane->showScreenshot(packageName, image);
 }
 
 void GamePage::showScreenshotProblem(const QString& packageName, const QString& message)
 {
-  toolsPane->showScreenshotProblem(packageName, message);
+  pluginsPane->showScreenshotProblem(packageName, message);
 }
 
-void GamePage::refreshTools()
+void GamePage::refreshPlugins()
 {
-  QList<Package> tools;
+  QList<Package> plugins;
   QStringList installedLabels;
   for (const Package& package : packagesFor(game, packages)) {
     if (package.role == QLatin1String("client")) {
       continue;
     }
-    tools.append(package);
-    if (package.role == QLatin1String("optionalTool") && toolsInstalledNames.contains(package.name)) {
+    plugins.append(package);
+    if (package.role == QLatin1String("optionalPlugin") && pluginsInstalledNames.contains(package.name)) {
       installedLabels.append(package.label);
     }
   }
-  toolsPane->showTools(tools, toolsInstalled, toolsInstalledNames, toolsBusyReason);
-  optionalToolsSummary->setText(QStringLiteral("%1   %2").arg(QChar(0x00B7),
+  pluginsPane->showPlugins(plugins, pluginsInstalled, pluginsInstalledNames, pluginsBusyReason, researchPluginsShown);
+  optionalPluginsSummary->setText(QStringLiteral("%1   %2").arg(QChar(0x00B7),
     installedLabels.isEmpty() ? QStringLiteral("None enabled") : installedLabels.join(QStringLiteral(", "))));
 }
 
@@ -646,7 +652,7 @@ void GamePage::showGame(const Game& newGame)
     : QStringLiteral("Game accounts are managed on the Ammolite site for now."));
   refreshAccounts();
   showDownloads();
-  refreshTools();
+  refreshPlugins();
   tabs->setCurrentIndex(0);
   updateStatus();
 }

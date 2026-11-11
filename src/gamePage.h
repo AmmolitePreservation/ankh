@@ -13,7 +13,7 @@ class QPushButton;
 class QStackedWidget;
 class QTabBar;
 class QVBoxLayout;
-class ToolsPane;
+class PluginsPane;
 
 enum class InstallState { notInstalled, unavailable, installing, installed, updateAvailable, busyElsewhere };
 
@@ -30,9 +30,10 @@ public:
   void showInstallProgress(const QString& text, qint64 done, qint64 total);
   void setGameAccounts(const QList<AccountDomain>& domains);
   void setGameAccountsFailed(const QString& message);
-  // What the Client tools tab shows: whether the game is installed, its installed tools, and why tools cannot change now.
-  void setToolState(bool isInstalled, const QStringList& installedNames, const QString& busyReason);
-  QStringList chosenOptionalTools() const;
+  // What the Plugins tab shows: whether the game is installed, its installed plugins, and why plugins cannot change now.
+  void setPluginState(bool isInstalled, const QStringList& installedNames, const QString& busyReason);
+  void setResearchPluginsShown(bool isShown);
+  QStringList chosenOptionalPlugins() const;
   void showScreenshot(const QString& packageName, const QByteArray& image);
   void showScreenshotProblem(const QString& packageName, const QString& message);
   // An attached game's worlds (from its own launcher service) and the logins kept on this computer, with the ones
@@ -50,8 +51,8 @@ signals:
   void updateRequested(const Game& game);
   void updateCheckRequested();
   void cancelRequested();
-  void toolsApplyRequested(const Game& game, const QStringList& optionalToolNames);
-  void toolChoiceChanged();
+  void pluginsApplyRequested(const Game& game, const QStringList& optionalPluginNames);
+  void pluginChoiceChanged();
   void screenshotWanted(const Package& package);
   void launchRequested(const Game& game, const QString& world, const QString& username);
   void manageLoginsRequested(const Game& game);
@@ -64,7 +65,7 @@ private:
   void updateStatus();
   void clearDownloads();
   void showDownloads();
-  void refreshTools();
+  void refreshPlugins();
 
   Palette colors;
   Game game;
@@ -86,14 +87,15 @@ private:
   QLabel* upToDateIcon;
   QLabel* upToDateLabel;
   QLabel* compatibilityIcon;
-  QLabel* optionalToolsIcon;
-  QLabel* optionalToolsSummary;
-  ToolsPane* toolsPane;
-  bool toolsInstalled = false;
-  QStringList toolsInstalledNames;
-  QString toolsBusyReason;
+  QLabel* optionalPluginsIcon;
+  QLabel* optionalPluginsSummary;
+  PluginsPane* pluginsPane;
+  bool pluginsInstalled = false;
+  QStringList pluginsInstalledNames;
+  QString pluginsBusyReason;
+  bool researchPluginsShown = false;
   QPushButton* checkForUpdates;
-  QPushButton* clientToolsLink;
+  QPushButton* pluginsLink;
   QLabel* statusDot;
   QLabel* statusTitle;
   QLabel* statusDetail;

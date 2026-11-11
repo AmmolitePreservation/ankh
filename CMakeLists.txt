@@ -50,7 +50,7 @@ qt_add_executable(ankh WIN32
   src/userMenuButton.cpp
   src/libraryPane.cpp
   src/gamePage.cpp
-  src/toolsPane.cpp
+  src/pluginsPane.cpp
   src/settingsPane.cpp
   src/settingsPage.cpp
   src/attributionsView.cpp
@@ -150,12 +150,12 @@ target_link_libraries(libraryPaneTest PRIVATE Qt6::Test Qt6::Network Qt6::Widget
 add_test(NAME libraryPane COMMAND libraryPaneTest)
 set_tests_properties(libraryPane PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
-qt_add_executable(toolsPaneTest tests/toolsPaneTest.cpp src/toolsPane.cpp src/palette.cpp)
-qt_add_resources(toolsPaneTest toolsPaneGlyphs PREFIX "/" FILES ${glyphFiles})
-target_include_directories(toolsPaneTest PRIVATE src)
-target_link_libraries(toolsPaneTest PRIVATE Qt6::Test Qt6::Network Qt6::Widgets)
-add_test(NAME toolsPane COMMAND toolsPaneTest)
-set_tests_properties(toolsPane PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+qt_add_executable(pluginsPaneTest tests/pluginsPaneTest.cpp src/pluginsPane.cpp src/palette.cpp)
+qt_add_resources(pluginsPaneTest pluginsPaneGlyphs PREFIX "/" FILES ${glyphFiles})
+target_include_directories(pluginsPaneTest PRIVATE src)
+target_link_libraries(pluginsPaneTest PRIVATE Qt6::Test Qt6::Network Qt6::Widgets)
+add_test(NAME pluginsPane COMMAND pluginsPaneTest)
+set_tests_properties(pluginsPane PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 qt_add_executable(gameLoginStoreTest tests/gameLoginStoreTest.cpp src/gameLoginStore.cpp src/credentialStore.cpp src/fatal.cpp)
 target_include_directories(gameLoginStoreTest PRIVATE src)

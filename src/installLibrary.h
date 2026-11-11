@@ -24,9 +24,9 @@ struct OwnedFile {
 struct Receipt {
   QString folder;
   InstalledPackage client;
-  QList<InstalledPackage> tools;
+  QList<InstalledPackage> plugins;
   QMap<QString, OwnedFile> files;
-  // Set for tools attached to the player's own copy of a game: there is no client package, and the folder is theirs.
+  // Set for plugins attached to the player's own copy of a game: there is no client package, and the folder is theirs.
   QString attachedGame;
   QString attachedVariant;
 

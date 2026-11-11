@@ -10,7 +10,7 @@ Every emulator we run (EQEmu, cmangos, ACE, Rusty Motors, Ourodev) lets one clie
 
 - **One account per player per server.** The emulator account is the player's identity on that server, created and owned by Ammolite; its password is random, set by Ammolite when it creates the account, kept by Ammolite, and never shown to the player. All of the player's characters on that server live in it. Access is granted or removed per Ammolite user.
 - **The server stays the source of the character list.** The client logs in, receives its characters from the server as it always did, renders them, and the player picks one. Nothing of ours draws a list.
-- **The login module** is a required client-side tool in every museum game's tool set. It does three things and no more:
+- **The login module** is a required plugin of every museum game. It does three things and no more:
   1. When the player presses the game's own Login button it signs in to Ammolite (reusing Ankh's token when Ankh runs, its own sign-in overlay otherwise), obtains the account's password from Ammolite, and completes the client's login with it.
   2. It lifts the client's character-screen capacity to an arbitrary count and adds sorting, search and a filter over the list the server sent.
   3. It carries the server address from the launch (argument or launch file) so one install serves several servers without editing `eqhost.txt` or `realmlist.wtf`.
@@ -38,7 +38,7 @@ The AmmolitePreservation organization holds a copy of every server we modify: a 
 - **Ammolite, one account per server.** The account verbs move onto the server handler and the server record keeps the connection configuration. Each handler gains `moveCharacter` (cmangos `characters.account`, EQEmu `character_data.account_id`, and the equivalents), and a merge moves every character of a player's old game accounts into one account per server, reversible by the same verb. Peridot's 72 become one when EverQuest's turn comes.
 - **Ammolite, credentials.** Ammolite sets a random password through the handler when it creates the account and keeps it encrypted. `GET /api/v1/servers/<id>/credential` returns it to the signed-in player whose account it is. Ammolite replaces it only when the player's access is removed or a reset is asked for. The emulator checks it as it checks any password.
 - **Each emulator, in the organization's copy:** characters per account unlimited; several sessions per account with the lock per character; every rule the server keys by account decided rather than inherited.
-- **Each game's plugin set** with the login module: the Login-button swap, the character-screen capacity with search and filter, the server address from the launch. EverQuest's is new, on the loader pattern of the DDO tools and thorium; claudelink stays a MacroQuest research tool.
+- **Each game's plugin set** with the login module: the Login-button swap, the character-screen capacity with search and filter, the server address from the launch. EverQuest's is new, on the plugin base the other games use; claudelink stays for MacroQuest research.
 - **Ankh Play for museum games.** Start the installed client aimed at the chosen server; the Characters tab lists the account's characters and offers launch-to-character.
 - **Removal, per server at its release:** `accountDomain` with its pages, forms and API, the account pages, the claim flow, Ankh's Account list and `GET /me/gameAccounts`. The `gameAccount` tables and Ankh's account domain fields go once no server needs them.
 

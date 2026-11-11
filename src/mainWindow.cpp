@@ -117,7 +117,8 @@ MainWindow::MainWindow()
     libraryPane(new LibraryPane(settings, this)),
     settingsPane(new SettingsPane(this)),
     gamePage(new GamePage(this)),
-    settingsPage(new SettingsPage(serviceUrl(settings).toString(), libraryRootFrom(settings), this)),
+    settingsPage(new SettingsPage(serviceUrl(settings).toString(), libraryRootFrom(settings),
+      settings.value(QStringLiteral("plugins/showResearch"), false).toBool(), this)),
     libraryNavigation(new QPushButton(QStringLiteral("Library"), this)),
     settingsButton(new QPushButton(QStringLiteral("Settings"), this)),
     activityButton(new QPushButton(QStringLiteral("Activity"), this)),
@@ -249,9 +250,14 @@ MainWindow::MainWindow()
   connect(settingsPane, &SettingsPane::sectionSelected, settingsPage, &SettingsPage::showSection);
   connect(settingsPage, &SettingsPage::updateCheckRequested, this, &MainWindow::checkManifest);
   connect(settingsPage, &SettingsPage::libraryRootChangeRequested, this, &MainWindow::chooseLibraryRoot);
+  gamePage->setResearchPluginsShown(settings.value(QStringLiteral("plugins/showResearch"), false).toBool());
+  connect(settingsPage, &SettingsPage::researchPluginsShownChanged, this, [this](bool isShown) {
+    settings.setValue(QStringLiteral("plugins/showResearch"), isShown);
+    gamePage->setResearchPluginsShown(isShown);
+  });
   connect(gamePage, &GamePage::installRequested, this, &MainWindow::startInstall);
   connect(gamePage, &GamePage::updateRequested, this, &MainWindow::startUpdate);
-  connect(gamePage, &GamePage::toolsApplyRequested, this, &MainWindow::startToolChange);
+  connect(gamePage, &GamePage::pluginsApplyRequested, this, &MainWindow::startPluginChange);
   connect(gamePage, &GamePage::launchRequested, this, &MainWindow::startLaunch);
   connect(gamePage, &GamePage::manageLoginsRequested, this, [this](const Game& game) {
     GameLoginDialog dialog(game, this);
@@ -596,17 +602,17 @@ void MainWindow::rescanLibrary()
   }
 }
 
-void MainWindow::refreshToolState()
+void MainWindow::refreshPluginState()
 {
   const Receipt* receipt = receiptFor(shownGame);
   QStringList installedNames;
   if (receipt != nullptr) {
-    for (const InstalledPackage& tool : receipt->tools) {
-      installedNames.append(tool.name);
+    for (const InstalledPackage& plugin : receipt->plugins) {
+      installedNames.append(plugin.name);
     }
   }
-  gamePage->setToolState(receipt != nullptr, installedNames,
-    installJob != nullptr ? QStringLiteral("Tools cannot change while an install runs. Try again when it finishes.") : QString());
+  gamePage->setPluginState(receipt != nullptr, installedNames,
+    installJob != nullptr ? QStringLiteral("Plugins cannot change while an install runs. Try again when it finishes.") : QString());
 }
 
 void MainWindow::refreshInstallState()
@@ -614,7 +620,7 @@ void MainWindow::refreshInstallState()
   if (shownGame.id.isEmpty()) {
     return;
   }
-  refreshToolState();
+  refreshPluginState();
   refreshAttachedChoices();
   if (installJob != nullptr) {
     if (shownGame.id == installingGameId) {
@@ -645,15 +651,15 @@ void MainWindow::refreshInstallState()
   }
   QString problem;
   if (shownGame.isAttached) {
-    bool hasRequiredTool = false;
+    bool hasRequiredPlugin = false;
     for (const Package& package : packagesFor(shownGame, packages)) {
-      if (package.role == QLatin1String("requiredTool") && !package.latest) {
-        problem = QStringLiteral("The required tool %1 has no version published yet.").arg(package.label);
+      if (package.role == QLatin1String("requiredPlugin") && !package.latest) {
+        problem = QStringLiteral("The required plugin %1 has no version published yet.").arg(package.label);
       }
-      hasRequiredTool = hasRequiredTool || package.role == QLatin1String("requiredTool");
+      hasRequiredPlugin = hasRequiredPlugin || package.role == QLatin1String("requiredPlugin");
     }
-    if (!hasRequiredTool) {
-      problem = QStringLiteral("No tools are published for %1 %2 yet.").arg(shownGame.title, shownGame.edition);
+    if (!hasRequiredPlugin) {
+      problem = QStringLiteral("No plugins are published for %1 %2 yet.").arg(shownGame.title, shownGame.edition);
     }
     if (!problem.isEmpty()) {
       gamePage->setInstallState(InstallState::unavailable, problem);
@@ -676,7 +682,7 @@ void MainWindow::startAttach(const Game& game)
   }
   settings.setValue(QStringLiteral("library/lastAttachFolder"), QFileInfo(chosen).absolutePath());
   QString problem;
-  const std::optional<InstallPlan> plan = planAttach(game, packages, chosen, problem, gamePage->chosenOptionalTools());
+  const std::optional<InstallPlan> plan = planAttach(game, packages, chosen, problem, gamePage->chosenOptionalPlugins());
   if (!plan) {
     installNotes.insert(game.id, problem);
     refreshInstallState();
@@ -692,7 +698,7 @@ void MainWindow::startInstall(const Game& game)
     return;
   }
   QString problem;
-  const std::optional<InstallPlan> plan = planInstall(game, packages, libraryRoot(), problem, gamePage->chosenOptionalTools());
+  const std::optional<InstallPlan> plan = planInstall(game, packages, libraryRoot(), problem, gamePage->chosenOptionalPlugins());
   if (!plan) {
     gamePage->setInstallState(InstallState::unavailable, problem);
     return;
@@ -707,7 +713,7 @@ void MainWindow::refreshAttachedChoices()
   }
   const Receipt* receipt = receiptFor(shownGame);
   if (receipt == nullptr) {
-    gamePage->setAttachedWorlds({}, QString(), QStringLiteral("Add the tools first"));
+    gamePage->setAttachedWorlds({}, QString(), QStringLiteral("Add the plugins first"));
     gamePage->setLocalLogins({}, QString());
     return;
   }
@@ -742,14 +748,14 @@ void MainWindow::startLaunch(const Game& game, const QString& world, const QStri
   launcher->prepareLaunch(receipt->folder, game.launcherConfig, world, username, *password, QStringLiteral("English"));
 }
 
-void MainWindow::startToolChange(const Game& game, const QStringList& optionalToolNames)
+void MainWindow::startPluginChange(const Game& game, const QStringList& optionalPluginNames)
 {
   const Receipt* receipt = receiptFor(game);
   if (receipt == nullptr) {
     return;
   }
   QString problem;
-  const std::optional<InstallPlan> plan = planToolChange(game, packages, *receipt, optionalToolNames, problem);
+  const std::optional<InstallPlan> plan = planPluginChange(game, packages, *receipt, optionalPluginNames, problem);
   if (!plan) {
     gamePage->setInstallState(InstallState::installed, problem.isEmpty() ? QStringLiteral("Nothing to change.") : problem);
     return;
@@ -779,15 +785,15 @@ void MainWindow::runPlan(const Game& game, const InstallPlan& startingPlan)
   }
   std::optional<InstallPlan> plan = startingPlan;
   InstallSheet sheet(game, *plan, this);
-  QStringList optionalToolNames;
-  for (const Package& tool : plan->tools) {
-    if (tool.role == QLatin1String("optionalTool")) {
-      optionalToolNames.append(tool.name);
+  QStringList optionalPluginNames;
+  for (const Package& plugin : plan->plugins) {
+    if (plugin.role == QLatin1String("optionalPlugin")) {
+      optionalPluginNames.append(plugin.name);
     }
   }
-  connect(&sheet, &InstallSheet::destinationChosen, this, [this, &sheet, &plan, &game, optionalToolNames](const QString& parentFolder) {
+  connect(&sheet, &InstallSheet::destinationChosen, this, [this, &sheet, &plan, &game, optionalPluginNames](const QString& parentFolder) {
     QString replanProblem;
-    plan = planInstall(game, packages, parentFolder, replanProblem, optionalToolNames);
+    plan = planInstall(game, packages, parentFolder, replanProblem, optionalPluginNames);
     if (!plan) {
       fatal(QStringLiteral("The install plan changed with its folder: %1").arg(replanProblem));
     }
@@ -818,15 +824,15 @@ void MainWindow::runPlan(const Game& game, const InstallPlan& startingPlan)
       gamePage->showInstallProgress(installStepText, done, total);
     }
   });
-  connect(installJob, &InstallJob::finished, this, [this, isUpdate = plan->isUpdate(), isToolChange = plan->isToolChange, isAttach = plan->isAttach](const Receipt& receipt, const ApplySummary& summary) {
+  connect(installJob, &InstallJob::finished, this, [this, isUpdate = plan->isUpdate(), isPluginChange = plan->isPluginChange, isAttach = plan->isAttach](const Receipt& receipt, const ApplySummary& summary) {
     rememberInstalls({receipt.folder});
     if (!isUpdate) {
       finishInstall(QString());
       return;
     }
-    QString note = isAttach ? QStringLiteral("Tools added: %1 files written").arg(summary.written)
-      : isToolChange ? QStringLiteral("Tools changed: %1 written, %2 deleted").arg(summary.written).arg(summary.deleted)
-      : receipt.isAttached() ? QStringLiteral("Tools updated: %1 written, %2 deleted").arg(summary.written).arg(summary.deleted)
+    QString note = isAttach ? QStringLiteral("Plugins added: %1 files written").arg(summary.written)
+      : isPluginChange ? QStringLiteral("Plugins changed: %1 written, %2 deleted").arg(summary.written).arg(summary.deleted)
+      : receipt.isAttached() ? QStringLiteral("Plugins updated: %1 written, %2 deleted").arg(summary.written).arg(summary.deleted)
       : QStringLiteral("Updated to %1: %2 written, %3 deleted").arg(receipt.client.version).arg(summary.written).arg(summary.deleted);
     if (!summary.replaced.isEmpty()) {
       QStringList named = summary.replaced.mid(0, 3);

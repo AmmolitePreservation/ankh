@@ -132,11 +132,16 @@ PackageVersion parsePackageVersion(const QJsonObject& object)
 
 Package parsePackage(const QJsonObject& object)
 {
-  static const QStringList roles = {QStringLiteral("client"), QStringLiteral("requiredTool"), QStringLiteral("optionalTool")};
+  static const QStringList roles = {QStringLiteral("client"), QStringLiteral("requiredPlugin"), QStringLiteral("optionalPlugin")};
   Package package{requiredString(object, "name"), requiredString(object, "label"), requiredString(object, "role"), {}, std::nullopt,
     requiredString(object, "description"), std::nullopt};
   if (!roles.contains(package.role)) {
     throw ReplyError{QStringLiteral("the role of the package %1 is unknown: %2").arg(package.name, package.role)};
+  }
+  package.category = requiredString(object, "category");
+  const bool isClient = package.role == QLatin1String("client");
+  if (isClient ? !package.category.isEmpty() : !pluginCategories.contains(package.category)) {
+    throw ReplyError{QStringLiteral("the category of the package %1 does not fit its role: \"%2\"").arg(package.name, package.category)};
   }
   for (const QJsonValue& value : requiredArray(object, "editions")) {
     package.editions.append(parseEdition(objectAt(value)));
