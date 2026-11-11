@@ -10,14 +10,13 @@ World of Warcraft Classic is the first game through the login model and EverQues
 - Where a server's changes are proven is set per game. EverQuest: on peridothousing and peridotguids, never on Peridot. World of Warcraft: on Arcanite itself, built from the fork's `claude` branch, with no clone and restarts as the work needs. The Phase 5 games are decided at their turn.
 - Nothing a production server's players use is removed before that server runs the new model.
 - Plugins reach a game folder Ankh manages only as versions of an Ammolite package applied by Ankh; development builds go to a separate copy of the game that Ankh does not manage.
-- Group B's TLO work on the DDO tools is not interrupted: the repository rename keeps their clones working and the move to `games/ddo` happens at a point agreed with them.
 
 ## Phase 0: names and the plugin repository
 
 - Ammolite: package roles `client`, `requiredPlugin`, `optionalPlugin`; plugin category (Login, Compatibility, Display, Interface, Multiboxing, Research) on every package; migration, admin form, API, manifest.
 - Ankh: the Client tools tab becomes Plugins, grouped by category, Research behind a Settings switch; the Play page summary line follows.
-- ddo-client-tools renamed to `ankh-plugins`. Layout `core/` (hooks, settings, logs, pipe, loader base, build check, Ammolite client), `plugins/` (generic, written once), `games/<game>/` (loader, offsets, ports, the rare game-specific plugin). DDO moved to `games/ddo` with `git mv`; its build and `package.ps1` produce the same nine DLLs, one package per plugin.
-- Exit: DDO installs from the new packages through Ankh and plays as before.
+- The plugins live in two repositories, which replace the per-game tool repositories: `ankh-plugins` (public: the loader, the shared source and the plugins that know no online game) and a private one that carries it as a submodule and adds every online game. Layout in both: `core/`, `plugins/` (written once, for every game), `games/<game>/` (settings, the game's handlers for a plugin, the rare plugin only it needs). World of Warcraft, Motor City Online, Asheron's Call and Dungeons & Dragons Online build and run from it; each game's plugins are one Ammolite package (`wow-plugins`, `mco-plugins`, `ac-plugins`, `ddo-plugins`).
+- Exit: each game installs from its new package through Ankh and plays as before. Not yet checked through Ankh; each was checked from a development copy.
 
 ## Phase 1: accounts on Ammolite
 
@@ -36,7 +35,7 @@ Running on Arcanite, from the `claude` branch of the organization's mangos-class
 - Session keys are hashed on the client's 40 bytes at the world login, the reconnect proof and Warden, and realmd's reconnect goes on to serve the realm list, both as upstream has them. A protocol test run on Arcanite covers a reconnect and a world login by the newest key, the oldest key, a key with a zero top byte and a key that is not in the list.
 - `AfkLogout` in `mangosd.conf` switches the logout of a character that has been AFK for 15 minutes. It defaults to 1, stock cmangos, which returns a client to the character list 20 minutes after its last input; Arcanite runs it at 0, so an idle team stays in the world. Checked with a client 17 minutes into AFK, which the setting at 1 then logged out at once; hours of idling are not yet measured.
 - Measured with stock 1.12.1 clients on one account of 50 characters: 40 in the world at once and in one raid group, the server's load average under 0.3. On the client PC a client takes about 365 MB of memory, 105 MB of video memory and 0.2 core at 10 frames per second; 40 of them take 9 of onyx's 16 threads.
-- The stock client fails a character list longer than 10 at one compare in its character list handler. A one-byte patch lifts it (thorium's `login` tool, branch `claude`, unreleased). The screen still draws 10 buttons; the rest are reached with the arrow keys.
+- The stock client fails a character list longer than 10 at one compare in its character list handler. The `login` plugin's one-byte patch lifts it. The screen still draws 10 buttons; the rest are reached with the arrow keys.
 
 Left on the server:
 
@@ -48,7 +47,7 @@ Left on the server:
 
 Left on the client:
 
-- `games/wow`: the 1.12 loader and thorium's tools as generic plugins, thorium's shared code reconciled into `core/`; plus `login` (Login-button credential swap, realm address from the launch, character screen capacity with sort, search and filter) and `sessionReport`.
+- `login` for `games/wow`, which today only lifts the character limit: the Login-button credential swap, the realm address from the launch, character screen capacity with sort, search and filter; and `sessionReport`.
 - The character screen past 10 buttons: scrolling, as part of `login`.
 - `WTF\Config.wtf` is shared by every client of an install and rewritten at each Enter World, so a starting client can read another's last character; the per-instance settings files of Phase 3 answer it.
 - Ankh: Play for museum games starts the installed client aimed at the chosen server; the Characters tab lists the account's characters and offers launch-to-character.
@@ -70,15 +69,15 @@ Left on the client:
 
 In this order:
 
-- Asheron's Call: ACE changes; `games/ac` with the generic plugins, `multibox` and the one named plugin, `scarab`, the ThwargLauncher replacement that keeps what AC players rely on inside the client (`/tf` team commands, ThwargFilter compatibility); directConnect deleted once Ankh covers its launch and swarm.
-- Motor City Online: Rusty Motors changes; `games/mco` from clearcoat.
+- Asheron's Call: ACE changes; `login` for `games/ac` beside the named plugin `scarab`, the ThwargLauncher replacement that keeps what AC players rely on inside the client (`/tf` team commands, ThwargFilter compatibility), whose launch and swarm go once Ankh covers them.
+- Motor City Online: Rusty Motors changes; `login` for `games/mco`.
 - City of Heroes: Ourodev changes; `games/coh` with the Impervium account service as its handler.
 - EverQuest, last: EQEmu changes on the branch the owner places them among `rof2`, `guids` and `housing`: unlimited characters per account; many sessions per account with the lock on the character, in world and login server; the shared bank made safe for two sessions on one account; per-IP caps. `games/eq`: the RoF2 loader and the generic plugins with `login`. Peridot's 72 accounts merge into one.
 - Exit per game: the Phase 2 test at that game's scale; for EverQuest a 72-character profile.
 
 ## Phase 6: removal
 
-- Once every server Ammolite lists runs the model: `gameAccount` tables, domain remnants and Ankh's domain fields gone; thorium, scarab and clearcoat archived; package descriptions and screenshots filled for every plugin.
+- Once every server Ammolite lists runs the model: `gameAccount` tables, domain remnants and Ankh's domain fields gone; package descriptions and screenshots filled for every plugin.
 
 ## Open decisions
 
