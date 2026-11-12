@@ -101,8 +101,11 @@ struct AttachedGame {
   QString edition;
   QColor color;
   QString executable;
+  // How the game is started: turbineGLS (its own launcher service, configured by the file launcherConfig in the game
+  // folder) or steam (Steam starts it by steamAppID).
   QString launcher;
   QString launcherConfig;
+  int steamAppID = 0;
 };
 
 struct Manifest {

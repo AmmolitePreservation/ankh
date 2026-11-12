@@ -317,7 +317,7 @@ private slots:
     QCOMPARE(login.screenshot->url, QUrl(QStringLiteral("https://ammolite.test/api/v1/packages/wow-login/screenshot")));
     QCOMPARE(login.screenshot->sha256, QStringLiteral("ab12"));
     QCOMPARE(login.screenshot->contentType, QStringLiteral("image/png"));
-    QCOMPARE(manifest->attachedGames.size(), 1);
+    QCOMPARE(manifest->attachedGames.size(), 2);
     const AttachedGame& ddo = manifest->attachedGames.first();
     QCOMPARE(ddo.game, QStringLiteral("Dungeons & Dragons Online"));
     QCOMPARE(ddo.variant, QStringLiteral("live"));
@@ -326,6 +326,13 @@ private slots:
     QCOMPARE(ddo.executable, QStringLiteral("x64/dndclient64.exe"));
     QCOMPARE(ddo.launcher, QStringLiteral("turbineGLS"));
     QCOMPARE(ddo.launcherConfig, QStringLiteral("ddo.launcherconfig"));
+    QCOMPARE(ddo.steamAppID, 0);
+    const AttachedGame& soma = manifest->attachedGames.at(1);
+    QCOMPARE(soma.game, QStringLiteral("SOMA"));
+    QCOMPARE(soma.executable, QStringLiteral("Soma.exe"));
+    QCOMPARE(soma.launcher, QStringLiteral("steam"));
+    QCOMPARE(soma.steamAppID, 282140);
+    QCOMPARE(soma.launcherConfig, QString());
   }
 
   void anAttachedGameWhoseExecutableLeavesItsFolderLosesTheCollectionAndKeepsTheRelease()

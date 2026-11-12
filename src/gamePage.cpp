@@ -378,7 +378,9 @@ void GamePage::updateStatus()
     statusDetail->setText(!launchStatus.isEmpty() ? launchStatus
       : QStringLiteral("%1 %2 %3").arg(realmChoice->currentText(), QString(QChar(0x00B7)), accountChoice->currentText()));
     primaryButton->setText(QStringLiteral("  Play"));
-    if (game.isAttached) {
+    if (game.startsThroughSteam()) {
+      primaryButton->setEnabled(launchStatus.isEmpty());
+    } else if (game.isAttached) {
       const bool canLaunch = realmChoice->isEnabled() && accountChoice->isEnabled() && launchStatus.isEmpty();
       primaryButton->setEnabled(canLaunch);
       if (!accountChoice->isEnabled()) {
@@ -533,6 +535,21 @@ void GamePage::setAttachedWorlds(const QStringList& worlds, const QString& selec
     realmChoice->setEnabled(true);
   }
   isFillingChoices = false;
+  updateStatus();
+}
+
+void GamePage::showSteamStart()
+{
+  isFillingChoices = true;
+  realmChoice->clear();
+  realmChoice->addItem(QStringLiteral("Starts through Steam"));
+  realmChoice->setEnabled(false);
+  accountChoice->clear();
+  accountChoice->addItem(QStringLiteral("Your Steam account"));
+  accountChoice->setEnabled(false);
+  isFillingChoices = false;
+  manageAccounts->setEnabled(false);
+  manageAccounts->setToolTip(QStringLiteral("Steam signs you in to this game."));
   updateStatus();
 }
 

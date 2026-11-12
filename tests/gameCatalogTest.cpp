@@ -66,6 +66,32 @@ private slots:
     QVERIFY(packagesFor(game, packages).isEmpty());
   }
 
+  void anAttachedGameThatSteamStartsCarriesItsAppIDAndStartUrl()
+  {
+    AttachedGame soma;
+    soma.game = QStringLiteral("SOMA");
+    soma.variant = QStringLiteral("steam");
+    soma.edition = QStringLiteral("Steam");
+    soma.executable = QStringLiteral("Soma.exe");
+    soma.launcher = QStringLiteral("steam");
+    soma.steamAppID = 282140;
+    const Game game = gameFromAttached(soma);
+    QVERIFY(game.isAttached);
+    QVERIFY(game.startsThroughSteam());
+    QCOMPARE(game.executable, QStringLiteral("Soma.exe"));
+    QCOMPARE(steamStartUrl(game), QUrl(QStringLiteral("steam://rungameid/282140")));
+
+    AttachedGame ddo;
+    ddo.game = QStringLiteral("Dungeons & Dragons Online");
+    ddo.variant = QStringLiteral("live");
+    ddo.launcher = QStringLiteral("turbineGLS");
+    ddo.launcherConfig = QStringLiteral("ddo.launcherconfig");
+    const Game ownLauncher = gameFromAttached(ddo);
+    QVERIFY(ownLauncher.isAttached);
+    QVERIFY(!ownLauncher.startsThroughSteam());
+    QCOMPARE(ownLauncher.launcherConfig, QStringLiteral("ddo.launcherconfig"));
+  }
+
   void rolesHaveTheirGroupLabels()
   {
     QCOMPARE(roleLabel(QStringLiteral("client")), QStringLiteral("Client"));

@@ -40,6 +40,8 @@ public:
   // to preselect; a problem replaces the world list.
   void setAttachedWorlds(const QStringList& worlds, const QString& selected, const QString& problem);
   void setLocalLogins(const QStringList& usernames, const QString& selected);
+  // An attached game that Steam starts has neither: the two choices say so and Play needs nothing chosen.
+  void showSteamStart();
   // While a launch runs the Play button is held and the status line shows the step; an empty text ends it.
   void showLaunchStatus(const QString& text);
   QString selectedRealm() const;

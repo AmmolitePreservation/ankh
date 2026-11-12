@@ -17,7 +17,8 @@ World of Warcraft Classic is the first game through the login model and EverQues
 - Ankh: the Plugins tab lists a game's plugins under their categories, the Research ones only while the Settings switch is on; the Play page summary line follows.
 - The plugins live in two repositories: `ankh-plugins` (public: the loader, the shared source and the plugins that know no online game) and a private one that carries it as a submodule and adds every online game. Layout in both: `core/`, `plugins/` (written once, for every game), `games/<game>/` (settings, the game's handlers for a plugin, the rare plugin only it needs). World of Warcraft, Motor City Online, Asheron's Call and Dungeons & Dragons Online build and run from it.
 - Every plugin of a game is an Ammolite package of its own, `<game>-<plugin>`, beside the game's loader, `<game>-loader`. The packages a game cannot run without are required and install with it; every other one installs when the player ticks it.
-- Exit: each game installs from its packages through Ankh and plays as before. Not yet checked through Ankh; each was checked from a development copy.
+- Exit: each game installs from its packages through Ankh and plays as before. World of Warcraft's packages were applied through Ankh and its plugins loaded from the install; Motor City Online, Asheron's Call and Dungeons & Dragons Online are still to do.
+- Found on the way, still open: a failed install, update or plugin change leaves no message while an update is still on offer (the offer's text takes the status line); an update that moves a package's files leaves the emptied folder behind; and a fresh World of Warcraft install crashes at its first start until a resolution is saved (the plugins' worklist has the measurements).
 
 ## Phase 1: accounts on Ammolite
 
