@@ -54,6 +54,24 @@ private slots:
       QStringLiteral("Game - Version 1.0"));
   }
 
+  void theProgramToStartIsFoundByItsNameWhereverThePackagePutIt()
+  {
+    Receipt receipt;
+    receipt.folder = QStringLiteral("C:/Games/Ankh/Fake Game");
+    receipt.files.insert(QStringLiteral("Fake Client/Fake.exe"), {QStringLiteral("fake-client"), 10, 1, false});
+    receipt.files.insert(QStringLiteral("Fake Client/data/Helper.exe"), {QStringLiteral("fake-client"), 10, 2, false});
+    receipt.files.insert(QStringLiteral("Fake Client/ankh-plugins/login.dll"), {QStringLiteral("fake-login"), 10, 3, false});
+    QString problem;
+    QCOMPARE(installedProgramPath(receipt, QStringLiteral("fake.EXE"), problem),
+      QStringLiteral("C:/Games/Ankh/Fake Game/Fake Client/Fake.exe"));
+    QCOMPARE(problem, QString());
+    QCOMPARE(installedProgramPath(receipt, QStringLiteral("Other.exe"), problem), QString());
+    QCOMPARE(problem, QStringLiteral("The installed game has no Other.exe."));
+    receipt.files.insert(QStringLiteral("Fake Client/old/Fake.exe"), {QStringLiteral("fake-client"), 10, 4, false});
+    QCOMPARE(installedProgramPath(receipt, QStringLiteral("Fake.exe"), problem), QString());
+    QCOMPARE(problem, QStringLiteral("The installed game has Fake.exe in 2 places, so which to start is unclear."));
+  }
+
   void aReceiptIsWrittenAndReadBackWhole()
   {
     QTemporaryDir library;

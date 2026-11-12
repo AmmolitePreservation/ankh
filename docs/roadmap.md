@@ -17,8 +17,8 @@ World of Warcraft Classic is the first game through the login model and EverQues
 - Ankh: the Plugins tab lists a game's plugins under their categories, the Research ones only while the Settings switch is on; the Play page summary line follows.
 - The plugins live in two repositories: `ankh-plugins` (public: the loader, the shared source and the plugins that know no online game) and a private one that carries it as a submodule and adds every online game. Layout in both: `core/`, `plugins/` (written once, for every game), `games/<game>/` (settings, the game's handlers for a plugin, the rare plugin only it needs). World of Warcraft, Motor City Online, Asheron's Call and Dungeons & Dragons Online build and run from it.
 - Every plugin of a game is an Ammolite package of its own, `<game>-<plugin>`, beside the game's loader, `<game>-loader`. The packages a game cannot run without are required and install with it; every other one installs when the player ticks it.
-- Exit: each game installs from its packages through Ankh and plays as before. World of Warcraft's packages were applied through Ankh and its plugins loaded from the install; Motor City Online, Asheron's Call and Dungeons & Dragons Online are still to do.
-- Found on the way, still open: a failed install, update or plugin change leaves no message while an update is still on offer (the offer's text takes the status line); an update that moves a package's files leaves the emptied folder behind; and a fresh World of Warcraft install crashes at its first start until a resolution is saved (the plugins' worklist has the measurements).
+- Exit: each game installs from its packages through Ankh and plays as before. Done for all four: each was updated through Ankh from the per-plugin packages, which removed the old tool packages' files, and started from its Ankh folder with the installed plugins loaded.
+- Found on the way, still open: a failed install, update or plugin change leaves no message while an update is still on offer (the offer's text takes the status line); and an update that moves a package's files leaves the emptied folder behind. A fresh World of Warcraft install crashed at its first start on some PCs; the game's part of `stability-guard` fixes it.
 
 ## Phase 1: accounts on Ammolite
 
@@ -52,7 +52,7 @@ Left on the client:
 - `login` for `games/wow`, which today only lifts the character limit: the Login-button credential swap, the realm address from the launch, character screen capacity with sort, search and filter; and `sessionReport`.
 - The character screen past 10 buttons: scrolling, as part of `login`.
 - `WTF\Config.wtf` is shared by every client of an install and rewritten at each Enter World, so a starting client can read another's last character; the per-instance settings files of Phase 3 answer it.
-- Ankh: Play for museum games starts the installed client aimed at the chosen server; the Characters tab lists the account's characters and offers launch-to-character.
+- Ankh: Play for museum games starts the installed client, and for World of Warcraft Classic hands it the player's sign-in and shows no accounts (seen on the workstation: the client Ankh started reported the site as its credential source; pressing Login in that freshly installed copy waits on the game's first-run terms, which a person accepts). Still to do: the Characters tab lists the account's characters and offers launch-to-character.
 - Exit: Play, Login with no typing; 50 characters on one account shown and searchable; 40 of them in the world at once and in one raid group; the same character refused a second time; the account-keyed rules behaving as decided.
 
 ## Phase 3: multiboxing

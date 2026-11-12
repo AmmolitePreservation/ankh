@@ -31,8 +31,11 @@ QString initialsFor(const QString& title)
 
 Game gameFromWorld(const World& world)
 {
-  return {QStringLiteral("world%1").arg(world.serverID), world.serverID, world.game, world.version, world.variant,
+  Game game{QStringLiteral("world%1").arg(world.serverID), world.serverID, world.game, world.version, world.variant,
     world.name, initialsFor(world.game), world.color, world.status, world.accountDomainID, world.accountDomain, false};
+  game.executable = world.executable;
+  game.givesCredential = world.givesCredential;
+  return game;
 }
 
 Game gameFromAttached(const AttachedGame& attached)
@@ -45,6 +48,11 @@ Game gameFromAttached(const AttachedGame& attached)
 QUrl steamStartUrl(const Game& game)
 {
   return QUrl(QStringLiteral("steam://rungameid/%1").arg(game.steamAppID));
+}
+
+QUrl credentialUrl(const QUrl& siteUrl, const Game& game)
+{
+  return siteUrl.resolved(QUrl(QStringLiteral("/api/v1/servers/%1/credential").arg(game.serverID)));
 }
 
 QList<Package> packagesFor(const Game& game, const QList<Package>& packages)
