@@ -22,6 +22,7 @@
 #include "windowControls.h"
 
 #include <QAbstractScrollArea>
+#include <QDesktopServices>
 #include <QFrame>
 #include <QApplication>
 #include <QDir>
@@ -714,6 +715,10 @@ void MainWindow::refreshAttachedChoices()
   if (!shownGame.isAttached) {
     return;
   }
+  if (shownGame.startsThroughSteam()) {
+    gamePage->showSteamStart();
+    return;
+  }
   const Receipt* receipt = receiptFor(shownGame);
   if (receipt == nullptr) {
     gamePage->setAttachedWorlds({}, QString(), QStringLiteral("Add the plugins first"));
@@ -734,6 +739,16 @@ void MainWindow::refreshAttachedChoices()
 
 void MainWindow::startLaunch(const Game& game, const QString& world, const QString& username)
 {
+  if (game.startsThroughSteam()) {
+    if (receiptFor(game) == nullptr) {
+      return;
+    }
+    installNotes.insert(game.id, QDesktopServices::openUrl(steamStartUrl(game))
+      ? QStringLiteral("Asked Steam to start %1.").arg(game.title)
+      : QStringLiteral("Could not ask Steam to start %1. Is Steam installed?").arg(game.title));
+    refreshInstallState();
+    return;
+  }
   const Receipt* receipt = receiptFor(game);
   if (receipt == nullptr || !launchingGameId.isEmpty() || world.isEmpty() || username.isEmpty()) {
     return;

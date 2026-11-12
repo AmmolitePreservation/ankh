@@ -8,9 +8,13 @@ An attached game's accounts are the player's own and never reach Ammolite. **Man
 
 The Account list on the game page holds those names and the Realm list holds the game's own worlds. Both choices are remembered per game in the settings (`attached/<id>/world`, `attached/<id>/account`).
 
+## Through Steam
+
+An attached edition whose launcher kind is `steam` is a game the player owns on Steam. It has no worlds and no logins of its own: the two lists on the game page say "Starts through Steam" and "Your Steam account", Manage accounts is off, and Play needs nothing chosen. Play opens `steam://rungameid/<steamAppID>`, as Steam's own shortcuts do, so Steam starts the game with the player signed in and the plugins in its folder load with it. Ankh does not learn whether the game started; it says that Steam was asked.
+
 ## The Turbine launch
 
-An attached edition names its launcher kind and configuration file in the manifest. The one kind so far is `turbineGLS`, what the Turbine and Standing Stone launchers do, read from the game folder's `ddo.launcherconfig` (or the like):
+An attached edition names its launcher kind in the manifest. The kind `turbineGLS` is what the Turbine and Standing Stone launchers do, read from the game folder's `ddo.launcherconfig` (or the like):
 
 1. `Launcher.DataCenterService.GLS` and `DataCenter.GameName` come from that file. Every published `http://` address is used over `https://`.
 2. `GetDatacenters` (SOAP) on the GLS service names the game's auth server, its server-side launcher configuration and its worlds, each with a chat server and a status address. The Realm list is these worlds in the service's order, fetched when the game page opens and kept for the session.
