@@ -10,7 +10,7 @@ class SettingsPage : public QWidget {
   Q_OBJECT
 
 public:
-  SettingsPage(const QString& serviceAddress, const QString& libraryRoot, QWidget* parent = nullptr);
+  SettingsPage(const QString& serviceAddress, const QString& libraryRoot, bool showResearchPlugins, QWidget* parent = nullptr);
 
   AccountView* accountView() const;
   void showSection(int index);
@@ -21,6 +21,7 @@ public:
 signals:
   void updateCheckRequested();
   void libraryRootChangeRequested();
+  void researchPluginsShownChanged(bool isShown);
 
 private:
   QStackedWidget* sections;

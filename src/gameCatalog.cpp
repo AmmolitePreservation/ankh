@@ -61,11 +61,11 @@ QString roleLabel(const QString& role)
   if (role == QLatin1String("client")) {
     return QStringLiteral("Client");
   }
-  if (role == QLatin1String("requiredTool")) {
-    return QStringLiteral("Required tools");
+  if (role == QLatin1String("requiredPlugin")) {
+    return QStringLiteral("Required plugins");
   }
-  if (role == QLatin1String("optionalTool")) {
-    return QStringLiteral("Optional tools");
+  if (role == QLatin1String("optionalPlugin")) {
+    return QStringLiteral("Optional plugins");
   }
   fatal(QStringLiteral("Unknown package role: %1").arg(role));
 }

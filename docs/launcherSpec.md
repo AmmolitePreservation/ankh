@@ -10,7 +10,7 @@ The product starts with **download and play**. It can grow into a local workspac
 
 | Decision | Result in the application |
 | --- | --- |
-| Required fixes are part of a working installation. | Install includes the exact connection and compatibility components required by that game build and realm. They are visible under Client tools but are not optional toggles. |
+| Required fixes are part of a working installation. | Install includes the exact connection and compatibility components required by that game build and realm. They are visible under Plugins but are not optional toggles. |
 | Optional features are independently enabled. | Client enhancements, Sessions, Automation, and MCP can each be enabled without enabling the others. Higher layers reuse the same underlying services. |
 | A mixed-game session is a first-class object. | One saved session can contain 12 EverQuest clients, one World of Warcraft client, and one Motor City Online client. |
 | Layouts and input groups are separate. | All 14 windows can share a layout while only the EQ clients belong to an EQ input group. |
@@ -25,9 +25,9 @@ The product starts with **download and play**. It can grow into a local workspac
 
 - First implementation targets Windows desktop because the collection and requested tooling center on legacy Windows clients. Other platforms are later adapter and packaging work.
 - Initial orchestration runs on one PC. A catalog or server can supply manifests and character data; controlling clients on other PCs is a later explicit extension.
-- Each person has a separate local launcher profile, named by their Windows login. They can share downloaded game content without sharing account credentials or optional tool settings.
-- The owner curates game releases, realms, required packages, and compatible optional tools. Ordinary players select from those releases.
-- Existing tools can be integrated through adapters. ISBoxer and MacroQuest are reference models; the product does not assume their code, licenses, APIs, or compatibility can be reused unchanged.
+- Each person has a separate local launcher profile, named by their Windows login. They can share downloaded game content without sharing account credentials or optional plugin settings.
+- The owner curates game releases, realms, required packages, and compatible optional plugins. Ordinary players select from those releases.
+- Existing programs can be integrated through adapters. ISBoxer and MacroQuest are reference models; the product does not assume their code, licenses, APIs, or compatibility can be reused unchanged.
 - Names, realms, characters, package versions, status indicators, and integrations in mockups are illustrative. The screenshots do not establish that any adapter already exists.
 
 ## 2. Layers and feature discovery
@@ -38,16 +38,16 @@ Layers describe increasing capability, not a subscription ladder or a mandatory 
 | --- | --- | --- | --- |
 | 1 · Play | Catalog, download, import, required setup, update, launch, basic accounts, media | Library → Play | On |
 | 1a · Characters | Character list, equipment, location, last snapshot, launch context | Library → Characters | Appears where supported; live integration optional |
-| 2 · Required compatibility | Build-specific dependencies, connection configuration, essential patches | Library → Client tools → Required | Included in Install; maintained automatically |
-| 3 · Optional client tools | Borderless window support, tested stability bundles, renderer or input fixes, optional integrations | Library → Client tools → Optional | Off until chosen |
+| 2 · Required compatibility | Build-specific dependencies, connection configuration, essential patches | Library → Plugins → Required | Included in Install; maintained automatically |
+| 3 · Optional plugins | Borderless window support, tested stability bundles, renderer or input fixes, optional integrations | Library → Plugins → Optional | Off until chosen |
 | 4 · Sessions | Mixed-game rosters, instance isolation, window presets, focus switching, scoped input groups | Sessions | Off until enabled |
 | 5 · Automation | Shared object model, Lua scripts, events, game adapters, GUI controls | Automation | Off until enabled |
 | 6 · Server bots | Activate characters on servers; track maps and activity; manage groups, missions, inventory, and trades | Bots | Off until enabled and connected to a capable server |
 | 7 · MCP | External clients inspecting and controlling allowed launcher operations, including granted bot operations | Connections → MCP | Off until enabled |
 
-**Settings → Features** has independent switches for Sessions, Automation, Bots, and MCP connections. Enabling one reveals its top navigation destination. Disabling it hides its UI after resolving active work. Server bots can continue on their servers if the user chooses; closing the UI is never an implicit stop command. It does not uninstall games. Installing a tool and enabling that tool for a particular launch profile are separate decisions.
+**Settings → Features** has independent switches for Sessions, Automation, Bots, and MCP connections. Enabling one reveals its top navigation destination. Disabling it hides its UI after resolving active work. Server bots can continue on their servers if the user chooses; closing the UI is never an implicit stop command. It does not uninstall games. Installing a plugin and enabling that plugin for a particular launch profile are separate decisions.
 
-Optional tools remain discoverable from a game's Client tools tab even when Sessions and Automation are hidden. A quiet “More ways to play” link in Settings explains the available features. Avoid recurring prompts on the Play page.
+Optional plugins remain discoverable from a game's Plugins tab even when Sessions and Automation are hidden. A quiet “More ways to play” link in Settings explains the available features. Avoid recurring prompts on the Play page.
 
 Dependencies are operational, not arbitrary: a script that arranges windows needs the window service, not a complete multiboxing setup; an MCP client can inspect the library without installing a game bridge or enabling Automation.
 
@@ -55,7 +55,7 @@ Dependencies are operational, not arbitrary: a script that arranges windows need
 
 1. A person selects a game, presses **Install**, and then **Play**. Required fixes arrive with the install.
 2. A player imports an existing client. The launcher identifies the build, explains any mismatch, and offers a managed copy or an explicit managed import.
-3. A player enables a borderless tool for one launch profile without changing everyone else's client configuration.
+3. A player enables a borderless plugin for one launch profile without changing everyone else's client configuration.
 4. A player views a character snapshot, selects the corresponding realm and account, and starts the game. Automatic character selection only appears when supported.
 5. An advanced user saves a 14-client mixed-game session, places it across monitors, and launches it with a preflight check.
 6. While that session is running, the user switches the main window, pauses an input group, and relaunches one failed slot without disturbing the rest.
@@ -83,7 +83,7 @@ Dependencies are operational, not arbitrary: a script that arranges windows need
 
 | Destination | Left pane | Main pane |
 | --- | --- | --- |
-| Library | Searchable game releases | Play / Characters / Client tools / Media / About |
+| Library | Searchable game releases | Play / Characters / Plugins / Media / About |
 | Sessions | Saved session presets, running sessions | Overview / Layout / Input / Runtime |
 | Bots | All worlds, realm filters, and saved bot collections | Roster / Map / Missions / Inventory / Activity |
 | Automation | Searchable scripts and GUI control panels | Editor / Controls / Runs / API browser |
@@ -118,13 +118,13 @@ Illustrative initial rows:
 ### Page organization
 
 1. **Game header:** 48 px icon; game title; edition and build beneath; one Game options menu. No scenic banner.
-2. **Tabs:** Play, Characters when supported, Client tools, Media, About.
+2. **Tabs:** Play, Characters when supported, Plugins, Media, About.
 3. **Launch setup:** a section heading, then Realm and Account dropdowns side by side with their labels above, a Manage accounts link under Account, and a collapsed More launch settings disclosure. The last valid choices are remembered per person and release. For a game that is not installed the dropdowns are disabled and a line says to install first.
-Up“Up to date · Required compatibility ready.” An optional-tools summary is a small link, not a promotional card.
+Up“Up to date · Required compatibility ready.” An optional-plugins summary is a small link, not a promotional card.
 5. **Recent character:** a section with at most one small row (portrait, name, level, race, class and location) when reliable data exists. It identifies the account/realm context and does not imply automatic in-game selection.
 Ready“Ready to play” and “Arcanite · Main account.”
 
-The default profile does not require users to understand tool bundles. More launch settings exposes launch profile, display mode, and additional arguments only if relevant. Manage accounts is a secondary link near Account.
+The default profile does not require users to understand plugin bundles. More launch settings exposes launch profile, display mode, and additional arguments only if relevant. Manage accounts is a secondary link near Account.
 
 ### Primary action states
 
@@ -133,9 +133,9 @@ The default profile does not require users to understand tool bundles. More laun
 | Not installed | Install | Destination, packages and disk requirement appear in a compact sheet. Required packages are included. Built: see `docs/install.md`. |
 | Downloading | Cancel | The step and a progress bar sit on the status line; finished and partial downloads are kept and resumed. |
 | Verifying / applying | Progress state | Show the current step. Cancellation during extraction removes the extraction folders; moving into place cannot be cancelled. |
-| Not installable | Install, disabled | The edition has no client, or the client or a required tool has no published version; the reason is on the status line. |
+| Not installable | Install, disabled | The edition has no client, or the client or a required plugin has no published version; the reason is on the status line. |
 | Required update | Update | The status line names the packages that changed; the sheet shows old and new versions. Built: see `docs/install.md`. |
-| Optional update only | Play | Small update notice in Client tools; do not block launch. |
+| Optional update only | Play | Small update notice in Plugins; do not block launch. |
 | Required component broken | Repair | Explain the failing component and planned repair. |
 | Ready | Play | Starts the selected single-client launch profile. |
 | Running, additional instance supported | Launch another | Show “1 running”; focus existing instance is a secondary action. |
@@ -166,7 +166,7 @@ Offline snapshot: “Last synced 2 hours ago.” No connection: “Connect a cha
 
 For MCO, a future adapter could show drivers and garages. For a game with no reliable source, omit the character tab rather than inventing data.
 
-## 7. Library → Client tools
+## 7. Library → Plugins
 
 **Purpose:** make the distinction between essential maintenance and chosen enhancements obvious.
 
@@ -174,11 +174,11 @@ For MCO, a future adapter could show drivers and garages. For a game with no rel
 
 1. Build and launch-profile selector: “EverQuest · Classic” and “Profile: Default.”
 2. **Required for this client:** compact checked rows. Each has name, purpose, version, and health. Examples: connection setup, legacy runtime, build compatibility patch. No off switches.
-3. **Optional tools:** searchable rows filtered to this exact build. Each has name, short benefit, compatible version, state, and one action. Examples: Borderless window, Stability bundle, Background frame limit, Game bridge.
+3. **Optional plugins:** searchable rows filtered to this exact build. Each has name, short benefit, compatible version, state, and one action. Examples: Borderless window, Stability bundle, Background frame limit, Game bridge.
 4. Selecting a row expands inline details: source, changed files/configuration, dependencies, conflicts, activation scope, restart requirement, and rollback availability.
 5. Bottom action appears only for pending changes: “2 changes · No games will close” and **Apply changes**. Otherwise use “All changes applied”; avoid a redundant permanent save button.
 
-### Tool lifecycle
+### Plugin lifecycle
 
 | State | Row action |
 | --- | --- |
@@ -191,17 +191,17 @@ For MCO, a future adapter could show drivers and garages. For a game with no rel
 | In use, restart required | Apply on next launch |
 | Broken | Repair / Restore previous version |
 
-Installation stores a package once. Enablement selects it for a profile or instance. Required components belong to the release baseline. Optional tools use per-profile settings or private writable overlays; if a tool changes shared game files, the UI states the scope and creates a separate managed variant when necessary.
+Installation stores a package once. Enablement selects it for a profile or instance. Required components belong to the release baseline. Optional plugins use per-profile settings or private writable overlays; if a plugin changes shared game files, the UI states the scope and creates a separate managed variant when necessary.
 
-“Stability bundle” is a curated, build-specific collection with named contents. It never claims to prevent every crash. Tool actions show real compatibility metadata rather than universal promises.
+“Stability bundle” is a curated, build-specific collection with named contents. It never claims to prevent every crash. Plugin actions show real compatibility metadata rather than universal promises.
 
 ### Package integrity and conflicts
 
 - Manifests pin package identity, version, compatible game builds, checksums, dependency graph, touched files, configuration schema, and rollback strategy.
 - Resolve the whole plan before modifying files. Conflicting writes cannot silently overwrite each other.
 - Stage downloads, verify hashes, back up affected configuration, and commit atomically where possible. Keep a recoverable journal where atomic replacement is unavailable.
-- Record the effective release and enabled tool versions in each launch and session run.
-- A user can launch without optional tools to diagnose a problem while retaining required connection fixes.
+- Record the effective release and enabled plugin versions in each launch and session run.
+- A user can launch without optional plugins to diagnose a problem while retaining required connection fixes.
 - Package provenance is visible in details. Never infer a trusted package merely from its filename.
 
 ## 8. Sessions: mixed-game multiboxing
@@ -212,7 +212,7 @@ A session has a saved definition and one or more historical runs. Editing a pres
 
 ### Saved session definition
 
-Each slot has a stable slot ID, display name, game release, realm, account reference, optional character reference, launch profile, tool selection, config overlay, layout role, and input-group memberships. Account secrets remain in the credential store.
+Each slot has a stable slot ID, display name, game release, realm, account reference, optional character reference, launch profile, plugin selection, config overlay, layout role, and input-group memberships. Account secrets remain in the credential store.
 
 The roster supports individual rows and repeatable groups. “EQ party × 12” expands to twelve independently addressable slots. Bulk editing can assign accounts and layout roles without hiding duplicate-account conflicts.
 
@@ -244,7 +244,7 @@ These are illustrative window rectangles. A real adapter may need minimum client
 
 ### Preflight and launch order
 
-Preflight resolves exact builds and tools; verifies accounts and unsupported duplicate logins; checks free disk and a conservative resource estimate; checks adapters, monitor topology, per-instance configuration, window mode, and slot minimum sizes. Estimates are labelled estimates, not guarantees.
+Preflight resolves exact builds and plugins; verifies accounts and unsupported duplicate logins; checks free disk and a conservative resource estimate; checks adapters, monitor topology, per-instance configuration, window mode, and slot minimum sizes. Estimates are labelled estimates, not guarantees.
 
 The review sheet shows client counts by game, required repairs/downloads, warnings, input state, and launch order. A missing optional bridge does not prevent a window-only slot unless a required script depends on it.
 
@@ -274,7 +274,7 @@ Launch is staggered using adapter readiness signals, with configurable concurren
 
 ### Model
 
-The proposed common API exposes **Library, Games, Releases, Accounts (references only), Characters, Sessions, Slots, Instances, Windows, Tools, Jobs, and Events**. Each instance reports supported capabilities. Optional game namespaces expose richer objects: for example, EQ character/spawn/target information or a future MCO driver/garage model. Those namespaces are not part of a fake universal combat interface.
+The proposed common API exposes **Library, Games, Releases, Accounts (references only), Characters, Sessions, Slots, Instances, Windows, Plugins, Jobs, and Events**. Each instance reports supported capabilities. Optional game namespaces expose richer objects: for example, EQ character/spawn/target information or a future MCO driver/garage model. Those namespaces are not part of a fake universal combat interface.
 
 | Capability | Meaning | Can exist without a game bridge? |
 | --- | --- | --- |
@@ -346,13 +346,13 @@ MCP is an interface to the local control plane, not a separate automation engine
 
 ### Proposed API surface
 
-These are application tool names, not changes to the MCP wire protocol.
+These are the application's MCP tool names (tool is the protocol's own word for a callable), not changes to the MCP wire protocol.
 
-| Tool family | Examples | Behavior |
+| MCP tool family | Examples | Behavior |
 | --- | --- | --- |
 | Read | library.list, game.get, character.list, instance.inspect, job.get | Read within the client's grant; respect stale/cached markers. |
-| Plan | game.plan_install, tools.plan_changes, session.preflight | Return a bounded preview, dependencies, targets, and warnings. |
-| Maintain | game.install, game.repair, tools.apply_plan | Use a validated plan ID and return a job reference. |
+| Plan | game.plan_install, plugins.plan_changes, session.preflight | Return a bounded preview, dependencies, targets, and warnings. |
+| Maintain | game.install, game.repair, plugins.apply_plan | Use a validated plan ID and return a job reference. |
 | Sessions | session.list, session.launch, session.stop, windows.apply_layout | Explicit preset or slot IDs; do not silently broaden a target set. |
 | Scripts | script.list, script.run, script.stop | Only enabled scripts and granted revisions/capabilities. |
 | Game actions | instance.invoke | Namespaced adapter command, schema-checked arguments, explicit instance targets. |
@@ -504,14 +504,14 @@ Separate grants for **Observe bots**, **Control bots & missions**, and **Move it
 | UserProfile | Local preferences, enabled features, account visibility, grants |
 | AccountRef | Game/realm identity and credential-store reference; no password in presets |
 | CharacterSnapshot | Source identity, timestamp, field freshness, game-specific data |
-| LaunchProfile | Display/config options, optional tool set, instance isolation defaults |
+| LaunchProfile | Display/config options, optional plugin set, instance isolation defaults |
 | SessionPreset | Slot roster, layout, input groups, launch sequencing, script bindings |
 | SessionRun / Instance | Resolved immutable plan, runtime state, process generation, window IDs |
 | BotCharacter / BotRuntime | Original character or distinct companion identity, realm, lease, bot lifecycle, telemetry freshness |
 | BotCollection / BotGroup | Cross-world saved selection versus actual world-local party and roles |
 | MissionPlan / MissionRun | Validated world-local objective, assignment, budget, stop rules, progress, durable supervisor |
 | InventorySnapshot / TransferPlan / Receipt | Item identities and revisions, validated movements, reservations, committed server results |
-| Package / Tool | Versioned manifest, compatibility, dependencies, conflicts, configuration |
+| Package / Plugin | Versioned manifest, compatibility, dependencies, conflicts, configuration |
 | ScriptRevision / ScriptRun | Code, declared capabilities, revision hash, targets, output |
 | ConnectionGrant | Authenticated client, operation/target scopes, expiry, review policy |
 | Job / ActivityEvent | Durable operation identity, state, progress, causality, result |
@@ -520,7 +520,7 @@ Separate grants for **Observe bots**, **Control bots & missions**, and **Move it
 
 1. **Desktop UI:** renders records and jobs, manages selections and forms, never patches files directly.
 2. **Local broker:** owns catalog state, validation, permissions, jobs, launch orchestration, and activity. Runs within the user's session; no always-elevated service by default.
-3. **Package worker:** downloads, verifies, stages, installs, journals, repairs, and restores releases and tools.
+3. **Package worker:** downloads, verifies, stages, installs, journals, repairs, and restores releases and plugins.
 4. **Process/window worker:** launches slots, observes lifecycle, discovers windows, applies validated layouts, and manages focus/input routing.
 5. **Game adapters:** declare build matching, login/launch behavior, supported capabilities, configuration isolation, and optional bridge integration.
 6. **Script worker:** scoped Lua runtime and event subscriptions; uses broker operations.
@@ -539,7 +539,7 @@ Catalog metadata, presets, snapshots, and jobs can use a local transactional dat
 
 ### Error vocabulary
 
-Use specific recoverable states: Build mismatch, Required component missing, Tool conflict, Login needed, Window not found, Adapter unavailable, Capability unsupported, Permission needed, Disk full, Server unreachable. Include affected game/slot and the next action. Avoid a generic “Something went wrong” modal for an entire session.
+Use specific recoverable states: Build mismatch, Required component missing, Plugin conflict, Login needed, Window not found, Adapter unavailable, Capability unsupported, Permission needed, Disk full, Server unreachable. Include affected game/slot and the next action. Avoid a generic “Something went wrong” modal for an entire session.
 
 ## 13. Supporting interfaces
 
@@ -549,7 +549,7 @@ Use specific recoverable states: Build mismatch, Required component missing, Too
 
 **About:** original game metadata, preserved edition/build, local notes, source references, and adapter/manifest versions. Keep operational setup elsewhere.
 
-**Attributions:** a Help page inside the application, opened from **Settings → About Ankh → Attributions** and from the Help item of the profile menu. It lists every third-party component in the running build: name, version, what Ankh uses it for, license name, copyright line, a source link, and the full license text in an expandable row. Qt's entry states that it is used under the LGPL, linked dynamically, and that its libraries sit beside the executable and can be replaced. The installer's tool is listed too. The page reads a manifest generated at build time from the same dependency list the build uses, bundled with the application, so it is correct offline and cannot drift from what ships. It is plain text in the application's own components, searchable, with no web view. Attribution is given even where a license does not require it.
+**Attributions:** a Help page inside the application, opened from **Settings → About Ankh → Attributions** and from the Help item of the profile menu. It lists every third-party component in the running build: name, version, what Ankh uses it for, license name, copyright line, a source link, and the full license text in an expandable row. Qt's entry states that it is used under the LGPL, linked dynamically, and that its libraries sit beside the executable and can be replaced. The program that builds the installer is listed too. The page reads a manifest generated at build time from the same dependency list the build uses, bundled with the application, so it is correct offline and cannot drift from what ships. It is plain text in the application's own components, searchable, with no web view. Attribution is given even where a license does not require it.
 
 **Games:** the game library folder and Change library folder, with the install records that could not be read, under Settings.
 
@@ -601,7 +601,7 @@ Each of ten screens is rendered once. These are visual concepts; the Markdown re
 | --- | --- | --- |
 | 01 · Download and play | Library → WoW Classic → Play | Seven compact searchable rows; realm/account; readiness; required fixes quietly included; Install/Play hierarchy; no hero art |
 | 02 · Character viewer | Library → WoW Classic → Characters | Account/realm filters; timestamped roster; Merrin, level 60 human priest, selected; compact equipment details; source/freshness; honest launch action |
-| 03 · Required and optional tools | Library → EverQuest → Client tools | Required checked rows without toggles; optional Borderless, Stability bundle, Background frame limit, Game bridge; per-profile scope; one pending Apply action |
+| 03 · Required and optional plugins | Library → EverQuest → Plugins | Required checked rows without toggles; optional Borderless, Stability bundle, Background frame limit, Game bridge; per-profile scope; one pending Apply action |
 | 04 · Mixed-game multiboxing | Sessions → Mixed worlds → Layout | 14 clients / 3 games; monitor layout; 12 EQ + 1 WoW + 1 MCO; EQ-only input group off; preflight; Review & launch |
 | 05 · Scripting and abstraction | Automation → Arrange on launch → Editor | Script list; typed API context; short Lua script; session target; Run; output; capability distinction between EQ bridge and MCO window-only |
 | 06 · MCP integration | Connections → Local MCP server | Local server state; copy configuration; client grants; bot permissions distinct from launch permissions; recent requests; revoke control; no chatbot |
@@ -615,7 +615,7 @@ Each of ten screens is rendered once. These are visual concepts; the Markdown re
 - User: the Ammolite username. WoW Classic realm: **Arcanite**. Account: **Main account**. Build: **1.12.1**.
 - Character sample: Merrin — 60 — Human Priest — Ironforge; Brannoc — 42 — Dwarf Hunter — Loch Modan; Thistle — 28 — Night Elf Druid — Ashenvale. Source line: **Realm snapshot · Updated 2 min ago**.
 - Character equipment example: Benediction, Robes of the Exalted, Devout Sandals. These are illustrative item names, not a verified character inventory.
-- EQ tools sample: **Required for this client · 3 ready**. Connection setup, Legacy runtime, Client compatibility. Optional tool labels are descriptive placeholders, not claims about specific released packages.
+- EQ plugins sample: **Required for this client · 3 ready**. Connection setup, Legacy runtime, Client compatibility. Optional plugin labels are descriptive placeholders, not claims about specific released packages.
 - Session: **Mixed worlds**. Summary: **12 EverQuest · 1 WoW · 1 Motor City Online**. Layout: **Main + auxiliaries**. EQ group: **EQ party · 12 targets · Input off**.
 - Automation script: **Arrange on launch**. Session target: **Mixed worlds**. Output example: **Validated 14 targets**; **Layout applied to 14 windows**. Capability badges: **EQ · live bridge** and **MCO · windows only**.
 - MCP client sample: **Local assistant**, connected, grant **Manage launches**; **Local inspector**, disconnected, **Inspect only**. Recent calls: library.list, session.preflight, windows.apply_layout. States and activity are mock data.
@@ -632,16 +632,16 @@ Create a polished, believable desktop application screenshot, straight-on and un
 
 ### Basic play
 
-- A fresh profile can install and launch a game without visiting Client tools, Sessions, Automation, or Connections.
+- A fresh profile can install and launch a game without visiting Plugins, Sessions, Automation, or Connections.
 - Required dependencies are included in the install plan and readiness checks. Broken required setup blocks launch with a repair action; optional tooling does not.
 - Downloads resume after restart. Disk-full and verification failures leave the prior usable release intact.
 - Import never overwrites an unmanaged client without a reviewed plan. Unknown builds are identified as unknown.
 
-### Optional tools
+### Optional plugins
 
-- Different user profiles can use different optional tools where the adapter supports isolation; shared-file limitations are stated.
-- Dependency/conflict resolution is previewable. Disabling a tool restores its configuration or switches to an unmodified managed variant.
-- Exact build and package versions are recorded. A pending tool update cannot mutate files under running clients.
+- Different user profiles can use different optional plugins where the adapter supports isolation; shared-file limitations are stated.
+- Dependency/conflict resolution is previewable. Disabling a plugin restores its configuration or switches to an unmodified managed variant.
+- Exact build and package versions are recorded. A pending plugin update cannot mutate files under running clients.
 
 ### Characters
 
@@ -686,7 +686,7 @@ Create a polished, believable desktop application screenshot, straight-on and un
 ## 17. Delivery sequence
 
 1. **Foundation:** catalog/manifests, managed installation, required setup, accounts, launch, Activity, and adapter capability contract.
-2. **Maintenance and viewing:** optional tools with transactions/rollback; character snapshots where data sources exist.
+2. **Maintenance and viewing:** optional plugins with transactions/rollback; character snapshots where data sources exist.
 3. **Mixed-game sessions:** stable slots, config isolation, staggered launch, monitor layouts, runtime controls, then scoped input management.
 4. **Automation:** Lua runtime, shared object model, inspector, GUI control declarations, and incremental per-game live adapters.
 5. **Bots:** per-world server agents and ownership/lease model; roster/activation; telemetry/maps; bounded missions/groups; validated inventory/trade. Add one capability at a time and expose honest adapter limits.
@@ -702,7 +702,7 @@ The following primary sources ground the reference models. All detailed applicat
 - [ISBoxer: Window Layout](https://wiki.isboxer.com/Window_Layout) documents regions, slots, and active-region swapping. This informs the proposed separation of session slots from window regions.
 - [ISBoxer: Repeater](https://wiki.isboxer.com/Repeater) distinguishes keyboard/mouse repetition and notes alignment issues between differing client interfaces. The proposed product therefore separates layout, input targets, and semantic mappings.
 - [MacroQuest: Lua](https://docs.macroquest.org/lua/) and [Top-Level Objects](https://docs.macroquest.org/reference/top-level-objects/) show the scripting and inspectable-data reference model. A cross-game equivalent still needs independent adapters and schemas.
-- [MCP: Tools](https://modelcontextprotocol.io/specification/2026-07-28/server/tools) and [Transports](https://modelcontextprotocol.io/specification/2026-07-28/basic/transports) ground the external tool interface and transport choices. Implementation must target the chosen SDK/protocol revision and its compatibility rules.
+- [MCP: Tools](https://modelcontextprotocol.io/specification/2026-07-28/server/tools) and [Transports](https://modelcontextprotocol.io/specification/2026-07-28/basic/transports) ground the external MCP interface and transport choices. Implementation must target the chosen SDK/protocol revision and its compatibility rules.
 - [CMaNGOS Playerbots README](https://github.com/cmangos/playerbots/blob/master/README.md) describes alt-character bots and configurable behaviors. [Playerbots configuration](https://github.com/cmangos/playerbots/blob/master/playerbot/aiplayerbot.conf.dist.in) includes autonomous questing and operational options. These establish useful primitives, not a complete cross-game management API.
 - [EQEmu bot command documentation](https://github.com/EQEmu/eqemu-docs-v2/blob/main/docs/server/bots/bot-commands.md) lists creation/spawn, actionable group selection, and inventory operations, with explicit notes about incomplete/disabled features. Actual-character conversion and autonomous mission parity require separate validation and server development.
 

@@ -42,11 +42,11 @@ QString nearestExisting(const QString& folder)
 
 QString roleNote(const Package& package)
 {
-  if (package.role == QLatin1String("requiredTool")) {
-    return QStringLiteral(" (required tool)");
+  if (package.role == QLatin1String("requiredPlugin")) {
+    return QStringLiteral(" (required plugin)");
   }
-  if (package.role == QLatin1String("optionalTool")) {
-    return QStringLiteral(" (optional tool)");
+  if (package.role == QLatin1String("optionalPlugin")) {
+    return QStringLiteral(" (optional plugin)");
   }
   return QString();
 }
@@ -56,9 +56,9 @@ QString installedVersion(const InstallPlan& plan, const Package& package)
   if (package.name == plan.existing->client.name) {
     return plan.existing->client.version;
   }
-  for (const InstalledPackage& tool : plan.existing->tools) {
-    if (tool.name == package.name) {
-      return tool.version;
+  for (const InstalledPackage& plugin : plan.existing->plugins) {
+    if (plugin.name == package.name) {
+      return plugin.version;
     }
   }
   return QString();
@@ -72,15 +72,15 @@ InstallSheet::InstallSheet(const Game& game, const InstallPlan& plan, QWidget* p
     folderLabel(new QLabel(this)),
     spaceLabel(new QLabel(this)),
     warning(new QLabel(this)),
-    installButton(new QPushButton(plan.isAttach ? QStringLiteral("Add tools") : plan.isToolChange ? QStringLiteral("Apply")
+    installButton(new QPushButton(plan.isAttach ? QStringLiteral("Add plugins") : plan.isPluginChange ? QStringLiteral("Apply")
       : plan.isUpdate() ? QStringLiteral("Update") : QStringLiteral("Install"), this))
 {
-  const QString verb = plan.isToolChange ? QStringLiteral("Apply") : plan.isUpdate() ? QStringLiteral("Update") : QStringLiteral("Install");
-  setWindowTitle(plan.isAttach ? QStringLiteral("Add tools to %1").arg(game.title)
-    : QStringLiteral("%1 %2").arg(plan.isToolChange ? QStringLiteral("Change tools of") : verb, game.title));
+  const QString verb = plan.isPluginChange ? QStringLiteral("Apply") : plan.isUpdate() ? QStringLiteral("Update") : QStringLiteral("Install");
+  setWindowTitle(plan.isAttach ? QStringLiteral("Add plugins to %1").arg(game.title)
+    : QStringLiteral("%1 %2").arg(plan.isPluginChange ? QStringLiteral("Change plugins of") : verb, game.title));
   setMinimumWidth(620);
-  auto* heading = makeLabel(plan.isAttach ? QStringLiteral("Add the tools to your %1").arg(game.title)
-    : plan.isToolChange ? QStringLiteral("Change the tools of %1 %2").arg(game.title, game.edition)
+  auto* heading = makeLabel(plan.isAttach ? QStringLiteral("Add the plugins to your %1").arg(game.title)
+    : plan.isPluginChange ? QStringLiteral("Change the plugins of %1 %2").arg(game.title, game.edition)
     : QStringLiteral("%1 %2 %3").arg(verb, game.title, game.edition), "heading", this);
   rows->setSpacing(6);
   folderLabel->setWordWrap(true);
@@ -111,9 +111,9 @@ InstallSheet::InstallSheet(const Game& game, const InstallPlan& plan, QWidget* p
   layout->addWidget(folderLabel);
   layout->addWidget(spaceLabel);
   if (plan.isAttach) {
-    layout->addWidget(makeLabel(QStringLiteral("Ankh adds the tools' files to this folder and keeps a record of them in its .ankh "
+    layout->addWidget(makeLabel(QStringLiteral("Ankh adds the plugins' files to this folder and keeps a record of them in its .ankh "
       "folder, so they can be updated and removed again. The game's own files are not changed; a file of the same name as one "
-      "of the tools' is replaced and reported."), "secondary", this));
+      "of the plugins' is replaced and reported."), "secondary", this));
   } else if (plan.isUpdate()) {
     layout->addWidget(makeLabel(QStringLiteral("Files that changed in a package are replaced and files it dropped are removed. "
       "Files a package marks write-once are never overwritten, and anything you added yourself is left alone."), "secondary", this));
@@ -152,7 +152,7 @@ void InstallSheet::showPlan(const InstallPlan& plan)
   };
   for (const Package& package : plan.fetch) {
     QString versionText = package.latest->version;
-    if (plan.isUpdate() && !plan.isToolChange && !plan.isAttach) {
+    if (plan.isUpdate() && !plan.isPluginChange && !plan.isAttach) {
       const QString previous = installedVersion(plan, package);
       versionText = previous.isEmpty() ? QStringLiteral("added, %1").arg(package.latest->version)
         : QStringLiteral("%1 %2 %3").arg(previous, QString(QChar(0x2192)), package.latest->version);
@@ -160,7 +160,7 @@ void InstallSheet::showPlan(const InstallPlan& plan)
     addRow(package.label + roleNote(package), QStringLiteral("%1, %2 download").arg(versionText, sizeText(package.latest->byteSize)));
   }
   for (const QString& name : plan.removed) {
-    addRow(name, plan.isToolChange ? QStringLiteral("will be removed; files kept for your settings stay")
+    addRow(name, plan.isPluginChange ? QStringLiteral("will be removed; files kept for your settings stay")
       : QStringLiteral("no longer part of this edition, removed"));
   }
   folderLabel->setText(plan.folder);

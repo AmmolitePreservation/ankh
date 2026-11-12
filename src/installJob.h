@@ -20,15 +20,15 @@ class FileHasher;
 
 // What one install or update does: fetch holds the packages downloaded and extracted (every package on a fresh
 // install, the changed ones on an update), removed the receipt's packages that left the edition, existing the
-// receipt an update starts from. tools is what the receipt lists afterwards.
+// receipt an update starts from. plugins is what the receipt lists afterwards.
 struct InstallPlan {
   Package client;
-  QList<Package> tools;
+  QList<Package> plugins;
   QString folder;
   QList<Package> fetch;
   QStringList removed;
   std::optional<Receipt> existing;
-  bool isToolChange = false;
+  bool isPluginChange = false;
   bool isAttach = false;
 
   bool isUpdate() const;
@@ -45,18 +45,18 @@ struct ApplySummary {
   QStringList replaced;
 };
 
-// optionalToolNames are the optional tools installed with the game; every required tool always is.
+// optionalPluginNames are the optional plugins installed with the game; every required plugin always is.
 std::optional<InstallPlan> planInstall(const Game& game, const QList<Package>& packages, const QString& parentFolder,
-  QString& problem, const QStringList& optionalToolNames = {});
-// Brings the installed optional tools to exactly optionalToolNames: missing ones are fetched, unwanted ones removed
-// (their write-once files stay). The client and the tools already installed are left at the versions they have; a
-// required tool that is missing is fetched. Nothing to do is nullopt with an empty problem.
-std::optional<InstallPlan> planToolChange(const Game& game, const QList<Package>& packages, const Receipt& receipt,
-  const QStringList& optionalToolNames, QString& problem);
-// The first install of an attached game's tools into the player's own copy in gameFolder: every required tool and the
+  QString& problem, const QStringList& optionalPluginNames = {});
+// Brings the installed optional plugins to exactly optionalPluginNames: missing ones are fetched, unwanted ones removed
+// (their write-once files stay). The client and the plugins already installed are left at the versions they have; a
+// required plugin that is missing is fetched. Nothing to do is nullopt with an empty problem.
+std::optional<InstallPlan> planPluginChange(const Game& game, const QList<Package>& packages, const Receipt& receipt,
+  const QStringList& optionalPluginNames, QString& problem);
+// The first install of an attached game's plugins into the player's own copy in gameFolder: every required plugin and the
 // optional ones named. The folder must hold the game's executable.
 std::optional<InstallPlan> planAttach(const Game& game, const QList<Package>& packages, const QString& gameFolder,
-  QString& problem, const QStringList& optionalToolNames = {});
+  QString& problem, const QStringList& optionalPluginNames = {});
 std::optional<InstallPlan> planUpdate(const Game& game, const QList<Package>& packages, const Receipt& receipt,
   QString& problem);
 QString stagingRootFor(const InstallPlan& plan);

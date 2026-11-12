@@ -304,17 +304,19 @@ private slots:
     QCOMPARE(wowClient.latest->fileCount, 159);
     QCOMPARE(wowClient.latest->extractedBytes, qint64(5388545392));
     QCOMPARE(wowClient.latest->url, QUrl(QStringLiteral("https://ammolite.test/api/v1/files/15/WoW-1.12.1-Arcanite.zip")));
-    const Package& thorium = manifest->packages.at(1);
-    QCOMPARE(thorium.role, QStringLiteral("requiredTool"));
-    QCOMPARE(thorium.editions.size(), 2);
-    QVERIFY(!thorium.latest.has_value());
+    const Package& login = manifest->packages.at(1);
+    QCOMPARE(login.role, QStringLiteral("requiredPlugin"));
+    QCOMPARE(login.editions.size(), 2);
+    QVERIFY(!login.latest.has_value());
     QCOMPARE(wowClient.description, QString());
+    QCOMPARE(wowClient.category, QString());
+    QCOMPARE(login.category, QStringLiteral("Login"));
     QVERIFY(!wowClient.screenshot.has_value());
-    QCOMPARE(thorium.description, QStringLiteral("Compatibility layer.\nInstalled with the game."));
-    QVERIFY(thorium.screenshot.has_value());
-    QCOMPARE(thorium.screenshot->url, QUrl(QStringLiteral("https://ammolite.test/api/v1/packages/thorium/screenshot")));
-    QCOMPARE(thorium.screenshot->sha256, QStringLiteral("ab12"));
-    QCOMPARE(thorium.screenshot->contentType, QStringLiteral("image/png"));
+    QCOMPARE(login.description, QStringLiteral("Compatibility layer.\nInstalled with the game."));
+    QVERIFY(login.screenshot.has_value());
+    QCOMPARE(login.screenshot->url, QUrl(QStringLiteral("https://ammolite.test/api/v1/packages/wow-login/screenshot")));
+    QCOMPARE(login.screenshot->sha256, QStringLiteral("ab12"));
+    QCOMPARE(login.screenshot->contentType, QStringLiteral("image/png"));
     QCOMPARE(manifest->attachedGames.size(), 1);
     const AttachedGame& ddo = manifest->attachedGames.first();
     QCOMPARE(ddo.game, QStringLiteral("Dungeons & Dragons Online"));
@@ -357,12 +359,12 @@ private slots:
     connect(&client, &AmmoliteClient::screenshotLoaded, this, [&](const QString&, const QString&, const QByteArray& bytes) { loaded.append(bytes); });
     connect(&client, &AmmoliteClient::screenshotFailed, this, [&](const QString&, const QString& message) { failures.append(message); });
 
-    client.loadScreenshot(QStringLiteral("thorium"), screenshot, cache.path());
+    client.loadScreenshot(QStringLiteral("wow-login"), screenshot, cache.path());
     QTRY_COMPARE_WITH_TIMEOUT(loaded.size(), 1, 5000);
     QCOMPARE(loaded.first(), image);
     QCOMPARE(server.requests.size(), 1);
     QCOMPARE(server.requests.first().authorization, QByteArray("Bearer ammolite_secret"));
-    client.loadScreenshot(QStringLiteral("thorium"), screenshot, cache.path());
+    client.loadScreenshot(QStringLiteral("wow-login"), screenshot, cache.path());
     QTRY_COMPARE_WITH_TIMEOUT(loaded.size(), 2, 5000);
     QCOMPARE(server.requests.size(), 1);
 
@@ -370,7 +372,7 @@ private slots:
     QVERIFY(damaged.open(QIODevice::WriteOnly | QIODevice::Truncate));
     damaged.write("something else");
     damaged.close();
-    client.loadScreenshot(QStringLiteral("thorium"), screenshot, cache.path());
+    client.loadScreenshot(QStringLiteral("wow-login"), screenshot, cache.path());
     QTRY_COMPARE_WITH_TIMEOUT(loaded.size(), 3, 5000);
     QCOMPARE(server.requests.size(), 2);
     QCOMPARE(loaded.last(), image);
@@ -388,7 +390,7 @@ private slots:
     bool isLoaded = false;
     connect(&client, &AmmoliteClient::screenshotLoaded, this, [&] { isLoaded = true; });
     connect(&client, &AmmoliteClient::screenshotFailed, this, [&](const QString&, const QString& message) { failures.append(message); });
-    client.loadScreenshot(QStringLiteral("thorium"),
+    client.loadScreenshot(QStringLiteral("wow-login"),
       PackageScreenshot{QUrl(server.url().toString() + QStringLiteral("/shot")), wrongHash, QStringLiteral("image/png")}, cache.path());
     QTRY_COMPARE_WITH_TIMEOUT(failures.size(), 1, 5000);
     QVERIFY(failures.first().contains(QStringLiteral("checksum")));
@@ -472,6 +474,28 @@ private slots:
     client.loadManifest(QByteArray());
     QTRY_VERIFY_WITH_TIMEOUT(!message.isEmpty(), 5000);
     QCOMPARE(message, QStringLiteral("The server's answer was not understood: the role of the package mystery is unknown: addon."));
+  }
+
+  void aPackageWhoseCategoryDoesNotFitItsRoleIsRefusedByName()
+  {
+    const QList<QPair<QString, QString>> cases = {
+      {QStringLiteral("\"role\":\"optionalPlugin\",\"category\":\"Capture\""), QStringLiteral("\"Capture\"")},
+      {QStringLiteral("\"role\":\"requiredPlugin\",\"category\":\"\""), QStringLiteral("\"\"")},
+      {QStringLiteral("\"role\":\"client\",\"category\":\"Login\""), QStringLiteral("\"Login\"")},
+    };
+    for (const auto& [fields, shown] : cases) {
+      FakeServer server;
+      server.answer(QStringLiteral("GET /api/v1/manifest"), 200, QStringLiteral("{\"ankh\":{\"error\":\"none\"},\"worlds\":[],"
+        "\"packages\":[{\"name\":\"mystery\",\"label\":\"Mystery\",%1,\"description\":\"\",\"screenshot\":null,\"editions\":[],"
+        "\"latest\":null}],\"attachedGames\":[]}").arg(fields).toUtf8());
+      AmmoliteClient client(server.url(), QStringLiteral("2026.11.08.0100"));
+      client.setToken(QStringLiteral("t"));
+      QString message;
+      connect(&client, &AmmoliteClient::requestFailed, this, [&](const QString&, const QString& reason) { message = reason; });
+      client.loadManifest(QByteArray());
+      QTRY_VERIFY_WITH_TIMEOUT(!message.isEmpty(), 5000);
+      QCOMPARE(message, QStringLiteral("The server's answer was not understood: the category of the package mystery does not fit its role: %1.").arg(shown));
+    }
   }
 
   void gameAccountsAreParsedWithTheirLogins()

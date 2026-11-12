@@ -174,7 +174,7 @@ int InstallPlan::fileCount() const
 }
 
 std::optional<InstallPlan> planInstall(const Game& game, const QList<Package>& packages, const QString& parentFolder,
-  QString& problem, const QStringList& optionalToolNames)
+  QString& problem, const QStringList& optionalPluginNames)
 {
   problem.clear();
   const QList<Package> attached = packagesFor(game, packages);
@@ -191,24 +191,24 @@ std::optional<InstallPlan> planInstall(const Game& game, const QList<Package>& p
   plan.client = *client;
   plan.fetch.append(*client);
   for (const Package& package : attached) {
-    const bool isRequired = package.role == QLatin1String("requiredTool");
-    if (!isRequired && !(package.role == QLatin1String("optionalTool") && optionalToolNames.contains(package.name))) {
+    const bool isRequired = package.role == QLatin1String("requiredPlugin");
+    if (!isRequired && !(package.role == QLatin1String("optionalPlugin") && optionalPluginNames.contains(package.name))) {
       continue;
     }
     if (!package.latest) {
       problem = QStringLiteral("The %1 %2 has no version published yet.")
-        .arg(isRequired ? QStringLiteral("required tool") : QStringLiteral("optional tool"), package.label);
+        .arg(isRequired ? QStringLiteral("required plugin") : QStringLiteral("optional plugin"), package.label);
       return std::nullopt;
     }
-    plan.tools.append(package);
+    plan.plugins.append(package);
     plan.fetch.append(package);
   }
-  for (const QString& name : optionalToolNames) {
+  for (const QString& name : optionalPluginNames) {
     const bool isAttached = std::any_of(attached.cbegin(), attached.cend(), [&name](const Package& package) {
-      return package.name == name && package.role == QLatin1String("optionalTool");
+      return package.name == name && package.role == QLatin1String("optionalPlugin");
     });
     if (!isAttached) {
-      problem = QStringLiteral("%1 is not an optional tool of %2 %3.").arg(name, game.title, game.edition);
+      problem = QStringLiteral("%1 is not an optional plugin of %2 %3.").arg(name, game.title, game.edition);
       return std::nullopt;
     }
   }
@@ -217,7 +217,7 @@ std::optional<InstallPlan> planInstall(const Game& game, const QList<Package>& p
 }
 
 std::optional<InstallPlan> planAttach(const Game& game, const QList<Package>& packages, const QString& gameFolder,
-  QString& problem, const QStringList& optionalToolNames)
+  QString& problem, const QStringList& optionalPluginNames)
 {
   problem.clear();
   if (!game.isAttached) {
@@ -230,10 +230,10 @@ std::optional<InstallPlan> planAttach(const Game& game, const QList<Package>& pa
     return std::nullopt;
   }
   Receipt empty{native(folder.absolutePath()), {}, {}, {}, game.title, game.variant};
-  std::optional<InstallPlan> plan = planToolChange(game, packages, empty, optionalToolNames, problem);
+  std::optional<InstallPlan> plan = planPluginChange(game, packages, empty, optionalPluginNames, problem);
   if (!plan) {
     if (problem.isEmpty()) {
-      problem = QStringLiteral("No tools are published for %1 %2 yet.").arg(game.title, game.edition);
+      problem = QStringLiteral("No plugins are published for %1 %2 yet.").arg(game.title, game.edition);
     }
     return std::nullopt;
   }
@@ -241,8 +241,8 @@ std::optional<InstallPlan> planAttach(const Game& game, const QList<Package>& pa
   return plan;
 }
 
-std::optional<InstallPlan> planToolChange(const Game& game, const QList<Package>& packages, const Receipt& receipt,
-  const QStringList& optionalToolNames, QString& problem)
+std::optional<InstallPlan> planPluginChange(const Game& game, const QList<Package>& packages, const Receipt& receipt,
+  const QStringList& optionalPluginNames, QString& problem)
 {
   problem.clear();
   const QList<Package> attached = packagesFor(game, packages);
@@ -258,27 +258,27 @@ std::optional<InstallPlan> planToolChange(const Game& game, const QList<Package>
   }
   plan.folder = receipt.folder;
   plan.existing = receipt;
-  plan.isToolChange = true;
+  plan.isPluginChange = true;
   QSet<QString> installedNames;
-  for (const InstalledPackage& tool : receipt.tools) {
-    installedNames.insert(tool.name);
+  for (const InstalledPackage& plugin : receipt.plugins) {
+    installedNames.insert(plugin.name);
   }
   QSet<QString> attachedNames;
   for (const Package& package : attached) {
     attachedNames.insert(package.name);
-    const bool isRequired = package.role == QLatin1String("requiredTool");
+    const bool isRequired = package.role == QLatin1String("requiredPlugin");
     if (package.role == QLatin1String("client")) {
       continue;
     }
-    const bool isWanted = isRequired || optionalToolNames.contains(package.name);
+    const bool isWanted = isRequired || optionalPluginNames.contains(package.name);
     const bool isInstalled = installedNames.contains(package.name);
     if (isWanted && !isInstalled && !package.latest) {
       problem = QStringLiteral("The %1 %2 has no version published yet.")
-        .arg(isRequired ? QStringLiteral("required tool") : QStringLiteral("optional tool"), package.label);
+        .arg(isRequired ? QStringLiteral("required plugin") : QStringLiteral("optional plugin"), package.label);
       return std::nullopt;
     }
     if (isWanted) {
-      plan.tools.append(package);
+      plan.plugins.append(package);
       if (!isInstalled) {
         plan.fetch.append(package);
       }
@@ -286,15 +286,15 @@ std::optional<InstallPlan> planToolChange(const Game& game, const QList<Package>
       plan.removed.append(package.name);
     }
   }
-  for (const QString& name : optionalToolNames) {
+  for (const QString& name : optionalPluginNames) {
     if (!attachedNames.contains(name)) {
-      problem = QStringLiteral("%1 is not a tool of %2 %3.").arg(name, game.title, game.edition);
+      problem = QStringLiteral("%1 is not a plugin of %2 %3.").arg(name, game.title, game.edition);
       return std::nullopt;
     }
   }
-  for (const InstalledPackage& tool : receipt.tools) {
-    if (!attachedNames.contains(tool.name)) {
-      plan.removed.append(tool.name);
+  for (const InstalledPackage& plugin : receipt.plugins) {
+    if (!attachedNames.contains(plugin.name)) {
+      plan.removed.append(plugin.name);
     }
   }
   if (plan.fetch.isEmpty() && plan.removed.isEmpty()) {
@@ -346,8 +346,8 @@ std::optional<InstallPlan> planUpdate(const Game& game, const QList<Package>& pa
     }
   }
   QMap<QString, QString> installedVersions;
-  for (const InstalledPackage& tool : receipt.tools) {
-    installedVersions.insert(tool.name, tool.version);
+  for (const InstalledPackage& plugin : receipt.plugins) {
+    installedVersions.insert(plugin.name, plugin.version);
   }
   QSet<QString> attachedNames;
   for (const Package& package : attached) {
@@ -356,26 +356,26 @@ std::optional<InstallPlan> planUpdate(const Game& game, const QList<Package>& pa
       continue;
     }
     const auto installed = installedVersions.constFind(package.name);
-    if (package.role == QLatin1String("requiredTool")) {
+    if (package.role == QLatin1String("requiredPlugin")) {
       if (!package.latest) {
-        problem = QStringLiteral("The required tool %1 has no version published yet.").arg(package.label);
+        problem = QStringLiteral("The required plugin %1 has no version published yet.").arg(package.label);
         return std::nullopt;
       }
-      plan.tools.append(package);
+      plan.plugins.append(package);
       if (installed == installedVersions.constEnd() || *installed != package.latest->version) {
         plan.fetch.append(package);
       }
     } else if (installed != installedVersions.constEnd()) {
-      // An optional tool that is installed stays and follows its newest version.
-      plan.tools.append(package);
+      // An optional plugin that is installed stays and follows its newest version.
+      plan.plugins.append(package);
       if (package.latest && package.latest->version != *installed) {
         plan.fetch.append(package);
       }
     }
   }
-  for (const InstalledPackage& tool : receipt.tools) {
-    if (!attachedNames.contains(tool.name)) {
-      plan.removed.append(tool.name);
+  for (const InstalledPackage& plugin : receipt.plugins) {
+    if (!attachedNames.contains(plugin.name)) {
+      plan.removed.append(plugin.name);
     }
   }
   if (plan.fetch.isEmpty() && plan.removed.isEmpty()) {
@@ -743,8 +743,8 @@ void InstallJob::apply()
   isApplying = true;
   emit progressChanged(0, 0);
   if (installPlan.isUpdate()) {
-    emit statusChanged(installPlan.isAttach ? QStringLiteral("Adding the tools...")
-      : installPlan.isToolChange ? QStringLiteral("Applying the tool changes...") : QStringLiteral("Applying the update..."));
+    emit statusChanged(installPlan.isAttach ? QStringLiteral("Adding the plugins...")
+      : installPlan.isPluginChange ? QStringLiteral("Applying the plugin changes...") : QStringLiteral("Applying the update..."));
     applyUpdate();
   } else {
     emit statusChanged(QStringLiteral("Moving the files into place..."));
@@ -762,8 +762,8 @@ void InstallJob::applyInstall()
     fail(QStringLiteral("Could not move the client into %1.").arg(installPlan.folder));
     return;
   }
-  for (const Package& tool : installPlan.tools) {
-    const QDir source(extractFolder(tool));
+  for (const Package& plugin : installPlan.plugins) {
+    const QDir source(extractFolder(plugin));
     QDirIterator files(source.absolutePath(), QDir::Files | QDir::Hidden, QDirIterator::Subdirectories);
     while (files.hasNext()) {
       const QString from = files.next();
@@ -771,20 +771,20 @@ void InstallJob::applyInstall()
       const QString to = QDir(installPlan.folder).filePath(relative);
       if (QFile::exists(to)) {
         QDir(installPlan.folder).removeRecursively();
-        fail(QStringLiteral("%1 and the client both ship %2; the install was undone.").arg(tool.label, relative));
+        fail(QStringLiteral("%1 and the client both ship %2; the install was undone.").arg(plugin.label, relative));
         return;
       }
       if (!QDir().mkpath(QFileInfo(to).absolutePath()) || !QFile::rename(from, to)) {
         QDir(installPlan.folder).removeRecursively();
-        fail(QStringLiteral("Could not move %1 of %2 into place; the install was undone.").arg(relative, tool.label));
+        fail(QStringLiteral("Could not move %1 of %2 into place; the install was undone.").arg(relative, plugin.label));
         return;
       }
     }
   }
   Receipt receipt{installPlan.folder, {installPlan.client.name, installPlan.client.latest->version, installPlan.client.latest->sha256},
     {}, ownedFiles};
-  for (const Package& tool : installPlan.tools) {
-    receipt.tools.append({tool.name, tool.latest->version, tool.latest->sha256});
+  for (const Package& plugin : installPlan.plugins) {
+    receipt.plugins.append({plugin.name, plugin.latest->version, plugin.latest->sha256});
   }
   ApplySummary summary;
   summary.written = static_cast<int>(ownedFiles.size());
@@ -863,25 +863,25 @@ void InstallJob::applyUpdate()
     ++summary.written;
   }
   Receipt receipt = old;
-  receipt.tools.clear();
+  receipt.plugins.clear();
   receipt.files = files;
   if (fetchedNames.contains(installPlan.client.name)) {
     receipt.client = {installPlan.client.name, installPlan.client.latest->version, installPlan.client.latest->sha256};
   }
-  for (const Package& tool : installPlan.tools) {
-    if (fetchedNames.contains(tool.name)) {
-      receipt.tools.append({tool.name, tool.latest->version, tool.latest->sha256});
+  for (const Package& plugin : installPlan.plugins) {
+    if (fetchedNames.contains(plugin.name)) {
+      receipt.plugins.append({plugin.name, plugin.latest->version, plugin.latest->sha256});
       continue;
     }
     bool isFound = false;
-    for (const InstalledPackage& installed : old.tools) {
-      if (installed.name == tool.name) {
-        receipt.tools.append(installed);
+    for (const InstalledPackage& installed : old.plugins) {
+      if (installed.name == plugin.name) {
+        receipt.plugins.append(installed);
         isFound = true;
       }
     }
     if (!isFound) {
-      fatal(QStringLiteral("The update plan lists %1, which is neither fetched nor installed.").arg(tool.name));
+      fatal(QStringLiteral("The update plan lists %1, which is neither fetched nor installed.").arg(plugin.name));
     }
   }
   complete(receipt, summary);

@@ -66,7 +66,15 @@ struct Package {
   std::optional<PackageVersion> latest;
   QString description;
   std::optional<PackageScreenshot> screenshot;
+  // What a plugin is listed under, one of pluginCategories; empty for a client.
+  QString category;
 };
+
+// The categories of plugin packages, in the order the Plugins tab lists them.
+inline const QStringList pluginCategories{QStringLiteral("Stability"), QStringLiteral("Display"), QStringLiteral("Login"),
+  QStringLiteral("Portability"), QStringLiteral("Automation"), QStringLiteral("Research")};
+// Plugins of this category record what a game does; they are listed only while the player asks for them in Settings.
+inline const QString researchCategory = QStringLiteral("Research");
 
 struct ReleaseNote {
   QString version;
@@ -86,7 +94,7 @@ struct AnkhRelease {
 };
 
 // A game Ammolite does not host: the player has their own copy, recognized by the executable inside its folder, and
-// Ankh adds the edition's tools to it.
+// Ankh adds the edition's plugins to it.
 struct AttachedGame {
   QString game;
   QString variant;

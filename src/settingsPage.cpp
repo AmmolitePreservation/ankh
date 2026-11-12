@@ -5,6 +5,7 @@
 #include "attributionsView.h"
 #include "installInfo.h"
 
+#include <QCheckBox>
 #include <QFormLayout>
 #include <QLabel>
 #include <QPushButton>
@@ -31,7 +32,7 @@ QLabel* headingLabel(const QString& text, QWidget* parent)
 
 }
 
-SettingsPage::SettingsPage(const QString& serviceAddress, const QString& libraryRoot, QWidget* parent)
+SettingsPage::SettingsPage(const QString& serviceAddress, const QString& libraryRoot, bool showResearchPlugins, QWidget* parent)
   : QWidget(parent), sections(new QStackedWidget(this)), account(new AccountView(serviceAddress, this)),
     libraryRootLabel(new QLabel(libraryRoot, this)), libraryProblems(new QLabel(this)), updateStatus(new QLabel(this))
 {
@@ -58,6 +59,14 @@ SettingsPage::SettingsPage(const QString& serviceAddress, const QString& library
   libraryProblems->setTextInteractionFlags(Qt::TextSelectableByMouse);
   libraryProblems->setVisible(false);
   gamesLayout->addWidget(libraryProblems);
+  auto* researchPlugins = new QCheckBox(QStringLiteral("Show research plugins"), games);
+  researchPlugins->setChecked(showResearchPlugins);
+  gamesLayout->addWidget(researchPlugins, 0, Qt::AlignLeft);
+  auto* researchNote = new QLabel(QStringLiteral("Research plugins record what a game does, for bug reports and for programs on this "
+    "computer that read the recordings. A game's Plugins tab lists them only while this is ticked; one you have installed stays installed either way."), games);
+  researchNote->setProperty("secondary", true);
+  researchNote->setWordWrap(true);
+  gamesLayout->addWidget(researchNote);
   gamesLayout->addStretch(1);
 
   auto* about = new QWidget(this);
@@ -92,6 +101,7 @@ SettingsPage::SettingsPage(const QString& serviceAddress, const QString& library
 
   connect(check, &QPushButton::clicked, this, &SettingsPage::updateCheckRequested);
   connect(changeLibrary, &QPushButton::clicked, this, &SettingsPage::libraryRootChangeRequested);
+  connect(researchPlugins, &QCheckBox::toggled, this, &SettingsPage::researchPluginsShownChanged);
 }
 
 void SettingsPage::setLibraryRoot(const QString& root)
