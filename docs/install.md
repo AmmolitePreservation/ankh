@@ -9,6 +9,7 @@ Install on a game page downloads the edition's client and its required plugins f
 - Ankh remembers every install folder (`library/installs`), so a game outside the library, or one installed before the library changed, is still known after a restart. A remembered folder whose receipt is gone is forgotten.
 - Each install is one folder, `<game> - <edition label>` (`World of Warcraft - Classic (1.12.1)`), or `<game>` alone when the client serves several editions (`EverQuest`). Characters Windows refuses in a name become `-`.
 - Every install folder carries `.ankh\receipt.json`: the client and each plugin with its version and SHA-256, and every file the packages placed with its size, CRC-32 and write-once flag from the server's listing. Ankh scans the library's receipts at start and after every install; a world is installed when its edition's client has a receipt. A receipt that cannot be read is listed under Settings -> Games and its game shows as not installed.
+- A receipt written by a release before 2026.11.12 calls its plugin list `tools`. Ankh reads it as it stands and writes it back with the field `plugins`, so the install it records stays installed.
 - Downloads and extraction happen in `.staging` beside the install folder (`<library>\.staging`, or `<chosen folder>\.staging`), so moving files into place never crosses a drive. A finished install leaves it empty.
 
 ## Install
