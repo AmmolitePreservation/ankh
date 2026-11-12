@@ -188,35 +188,41 @@ Manifest parseManifest(const QJsonObject& object)
     manifest.ankh = parseRelease(ankh);
   }
   if (object.contains(QLatin1String("worlds"))) {
-    manifest.hasCollection = true;
-    for (const QJsonValue& value : requiredArray(object, "worlds")) {
-      manifest.worlds.append(parseWorld(objectAt(value)));
-    }
-    for (const QJsonValue& value : requiredArray(object, "packages")) {
-      manifest.packages.append(parsePackage(objectAt(value)));
-    }
-    for (const QJsonValue& value : requiredArray(object, "attachedGames")) {
-      const QJsonObject attached = objectAt(value);
-      const QColor color(requiredString(attached, "color"));
-      const QString executable = requiredString(attached, "executable");
-      if (!color.isValid()) {
-        throw ReplyError{QStringLiteral("the color of an attached game is not a color")};
+    Manifest read = manifest;
+    try {
+      for (const QJsonValue& value : requiredArray(object, "worlds")) {
+        read.worlds.append(parseWorld(objectAt(value)));
       }
-      if (executable.isEmpty() || executable.startsWith(QLatin1Char('/')) || executable.contains(QLatin1Char('\\'))
-          || executable.contains(QLatin1Char(':')) || executable.split(QLatin1Char('/')).contains(QStringLiteral(".."))) {
-        throw ReplyError{QStringLiteral("the executable of an attached game is not a path inside its folder: %1").arg(executable)};
+      for (const QJsonValue& value : requiredArray(object, "packages")) {
+        read.packages.append(parsePackage(objectAt(value)));
       }
-      const QString launcher = requiredString(attached, "launcher");
-      const QString launcherConfig = requiredString(attached, "launcherConfig");
-      if (launcher != QLatin1String("turbineGLS")) {
-        throw ReplyError{QStringLiteral("the launcher of an attached game is unknown: %1").arg(launcher)};
+      for (const QJsonValue& value : requiredArray(object, "attachedGames")) {
+        const QJsonObject attached = objectAt(value);
+        const QColor color(requiredString(attached, "color"));
+        const QString executable = requiredString(attached, "executable");
+        if (!color.isValid()) {
+          throw ReplyError{QStringLiteral("the color of an attached game is not a color")};
+        }
+        if (executable.isEmpty() || executable.startsWith(QLatin1Char('/')) || executable.contains(QLatin1Char('\\'))
+            || executable.contains(QLatin1Char(':')) || executable.split(QLatin1Char('/')).contains(QStringLiteral(".."))) {
+          throw ReplyError{QStringLiteral("the executable of an attached game is not a path inside its folder: %1").arg(executable)};
+        }
+        const QString launcher = requiredString(attached, "launcher");
+        const QString launcherConfig = requiredString(attached, "launcherConfig");
+        if (launcher != QLatin1String("turbineGLS")) {
+          throw ReplyError{QStringLiteral("the launcher of an attached game is unknown: %1").arg(launcher)};
+        }
+        if (launcherConfig.isEmpty() || launcherConfig.contains(QLatin1Char('/')) || launcherConfig.contains(QLatin1Char('\\'))
+            || launcherConfig == QLatin1String("..")) {
+          throw ReplyError{QStringLiteral("the launcher configuration of an attached game is not a file name: %1").arg(launcherConfig)};
+        }
+        read.attachedGames.append({requiredString(attached, "game"), requiredString(attached, "variant"),
+          requiredString(attached, "edition"), color, executable, launcher, launcherConfig});
       }
-      if (launcherConfig.isEmpty() || launcherConfig.contains(QLatin1Char('/')) || launcherConfig.contains(QLatin1Char('\\'))
-          || launcherConfig == QLatin1String("..")) {
-        throw ReplyError{QStringLiteral("the launcher configuration of an attached game is not a file name: %1").arg(launcherConfig)};
-      }
-      manifest.attachedGames.append({requiredString(attached, "game"), requiredString(attached, "variant"),
-        requiredString(attached, "edition"), color, executable, launcher, launcherConfig});
+      read.hasCollection = true;
+      manifest = read;
+    } catch (const ReplyError& error) {
+      manifest.collectionProblem = error.message;
     }
   }
   return manifest;

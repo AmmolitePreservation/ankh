@@ -328,20 +328,22 @@ private slots:
     QCOMPARE(ddo.launcherConfig, QStringLiteral("ddo.launcherconfig"));
   }
 
-  void anAttachedGameWhoseExecutableLeavesItsFolderIsRefused()
+  void anAttachedGameWhoseExecutableLeavesItsFolderLosesTheCollectionAndKeepsTheRelease()
   {
     FakeServer server;
     server.answer(QStringLiteral("GET /api/v1/manifest"), 200, fixture("manifestBadExecutable.json"));
     AmmoliteClient client(server.url(), QStringLiteral("2026.11.08.0100"));
     client.setToken(QStringLiteral("ammolite_secret"));
-    QString failure;
-    bool isLoaded = false;
-    connect(&client, &AmmoliteClient::manifestLoaded, this, [&] { isLoaded = true; });
-    connect(&client, &AmmoliteClient::requestFailed, this, [&](const QString&, const QString& message) { failure = message; });
+    std::optional<Manifest> manifest;
+    connect(&client, &AmmoliteClient::manifestLoaded, this, [&](const Manifest& loaded) { manifest = loaded; });
     client.loadManifest(QByteArray());
-    QTRY_VERIFY_WITH_TIMEOUT(!failure.isEmpty(), 5000);
-    QVERIFY2(failure.contains(QStringLiteral("not a path inside its folder: ../outside/game.exe")), qPrintable(failure));
-    QVERIFY(!isLoaded);
+    QTRY_VERIFY_WITH_TIMEOUT(manifest.has_value(), 5000);
+    QCOMPARE(manifest->collectionProblem,
+      QStringLiteral("the executable of an attached game is not a path inside its folder: ../outside/game.exe"));
+    QVERIFY(!manifest->hasCollection);
+    QVERIFY(manifest->worlds.isEmpty() && manifest->packages.isEmpty() && manifest->attachedGames.isEmpty());
+    QVERIFY(manifest->ankh.has_value());
+    QCOMPARE(manifest->ankh->version, QStringLiteral("2026.11.08.0514"));
   }
 
   void aScreenshotIsFetchedOnceVerifiedAndThenServedFromTheCache()
@@ -429,25 +431,18 @@ private slots:
     QVERIFY(!manifest->hasCollection);
   }
 
-  void aWorldMissingAFieldIsRefusedByName()
+  void aWorldMissingAFieldLosesTheCollectionAndNamesTheField()
   {
     FakeServer server;
     server.answer(QStringLiteral("GET /api/v1/manifest"), 200, fixture("manifestMissingColor.json"));
     AmmoliteClient client(server.url(), QStringLiteral("2026.11.08.0100"));
     client.setToken(QStringLiteral("t"));
-    QString what;
-    QString message;
-    bool isLoaded = false;
-    connect(&client, &AmmoliteClient::manifestLoaded, this, [&] { isLoaded = true; });
-    connect(&client, &AmmoliteClient::requestFailed, this, [&](const QString& failed, const QString& reason) {
-      what = failed;
-      message = reason;
-    });
+    std::optional<Manifest> manifest;
+    connect(&client, &AmmoliteClient::manifestLoaded, this, [&](const Manifest& loaded) { manifest = loaded; });
     client.loadManifest(QByteArray());
-    QTRY_VERIFY_WITH_TIMEOUT(!what.isEmpty(), 5000);
-    QCOMPARE(what, QStringLiteral("manifest"));
-    QVERIFY2(message.contains(QStringLiteral("\"color\" is missing")), qPrintable(message));
-    QVERIFY(!isLoaded);
+    QTRY_VERIFY_WITH_TIMEOUT(manifest.has_value(), 5000);
+    QCOMPARE(manifest->collectionProblem, QStringLiteral("the field \"color\" is missing"));
+    QVERIFY(!manifest->hasCollection);
   }
 
   void aReleaseWithoutTheReleaseListIsRefusedByName()
@@ -463,20 +458,22 @@ private slots:
     QVERIFY2(message.contains(QStringLiteral("\"releases\" is missing")), qPrintable(message));
   }
 
-  void aPackageWithAnUnknownRoleIsRefusedByName()
+  void aPackageWithAnUnknownRoleLosesTheCollectionAndNamesThePackage()
   {
     FakeServer server;
     server.answer(QStringLiteral("GET /api/v1/manifest"), 200, fixture("manifestUnknownRole.json"));
     AmmoliteClient client(server.url(), QStringLiteral("2026.11.08.0100"));
     client.setToken(QStringLiteral("t"));
-    QString message;
-    connect(&client, &AmmoliteClient::requestFailed, this, [&](const QString&, const QString& reason) { message = reason; });
+    std::optional<Manifest> manifest;
+    connect(&client, &AmmoliteClient::manifestLoaded, this, [&](const Manifest& loaded) { manifest = loaded; });
     client.loadManifest(QByteArray());
-    QTRY_VERIFY_WITH_TIMEOUT(!message.isEmpty(), 5000);
-    QCOMPARE(message, QStringLiteral("The server's answer was not understood: the role of the package mystery is unknown: addon."));
+    QTRY_VERIFY_WITH_TIMEOUT(manifest.has_value(), 5000);
+    QCOMPARE(manifest->collectionProblem, QStringLiteral("the role of the package mystery is unknown: addon"));
+    QVERIFY(!manifest->hasCollection);
+    QCOMPARE(manifest->ankhProblem, QStringLiteral("GitHub answered 503 for the latest release."));
   }
 
-  void aPackageWhoseCategoryDoesNotFitItsRoleIsRefusedByName()
+  void aPackageWhoseCategoryDoesNotFitItsRoleLosesTheCollectionAndNamesThePackage()
   {
     const QList<QPair<QString, QString>> cases = {
       {QStringLiteral("\"role\":\"optionalPlugin\",\"category\":\"Capture\""), QStringLiteral("\"Capture\"")},
@@ -490,11 +487,12 @@ private slots:
         "\"latest\":null}],\"attachedGames\":[]}").arg(fields).toUtf8());
       AmmoliteClient client(server.url(), QStringLiteral("2026.11.08.0100"));
       client.setToken(QStringLiteral("t"));
-      QString message;
-      connect(&client, &AmmoliteClient::requestFailed, this, [&](const QString&, const QString& reason) { message = reason; });
+      std::optional<Manifest> manifest;
+      connect(&client, &AmmoliteClient::manifestLoaded, this, [&](const Manifest& loaded) { manifest = loaded; });
       client.loadManifest(QByteArray());
-      QTRY_VERIFY_WITH_TIMEOUT(!message.isEmpty(), 5000);
-      QCOMPARE(message, QStringLiteral("The server's answer was not understood: the category of the package mystery does not fit its role: %1.").arg(shown));
+      QTRY_VERIFY_WITH_TIMEOUT(manifest.has_value(), 5000);
+      QCOMPARE(manifest->collectionProblem, QStringLiteral("the category of the package mystery does not fit its role: %1").arg(shown));
+      QVERIFY(!manifest->hasCollection);
     }
   }
 
