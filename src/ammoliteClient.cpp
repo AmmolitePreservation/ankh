@@ -111,10 +111,14 @@ World parseWorld(const QJsonObject& object)
   if (!color.isValid()) {
     throw ReplyError{QStringLiteral("the color of a world is not a color")};
   }
-  return {requiredInt(object, "serverID"), requiredString(object, "name"), requiredString(object, "game"),
+  World world{requiredInt(object, "serverID"), requiredString(object, "name"), requiredString(object, "game"),
     requiredString(object, "variant"), requiredString(object, "version"), color, requiredInt(object, "eraStart"),
     requiredInt(object, "eraEnd"), optionalString(object, "status"), optionalInt(object, "accountDomainID"),
     optionalString(object, "accountDomain")};
+  // A site older than these two says neither: the game is then not started from here and keeps its account list.
+  world.executable = object.value(QLatin1String("executable")).toString();
+  world.givesCredential = object.value(QLatin1String("givesCredential")).toBool();
+  return world;
 }
 
 Edition parseEdition(const QJsonObject& object)

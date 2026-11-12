@@ -93,6 +93,22 @@ QString libraryRootProblem(const QString& root)
   return QString();
 }
 
+QString installedProgramPath(const Receipt& receipt, const QString& fileName, QString& problem)
+{
+  QStringList found;
+  for (auto file = receipt.files.constBegin(); file != receipt.files.constEnd(); ++file) {
+    if (QFileInfo(file.key()).fileName().compare(fileName, Qt::CaseInsensitive) == 0) {
+      found.append(file.key());
+    }
+  }
+  if (found.size() != 1) {
+    problem = found.isEmpty() ? QStringLiteral("The installed game has no %1.").arg(fileName)
+      : QStringLiteral("The installed game has %1 in %2 places, so which to start is unclear.").arg(fileName).arg(found.size());
+    return QString();
+  }
+  return QDir(receipt.folder).filePath(found.first());
+}
+
 QString installFolderNameFor(const Package& client)
 {
   if (client.editions.isEmpty()) {

@@ -41,6 +41,9 @@ struct LibraryScan {
 QString defaultLibraryRoot();
 QString libraryRootProblem(const QString& root);
 QString installFolderNameFor(const Package& client);
+// The full path of the one installed file with that name, whatever folder of the install a package put it in. Empty,
+// with the problem, when the install holds none or more than one.
+QString installedProgramPath(const Receipt& receipt, const QString& fileName, QString& problem);
 QString receiptPath(const QString& folder);
 QString writeReceipt(const Receipt& receipt);
 std::optional<Receipt> readReceipt(const QString& folder, QString& problem);

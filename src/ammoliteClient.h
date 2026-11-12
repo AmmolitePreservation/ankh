@@ -33,6 +33,10 @@ struct World {
   QString status;
   std::optional<int> accountDomainID;
   QString accountDomain;
+  // The file name of the game's program in its client package; empty where Ankh cannot start the game.
+  QString executable;
+  // The game's client signs the player in with their own account, which the site gives it: nothing to type or choose.
+  bool givesCredential = false;
 };
 
 struct Edition {

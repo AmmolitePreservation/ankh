@@ -737,8 +737,38 @@ void MainWindow::refreshAttachedChoices()
     settings.value(QStringLiteral("attached/%1/account").arg(shownGame.id)).toString());
 }
 
+void MainWindow::startMuseumGame(const Game& game)
+{
+  const Receipt* receipt = receiptFor(game);
+  if (receipt == nullptr) {
+    return;
+  }
+  QString note;
+  const QString program = installedProgramPath(*receipt, game.executable, note);
+  if (!program.isEmpty()) {
+    QProcess gameProcess;
+    gameProcess.setProgram(program);
+    gameProcess.setWorkingDirectory(QFileInfo(program).absolutePath());
+    QProcessEnvironment environment = QProcessEnvironment::systemEnvironment();
+    if (game.givesCredential) {
+      // The game's login plugin takes both out of its environment and asks the site for the player's account at each login.
+      environment.insert(QStringLiteral("ankhPluginsCredentialURL"), credentialUrl(client->baseUrl(), game).toString());
+      environment.insert(QStringLiteral("ankhPluginsCredentialToken"), client->token());
+    }
+    gameProcess.setProcessEnvironment(environment);
+    note = gameProcess.startDetached() ? QStringLiteral("Started %1 on %2.").arg(game.title, game.worldName)
+      : QStringLiteral("Could not start %1.").arg(QDir::toNativeSeparators(program));
+  }
+  installNotes.insert(game.id, note);
+  refreshInstallState();
+}
+
 void MainWindow::startLaunch(const Game& game, const QString& world, const QString& username)
 {
+  if (!game.isAttached) {
+    startMuseumGame(game);
+    return;
+  }
   if (game.startsThroughSteam()) {
     if (receiptFor(game) == nullptr) {
       return;

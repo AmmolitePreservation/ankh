@@ -79,6 +79,7 @@ private:
   QTabBar* tabs;
   QStackedWidget* pages;
   QComboBox* realmChoice;
+  QLabel* accountLabel;
   QComboBox* accountChoice;
   QPushButton* manageAccounts;
   QPushButton* launchSettingsToggle;

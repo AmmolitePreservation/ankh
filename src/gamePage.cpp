@@ -165,7 +165,8 @@ GamePage::GamePage(QWidget* parent)
   launchLayout->setHorizontalSpacing(52);
   launchLayout->setVerticalSpacing(8);
   launchLayout->addWidget(makeLabel(QStringLiteral("Realm"), "fieldLabel", launchSetup), 0, 0);
-  launchLayout->addWidget(makeLabel(QStringLiteral("Account"), "fieldLabel", launchSetup), 0, 1);
+  accountLabel = makeLabel(QStringLiteral("Account"), "fieldLabel", launchSetup);
+  launchLayout->addWidget(accountLabel, 0, 1);
   launchLayout->addWidget(realmChoice, 1, 0);
   launchLayout->addWidget(accountChoice, 1, 1);
   launchLayout->addWidget(manageAccounts, 2, 1, Qt::AlignLeft);
@@ -303,11 +304,7 @@ GamePage::GamePage(QWidget* parent)
   connect(primaryButton, &QPushButton::clicked, this, [this] {
     switch (installState) {
     case InstallState::installed:
-      if (game.isAttached) {
-        emit launchRequested(game, realmChoice->currentText(), accountChoice->currentText());
-      } else {
-        statusDetail->setText(QStringLiteral("Launching is not built yet."));
-      }
+      emit launchRequested(game, realmChoice->currentText(), accountChoice->currentText());
       break;
     case InstallState::installing:
       emit cancelRequested();
@@ -376,9 +373,15 @@ void GamePage::updateStatus()
       upToDateLabel->setToolTip(installDetail);
     }
     statusDetail->setText(!launchStatus.isEmpty() ? launchStatus
+      : game.givesCredential ? realmChoice->currentText()
       : QStringLiteral("%1 %2 %3").arg(realmChoice->currentText(), QString(QChar(0x00B7)), accountChoice->currentText()));
     primaryButton->setText(QStringLiteral("  Play"));
-    if (game.startsThroughSteam()) {
+    if (!game.isAttached) {
+      primaryButton->setEnabled(!game.executable.isEmpty() && launchStatus.isEmpty());
+      if (game.executable.isEmpty()) {
+        primaryButton->setToolTip(QStringLiteral("Ankh cannot start this game yet."));
+      }
+    } else if (game.startsThroughSteam()) {
       primaryButton->setEnabled(launchStatus.isEmpty());
     } else if (game.isAttached) {
       const bool canLaunch = realmChoice->isEnabled() && accountChoice->isEnabled() && launchStatus.isEmpty();
@@ -670,6 +673,10 @@ void GamePage::showGame(const Game& newGame)
   }
   isFillingChoices = false;
   launchStatus.clear();
+  // A game that signs the player in has nothing about accounts to show.
+  accountLabel->setVisible(!game.givesCredential);
+  accountChoice->setVisible(!game.givesCredential);
+  manageAccounts->setVisible(!game.givesCredential);
   manageAccounts->setEnabled(game.isAttached);
   manageAccounts->setToolTip(game.isAttached ? QStringLiteral("Logins for this game, kept on this computer.")
     : QStringLiteral("Game accounts are managed on the Ammolite site for now."));

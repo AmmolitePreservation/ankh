@@ -1,6 +1,12 @@
-# Launching attached games
+# Launching games
 
-Only attached games launch today (see `install.md`, Attached games). A museum game's Play button still says launching is not built.
+A museum game's Play starts the installed client; an attached game (see `install.md`, Attached games) starts through its own launcher service or through Steam.
+
+## A museum game
+
+The manifest's world names the file name of the game's program (`executable`). Play finds the one installed file with that name, whatever folder the client package put it in, and starts it from its own folder; none or more than one stops with the reason, and a world without an `executable` has no Play yet. The client is aimed at its server by its client package.
+
+A world with `givesCredential` is one whose client signs the player in: its login plugin asks the site for the player's own account in that world at each login, so the player types and chooses nothing. Play hands the client what that takes in its environment, `ankhPluginsCredentialURL` (the world's `/api/v1/servers/<id>/credential`) and `ankhPluginsCredentialToken` (the player's Ammolite token), which the plugin removes from the environment as it reads them. For such a world the game page shows no Account list and no Manage accounts. Every other museum game keeps its account list and starts at its own login screen.
 
 ## Logins kept on this computer
 

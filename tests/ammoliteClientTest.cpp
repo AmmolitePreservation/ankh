@@ -285,6 +285,10 @@ private slots:
     QCOMPARE(arcanite.status, QStringLiteral("Online, 12 playing"));
     QCOMPARE(arcanite.accountDomainID, std::optional<int>(2));
     QCOMPARE(arcanite.accountDomain, QStringLiteral("Arcanite Logins"));
+    QCOMPARE(arcanite.executable, QStringLiteral("WoW.exe"));
+    QVERIFY(arcanite.givesCredential);
+    QCOMPARE(manifest->worlds.at(1).executable, QString());
+    QVERIFY(!manifest->worlds.at(1).givesCredential);
     QCOMPARE(manifest->worlds.at(1).status, QString());
     QCOMPARE(manifest->worlds.at(1).accountDomainID, std::optional<int>());
     QCOMPARE(manifest->worlds.at(1).accountDomain, QString());

@@ -42,6 +42,22 @@ private slots:
     QCOMPARE(game.status, QStringLiteral("Online, 12 playing"));
     QCOMPARE(game.accountDomainID, std::optional<int>(2));
     QVERIFY(!game.isInstalled);
+    QCOMPARE(game.executable, QString());
+    QVERIFY(!game.givesCredential);
+  }
+
+  void aWorldThatSignsThePlayerInCarriesItsProgramAndWhereToAskForTheAccount()
+  {
+    World world{3, QStringLiteral("Arcanite"), QStringLiteral("World of Warcraft"), QStringLiteral("classic"),
+      QStringLiteral("Classic (1.12.1)"), QColor("#82b556"), 2004, 2006, QString(), 2, QStringLiteral("Arcanite Logins")};
+    world.executable = QStringLiteral("WoW.exe");
+    world.givesCredential = true;
+    const Game game = gameFromWorld(world);
+    QVERIFY(!game.isAttached);
+    QCOMPARE(game.executable, QStringLiteral("WoW.exe"));
+    QVERIFY(game.givesCredential);
+    QCOMPARE(credentialUrl(QUrl(QStringLiteral("https://ammolite.test:1996")), game),
+      QUrl(QStringLiteral("https://ammolite.test:1996/api/v1/servers/3/credential")));
   }
 
   void theEditionsPackagesAreFoundInTheOrderTheServerGaveThem()
