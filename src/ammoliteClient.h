@@ -112,6 +112,9 @@ struct Manifest {
   QList<World> worlds;
   QList<Package> packages;
   QList<AttachedGame> attachedGames;
+  // Why the collection the server sent could not be read; empty when it was read or none was sent. The release above
+  // stands either way, so an Ankh that cannot read a newer server's collection still learns of the release that can.
+  QString collectionProblem;
 };
 
 struct GameLogin {

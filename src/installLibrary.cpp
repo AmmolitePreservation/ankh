@@ -177,7 +177,10 @@ std::optional<Receipt> readReceipt(const QString& folder, QString& problem)
     } else {
       receipt.client = packageFrom(required(object, "client"));
     }
-    const QJsonValue plugins = required(object, "plugins");
+    // Releases before 2026.11.12 wrote this list as "tools". Such a receipt is read as it stands and written back
+    // below with the field's name of today, so the install it records stays installed.
+    const bool isEarlierReceipt = !object.contains(QLatin1String("plugins")) && object.contains(QLatin1String("tools"));
+    const QJsonValue plugins = required(object, isEarlierReceipt ? "tools" : "plugins");
     if (!plugins.isArray()) {
       throw ReceiptError{QStringLiteral("the field \"plugins\" is not a list")};
     }
@@ -196,6 +199,13 @@ std::optional<Receipt> readReceipt(const QString& folder, QString& problem)
       const QJsonObject owned = entry.value().toObject();
       receipt.files.insert(entry.key(), {requiredText(owned, "package"), requiredCount(owned, "byteSize"),
         static_cast<quint32>(requiredCount(owned, "crc32")), requiredFlag(owned, "writeOnce")});
+    }
+    if (isEarlierReceipt) {
+      file.close();
+      const QString writeProblem = writeReceipt(receipt);
+      if (!writeProblem.isEmpty()) {
+        throw ReceiptError{QStringLiteral("it is from an earlier release and could not be rewritten (%1)").arg(writeProblem)};
+      }
     }
     return receipt;
   } catch (const ReceiptError& error) {

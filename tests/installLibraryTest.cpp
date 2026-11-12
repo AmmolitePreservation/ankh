@@ -2,6 +2,9 @@
 
 #include <QDir>
 #include <QFile>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QTemporaryDir>
 #include <QtTest>
 
@@ -107,6 +110,38 @@ private slots:
     QVERIFY(receiptForAttached(receipts, QStringLiteral("Dungeons & Dragons Online"), QStringLiteral("other")) == nullptr);
     QCOMPARE(receiptForClient(receipts, QStringLiteral("wow-classic"))->folder, museum.folder);
     QVERIFY(receiptForClient(receipts, QString()) == nullptr);
+  }
+
+  void aReceiptFromAnEarlierReleaseKeepsItsInstallAndIsRewrittenWithTodaysField()
+  {
+    QTemporaryDir library;
+    const QString folder = QDir(library.path()).filePath(QStringLiteral("Earlier"));
+    QVERIFY(QDir().mkpath(folder + QStringLiteral("/.ankh")));
+    QFile earlier(receiptPath(folder));
+    QVERIFY(earlier.open(QIODevice::WriteOnly));
+    earlier.write("{\"client\": {\"name\": \"alpha-client\", \"version\": \"1\", \"sha256\": \"aa\"}, "
+      "\"tools\": [{\"name\": \"alpha-fixes\", \"version\": \"2\", \"sha256\": \"bb\"}], "
+      "\"files\": {\"fixes.dll\": {\"package\": \"alpha-fixes\", \"byteSize\": 3, \"crc32\": 9, \"writeOnce\": false}}}");
+    earlier.close();
+    QString problem;
+    const std::optional<Receipt> read = readReceipt(folder, problem);
+    QVERIFY2(read.has_value(), qPrintable(problem));
+    QCOMPARE(read->client.name, QStringLiteral("alpha-client"));
+    QCOMPARE(read->plugins.size(), 1);
+    QCOMPARE(read->plugins.first().name, QStringLiteral("alpha-fixes"));
+    QCOMPARE(read->plugins.first().version, QStringLiteral("2"));
+    QCOMPARE(read->files.value(QStringLiteral("fixes.dll")).package, QStringLiteral("alpha-fixes"));
+
+    QFile rewritten(receiptPath(folder));
+    QVERIFY(rewritten.open(QIODevice::ReadOnly));
+    const QJsonObject object = QJsonDocument::fromJson(rewritten.readAll()).object();
+    QVERIFY(!object.contains(QStringLiteral("tools")));
+    QCOMPARE(object.value(QStringLiteral("plugins")).toArray().size(), 1);
+    QCOMPARE(object.value(QStringLiteral("plugins")).toArray().first().toObject().value(QStringLiteral("name")).toString(),
+      QStringLiteral("alpha-fixes"));
+    const std::optional<Receipt> again = readReceipt(folder, problem);
+    QVERIFY2(again.has_value(), qPrintable(problem));
+    QCOMPARE(again->plugins.size(), 1);
   }
 
   void aReceiptWithNoClientMustSayWhichGameItIsAttachedTo()

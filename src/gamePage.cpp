@@ -490,6 +490,11 @@ void GamePage::showDownloads()
   }
   QString shownRole;
   for (const Package& package : attached) {
+    const bool isUnlistedResearch = package.role == QLatin1String("optionalPlugin") && package.category == researchCategory
+      && !researchPluginsShown && !pluginsInstalledNames.contains(package.name);
+    if (isUnlistedResearch) {
+      continue;
+    }
     if (package.role != shownRole) {
       shownRole = package.role;
       downloadsLayout->addWidget(makeLabel(roleLabel(package.role), "fieldLabel", downloadsBox));
@@ -576,6 +581,7 @@ void GamePage::setResearchPluginsShown(bool isShown)
 {
   researchPluginsShown = isShown;
   refreshPlugins();
+  showDownloads();
 }
 
 QStringList GamePage::chosenOptionalPlugins() const

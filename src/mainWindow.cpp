@@ -515,6 +515,9 @@ void MainWindow::applyManifest(const Manifest& manifest, const QByteArray& etag)
   }
   if (manifest.hasCollection) {
     showCollection(manifest);
+  } else if (!manifest.collectionProblem.isEmpty() && !hasCollection) {
+    showCollectionProblem(QStringLiteral("Could not load the collection: the server's answer was not understood: %1.")
+      .arg(manifest.collectionProblem));
   }
 }
 
