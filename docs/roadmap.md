@@ -72,7 +72,7 @@ Left on the client:
 In this order:
 
 - Asheron's Call: ACE changes; `login` for `games/ac` beside the named plugin `scarab`, the ThwargLauncher replacement that keeps what AC players rely on inside the client (`/tf` team commands, ThwargFilter compatibility), whose launch and swarm go once Ankh covers them.
-- Motor City Online: Rusty Motors changes; `login` for `games/mco`.
+- Motor City Online: Rusty Motors changes; `login` for `games/mco`. Done: Fordite's login checks the names and passwords typed at it with Ammolite (a player's Ammolite name and password, or a login key for Ankh's Play), and its players' personas are merged into the accounts named after them. Left: Ankh's Play through the login plugin, seen as far as the skipped login dialog, since the game's front end stops where it opens its database through DAO 3.5, which today's Windows lacks; then the variant signs players in, so Ankh shows no accounts, and Ammolite stops offering game accounts on its domain.
 - City of Heroes: Ourodev changes; `games/coh` with the Impervium account service as its handler.
 - EverQuest, last: EQEmu changes on the branch the owner places them among `rof2`, `guids` and `housing`: unlimited characters per account; many sessions per account with the lock on the character, in world and login server; the shared bank made safe for two sessions on one account; per-IP caps. `games/eq`: the RoF2 loader and the generic plugins with `login`. Peridot's 72 accounts merge into one.
 - Exit per game: the Phase 2 test at that game's scale; for EverQuest a 72-character profile.
