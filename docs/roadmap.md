@@ -49,7 +49,7 @@ Left on the server:
 
 Left on the client:
 
-- `login` for `games/wow` does the Login-button credential swap and takes a new account straight to its world's character list; still to do: the realm address from the launch, character screen capacity with sort, search and filter, and `sessionReport`.
+- `login` for `games/wow` does the Login-button credential swap, takes the player's Ammolite name and password typed at the login screen (with or without Ankh, retyped after a return to it), and takes a new account straight to its world's character list; still to do: the realm address from the launch, character screen capacity with sort, search and filter, and `sessionReport`.
 - The character screen past 10 buttons: scrolling, as part of `login`.
 - `WTF\Config.wtf` is shared by every client of an install and rewritten at each Enter World, so a starting client can read another's last character; the per-instance settings files of Phase 3 answer it.
 - Ankh: Play for museum games starts the installed client, and for World of Warcraft Classic hands it the player's sign-in and shows no accounts (seen on the workstation: the client Ankh started reported the site as its credential source; pressing Login in that freshly installed copy waits on the game's first-run terms, which a person accepts). Still to do: the Characters tab lists the account's characters and offers launch-to-character.
