@@ -25,7 +25,7 @@ World of Warcraft Classic is the first game through the login model and EverQues
 - Added beside what exists: account verbs on the server handlers; one account per player per server; `moveCharacter` and the reversible merge that moves a player's characters into that account; the account's random password, set through the handler when the account is created, kept encrypted, and replaced only when access is removed or a reset is asked for; `GET /api/v1/servers/<id>/credential`, which returns that password to the signed-in player.
 - The cmangos handler carries the new verbs first (`moveCharacter` is `characters.account`); every other handler gains them in its game's phase.
 - Account domains, the claim flow, the account pages, `GET /me/gameAccounts` and Ankh's Account list keep serving every server that has not moved; each server sheds them at its own release.
-- Exit: on Arcanite, a player's test accounts merge into one and back again; the password Ammolite returns logs a stock client in, and stops doing so once the player's access is removed.
+- Exit: on Arcanite, a player's test accounts merge into one and back again; the password Ammolite returns logs a stock client in, and stops doing so once the player's access is removed. Met for the merge: on Arcanite a test player's claimed account's 50 characters moved into the account the site made for them, back, and in again, through a database user that may only change a character's account and the realm's counts; the account's character list shows them after a login with nothing typed. Not yet seen: the password stopping to work once access is removed.
 
 ## Phase 2: World of Warcraft Classic
 
@@ -49,7 +49,7 @@ Left on the server:
 
 Left on the client:
 
-- `login` for `games/wow`, which today only lifts the character limit: the Login-button credential swap, the realm address from the launch, character screen capacity with sort, search and filter; and `sessionReport`.
+- `login` for `games/wow` does the Login-button credential swap, takes the player's Ammolite name and password typed at the login screen (with or without Ankh, retyped after a return to it), and takes a new account straight to its world's character list; still to do: the realm address from the launch, character screen capacity with sort, search and filter, and `sessionReport`.
 - The character screen past 10 buttons: scrolling, as part of `login`.
 - `WTF\Config.wtf` is shared by every client of an install and rewritten at each Enter World, so a starting client can read another's last character; the per-instance settings files of Phase 3 answer it.
 - Ankh: Play for museum games starts the installed client, and for World of Warcraft Classic hands it the player's sign-in and shows no accounts (seen on the workstation: the client Ankh started reported the site as its credential source; pressing Login in that freshly installed copy waits on the game's first-run terms, which a person accepts). Still to do: the Characters tab lists the account's characters and offers launch-to-character.
@@ -72,7 +72,7 @@ Left on the client:
 In this order:
 
 - Asheron's Call: ACE changes; `login` for `games/ac` beside the named plugin `scarab`, the ThwargLauncher replacement that keeps what AC players rely on inside the client (`/tf` team commands, ThwargFilter compatibility), whose launch and swarm go once Ankh covers them.
-- Motor City Online: Rusty Motors changes; `login` for `games/mco`.
+- Motor City Online: Rusty Motors changes; `login` for `games/mco`. Done: Fordite's login checks the names and passwords typed at it with Ammolite (a player's Ammolite name and password, or a login key for Ankh's Play), its players' personas are merged into the accounts named after them, Ankh's Play logs the player in with nothing typed, and `database-dao` gives the game Windows' DAO 3.6 for the DAO 3.5 it was built with, so its front end opens its database. Left: Ammolite stops offering game accounts on Fordite's domain, a 32-character name typed in the login dialog, several sessions of one account.
 - City of Heroes: Ourodev changes; `games/coh` with the Impervium account service as its handler.
 - EverQuest, last: EQEmu changes on the branch the owner places them among `rof2`, `guids` and `housing`: unlimited characters per account; many sessions per account with the lock on the character, in world and login server; the shared bank made safe for two sessions on one account; per-IP caps. `games/eq`: the RoF2 loader and the generic plugins with `login`. Peridot's 72 accounts merge into one.
 - Exit per game: the Phase 2 test at that game's scale; for EverQuest a 72-character profile.
