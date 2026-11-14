@@ -10,7 +10,7 @@ World of Warcraft Classic is the first game through the login model and EverQues
 - Where a server's changes are proven is set per game. EverQuest: on peridothousing and peridotguids, never on Peridot. World of Warcraft: on Arcanite itself, built from the fork's `claude` branch, with no clone and restarts as the work needs. The Phase 5 games are decided at their turn.
 - Nothing a production server's players use is removed before that server runs the new model.
 - Plugins reach a game folder Ankh manages only as versions of an Ammolite package applied by Ankh; development builds go to a separate copy of the game that Ankh does not manage.
-- No game gets exclusive fullscreen: every game runs as a borderless window covering its monitor at the monitor's own resolution, refresh rate and HDR state, whatever the game or the player asks for. A game's borderless plugin is required. No external library such as DXVK ships; such projects' approaches are studied, not used.
+- No game gets exclusive fullscreen: every game runs as a borderless window covering its monitor at the monitor's own resolution, refresh rate and HDR state, whatever the game or the player asks for. A game's borderless plugin is required. A game that supports HDR keeps its HDR output borderless; none of today's games does. No external library such as DXVK ships; such projects' approaches are studied, not used.
 
 ## Phase 0: names and the plugin repository
 
