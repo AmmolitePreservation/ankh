@@ -39,4 +39,5 @@ Inno Setup builds the installer. Its look is brought close to the application's 
 - Qt is linked dynamically and ships beside `ankh.exe`.
 - The installer carries Microsoft's Visual C++ redistributable and runs it only when the machine lacks it or has an older one. It is the one shared system component: a single runtime for Ankh and Qt, with a UAC prompt on first install.
 - `/RELAUNCH=1` starts the new Ankh after a silent install; the updater passes it.
+- Setup starts Ankh (Launch Ankh, `/RELAUNCH=1`) through Windows Explorer, so Ankh does not inherit Setup's process policies (see `launch.md`).
 - Inno Setup and Qt are credited on the in-application Attributions page.

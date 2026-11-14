@@ -54,8 +54,10 @@ Name: "{autoprograms}\Ankh"; Filename: "{app}\ankh.exe"
 
 [Run]
 Filename: "{tmp}\vc_redist.x64.exe"; Parameters: "/install /quiet /norestart"; StatusMsg: "Installing the Microsoft Visual C++ runtime..."; Flags: shellexec waituntilterminated; Check: NeedsVCRedist
-Filename: "{app}\ankh.exe"; Description: "Launch Ankh"; Flags: nowait postinstall skipifsilent
-Filename: "{app}\ankh.exe"; Flags: nowait runasoriginaluser; Check: IsRelaunchRequested
+; Ankh is started through Explorer: a program Setup starts can inherit the PreferSystem32 image load policy Windows
+; gives Setup, and every game Ankh started would inherit it from Ankh and skip its plugin loader.
+Filename: "{win}\explorer.exe"; Parameters: """{app}\ankh.exe"""; Description: "Launch Ankh"; Flags: nowait postinstall skipifsilent runasoriginaluser
+Filename: "{win}\explorer.exe"; Parameters: """{app}\ankh.exe"""; Flags: nowait runasoriginaluser; Check: IsRelaunchRequested
 
 [Code]
 function IsRelaunchRequested: Boolean;

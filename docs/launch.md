@@ -2,6 +2,8 @@
 
 A museum game's Play starts the installed client; an attached game (see `install.md`, Attached games) starts through its own launcher service or through Steam.
 
+A game Ankh starts inherits Ankh's image load policy. With Windows' PreferSystem32 on, the game takes System32's copy of the DLL its plugin loader stands in for (`opengl32.dll`, `version.dll`, `dinput8.dll`) and runs without plugins, and no program can turn the policy off for the processes it starts. A process Setup starts can carry it, so Ankh checks at startup: with the policy on, it asks Windows Explorer to start it again, which starts it without it, and exits. If it is still on a minute later, Ankh stops with a message naming the Exploit protection setting that forces it.
+
 ## A museum game
 
 The manifest's world names the file name of the game's program (`executable`). Play finds the one installed file with that name, whatever folder the client package put it in, and starts it from its own folder; none or more than one stops with the reason, and a world without an `executable` has no Play yet. The client is aimed at its server by its client package.
