@@ -33,6 +33,7 @@ Inno Setup builds the installer. Its look is brought close to the application's 
 - `ankhSetup-<version>-win64.exe` is produced by the release workflow, which stages the application folder (`ankh.exe`, the Qt DLLs, the license texts) and runs the Inno compiler on one script.
 - The wizard asks for **all users** (default `C:\Program Files\Ankh`, elevates) or **this user** (default `%LOCALAPPDATA%\Programs\Ankh`, no elevation). The folder is editable in either case.
 - Install writes the uninstall entry for Apps and features (machine-wide or per-user to match the scope) and a Start menu shortcut. Nothing else is written outside the install folder.
+- Ankh reads its install scope from that uninstall entry: the machine-wide or per-user entry whose folder is the one `ankh.exe` runs from. A copy no entry names, such as a build folder, cannot update itself. Where the folder is plays no part, so an install into any folder the user picked updates like one in the default.
 - Silent installs take Inno's standard flags: `/SILENT`, `/VERYSILENT`, `/SUPPRESSMSGBOXES`, `/DIR=`, `/ALLUSERS`, `/CURRENTUSER`, `/NORESTART`, `/LOG=`, `/TASKS=`, `/LOADINF=` and `/SAVEINF=`. Custom flags are read from the script when needed.
 - Uninstall is Inno's `unins000.exe`, with the same silent flags. It leaves games, accounts and profiles alone unless the user chooses otherwise.
 - Qt is linked dynamically and ships beside `ankh.exe`.

@@ -56,7 +56,7 @@ void UpdateInstaller::setOffer(const UpdateOffer& newOffer)
 
 void UpdateInstaller::start()
 {
-  if (installScope() == InstallScope::buildFolder) {
+  if (installScope() == InstallScope::notInstalled) {
     emit failed(QStringLiteral("This copy of Ankh was not set up by the installer, so it cannot update itself."));
     return;
   }

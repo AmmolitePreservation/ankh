@@ -106,10 +106,10 @@ void UpdateSheet::refresh()
   if (isWorking) {
     return;
   }
-  const bool isBuildFolder = installScope() == InstallScope::buildFolder;
-  updateButton->setEnabled(!isBuildFolder && heldFor.isEmpty() && !isChecking);
-  if (isBuildFolder) {
-    status->setText(QStringLiteral("This copy is running from a build folder, so it cannot update itself. Install Ankh with the installer first."));
+  const bool isNotInstalled = installScope() == InstallScope::notInstalled;
+  updateButton->setEnabled(!isNotInstalled && heldFor.isEmpty() && !isChecking);
+  if (isNotInstalled) {
+    status->setText(QStringLiteral("This copy was not installed by the Ankh installer, so it cannot update itself. Install Ankh with the installer first."));
   } else if (!heldFor.isEmpty()) {
     status->setText(QStringLiteral("%1 is still running. Updating Ankh would close it half-way, so wait for it to finish and open this sheet again.")
       .arg(heldFor));
