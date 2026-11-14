@@ -1,4 +1,13 @@
+param(
+  [string]$version = ''
+)
+
 $ErrorActionPreference = 'Stop'
+
+& (Join-Path $PSScriptRoot 'build.ps1') -version $version
+if (-not $?) {
+  throw 'Build failed.'
+}
 
 $qtRoot = [Environment]::GetEnvironmentVariable('ANKH_QT_ROOT')
 if ([string]::IsNullOrEmpty($qtRoot)) {

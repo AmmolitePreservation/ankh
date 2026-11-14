@@ -32,13 +32,13 @@ if ($target -eq '') {
   $target = (git -C $repositoryRoot rev-parse HEAD)
 }
 
+& (Join-Path $repositoryRoot 'test.ps1') -version $version
+if (-not $?) {
+  throw 'Tests failed.'
+}
 & (Join-Path $repositoryRoot 'package.ps1') -version $version
 if (-not $?) {
   throw 'Packaging failed.'
-}
-& (Join-Path $repositoryRoot 'test.ps1')
-if (-not $?) {
-  throw 'Tests failed.'
 }
 
 $distribution = Join-Path $repositoryRoot 'dist'

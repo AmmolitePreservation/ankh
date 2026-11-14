@@ -56,4 +56,4 @@ Launching and repairing games, and optional plugins, are not built.
 
 ## Tests
 
-`.\test.ps1` runs every test target through ctest (needs a build first). The install tests drive the job against a local HTTP server and real zip fixtures in `tests/fixtures/install`.
+`.\test.ps1` builds once (as `build.ps1`, taking the same `-version`), then runs every test target through ctest. The install tests drive the job against a local HTTP server and real zip fixtures in `tests/fixtures/install`.
