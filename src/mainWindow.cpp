@@ -3,6 +3,7 @@
 #include "accountView.h"
 #include "appVersion.h"
 #include "captionButton.h"
+#include "cleanStart.h"
 #include "edgeGrain.h"
 #include "fatal.h"
 #include "gameCatalog.h"
@@ -312,9 +313,10 @@ MainWindow::MainWindow()
     QString note;
     if (QFileInfo(program).fileName().compare(executable, Qt::CaseInsensitive) != 0) {
       note = QStringLiteral("The game's launcher names the client %1, but the edition's executable is %2.").arg(executable, QFileInfo(program).fileName());
-    } else if (!QProcess::startDetached(program, arguments, receipt->folder)) {
+    } else if (qint64 processID = 0; !QProcess::startDetached(program, arguments, receipt->folder, &processID)) {
       note = QStringLiteral("Could not start %1.").arg(QDir::toNativeSeparators(program));
     } else {
+      letGameTakeForeground(processID);
       note = QStringLiteral("Started %1 as %2 on %3.").arg(shownGame.title, gamePage->selectedAccount(), gamePage->selectedRealm());
     }
     installNotes.insert(gameId, note);
@@ -756,8 +758,13 @@ void MainWindow::startMuseumGame(const Game& game)
       environment.insert(QStringLiteral("ankhPluginsCredentialToken"), client->token());
     }
     gameProcess.setProcessEnvironment(environment);
-    note = gameProcess.startDetached() ? QStringLiteral("Started %1 on %2.").arg(game.title, game.worldName)
-      : QStringLiteral("Could not start %1.").arg(QDir::toNativeSeparators(program));
+    qint64 processID = 0;
+    if (gameProcess.startDetached(&processID)) {
+      letGameTakeForeground(processID);
+      note = QStringLiteral("Started %1 on %2.").arg(game.title, game.worldName);
+    } else {
+      note = QStringLiteral("Could not start %1.").arg(QDir::toNativeSeparators(program));
+    }
   }
   installNotes.insert(game.id, note);
   refreshInstallState();
