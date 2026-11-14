@@ -31,6 +31,7 @@ configure_file(src/ankh.rc.in ankh.rc @ONLY)
 qt_add_executable(ankh WIN32
   src/main.cpp
   src/fatal.cpp
+  src/cleanStart.cpp
   src/calendarVersion.cpp
   src/captionButton.cpp
   src/windowControls.cpp
