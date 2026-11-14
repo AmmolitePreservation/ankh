@@ -150,6 +150,15 @@ class InstallJobTest : public QObject {
   const QByteArray client2Zip = fixture("client2.zip");
   const QByteArray pluginZip = fixture("plugin.zip");
   const QByteArray mapsZip = fixture("maps.zip");
+  const QByteArray nestedClientZip = fixture("nestedClient.zip");
+  const QByteArray nestedPluginZip = fixture("nestedPlugin.zip");
+  const QByteArray nestedClientListing = "{\"files\":["
+    "{\"path\":\"Alpha/Game.exe\",\"byteSize\":200,\"crc32\":111,\"writeOnce\":false},"
+    "{\"path\":\"Alpha/Data/world.dat\",\"byteSize\":2400,\"crc32\":222,\"writeOnce\":false},"
+    "{\"path\":\"Alpha/readme.txt\",\"byteSize\":13,\"crc32\":333,\"writeOnce\":false},"
+    "{\"path\":\"Alpha/settings.ini\",\"byteSize\":20,\"crc32\":444,\"writeOnce\":true}]}";
+  const QByteArray nestedPluginListing =
+    "{\"files\":[{\"path\":\"Alpha/ankh-plugins/login.dll\",\"byteSize\":1100,\"crc32\":888,\"writeOnce\":false}]}";
   const QByteArray mapsListing = "{\"files\":["
     "{\"path\":\"maps/world.map\",\"byteSize\":400,\"crc32\":901,\"writeOnce\":false},"
     "{\"path\":\"maps/maps.ini\",\"byteSize\":19,\"crc32\":902,\"writeOnce\":true}]}";
@@ -210,6 +219,45 @@ class InstallJobTest : public QObject {
   {
     return {QStringLiteral("alpha-maps"), QStringLiteral("Alpha maps"), QStringLiteral("optionalPlugin"),
       {{QStringLiteral("Alpha"), QStringLiteral("classic"), QStringLiteral("Classic")}}, std::nullopt};
+  }
+
+  // The client and plugin as they were published while the client unpacked into a folder, Alpha, of the install.
+  Package nestedClientPackage(const FakeFileServer& server) const
+  {
+    Package package = clientPackage(server);
+    package.latest = PackageVersion{QStringLiteral("2026.10.13"), QStringLiteral("alphaNested.zip"), nestedClientZip.size(),
+      sha256Of(nestedClientZip), QStringLiteral("2026-10-13T00:00:00Z"), 4, 2633,
+      QUrl(server.url().toString() + QStringLiteral("/files/nestedClient.zip"))};
+    return package;
+  }
+
+  Package nestedPluginPackage(const FakeFileServer& server) const
+  {
+    Package package = pluginPackage(server);
+    package.latest = PackageVersion{QStringLiteral("2026.10.14-nested"), QStringLiteral("alphaLoginNested.zip"),
+      nestedPluginZip.size(), sha256Of(nestedPluginZip), QStringLiteral("2026-10-14T00:00:00Z"), 1, 1100,
+      QUrl(server.url().toString() + QStringLiteral("/files/nestedPlugin.zip"))};
+    return package;
+  }
+
+  Receipt installNested(FakeFileServer& server, const QString& libraryRoot)
+  {
+    server.answer(QStringLiteral("/api/v1/packages/alpha-client/versions/2026.10.13/files"), 200, nestedClientListing, "application/json");
+    server.answer(QStringLiteral("/api/v1/packages/alpha-login/versions/2026.10.14-nested/files"), 200, nestedPluginListing, "application/json");
+    server.answer(QStringLiteral("/files/nestedClient.zip"), 200, nestedClientZip, "application/octet-stream");
+    server.answer(QStringLiteral("/files/nestedPlugin.zip"), 200, nestedPluginZip, "application/octet-stream");
+    QString problem;
+    const std::optional<InstallPlan> plan = planInstall(alpha(), {nestedClientPackage(server), nestedPluginPackage(server)}, libraryRoot, problem);
+    if (!plan) {
+      qFatal("%s", qPrintable(problem));
+    }
+    InstallJob job(*plan, server.url(), QStringLiteral("t"), QStringLiteral("2026.11.08.1200"));
+    Outcome outcome;
+    run(job, outcome);
+    if (!outcome.isDone) {
+      qFatal("The nested install failed: %s", qPrintable(outcome.failure));
+    }
+    return outcome.receipt;
   }
 
   Game ownCopy() const
@@ -603,6 +651,70 @@ private slots:
     QCOMPARE(QDir(stagingFolderFor(library.path())).entryList(QDir::AllEntries | QDir::NoDotAndDotDot), QStringList());
     QVERIFY(!planUpdate(alpha(), {client2Package(server), pluginPackage(server), optionalPackage()}, *stored, problem));
     QVERIFY(problem.isEmpty());
+  }
+
+  void aClientThatNoLongerUnpacksIntoAFolderMovesTheGameUpWithThePlayersOwnFiles()
+  {
+    FakeFileServer server;
+    serveEverything(server);
+    QTemporaryDir library;
+    const Receipt first = installNested(server, library.path());
+    const QDir folder(first.folder);
+    QCOMPARE(QFileInfo(folder.filePath(QStringLiteral("Alpha/Game.exe"))).size(), qint64(200));
+    writeFile(folder.filePath(QStringLiteral("Alpha/settings.ini")), "[video]\r\nwidth=3440\r\n");
+    writeFile(folder.filePath(QStringLiteral("Alpha/WTF/Config.wtf")), "SET gxWindow \"1\"");
+    writeFile(folder.filePath(QStringLiteral("Alpha/Screenshots/shot.png")), "png");
+
+    QString problem;
+    const std::optional<InstallPlan> plan = planUpdate(alpha(), {client2Package(server), pluginPackage(server)}, first, problem);
+    QVERIFY2(plan.has_value(), qPrintable(problem));
+    QCOMPARE(plan->fetch.size(), 2);
+    InstallJob job(*plan, server.url(), QStringLiteral("t"), QStringLiteral("2026.11.14.1200"));
+    Outcome outcome;
+    run(job, outcome);
+    QVERIFY2(outcome.isDone, qPrintable(outcome.failure));
+
+    QVERIFY(!QFileInfo::exists(folder.filePath(QStringLiteral("Alpha"))));
+    QCOMPARE(QFileInfo(folder.filePath(QStringLiteral("Game.exe"))).size(), qint64(300));
+    QCOMPARE(QFileInfo(folder.filePath(QStringLiteral("Data/extra.dat"))).size(), qint64(500));
+    QVERIFY(!QFile::exists(folder.filePath(QStringLiteral("readme.txt"))));
+    QCOMPARE(QFileInfo(folder.filePath(QStringLiteral("ankh-plugins/login.dll"))).size(), qint64(1100));
+    QCOMPARE(contentOf(folder.filePath(QStringLiteral("settings.ini"))), QByteArray("[video]\r\nwidth=3440\r\n"));
+    QCOMPARE(contentOf(folder.filePath(QStringLiteral("WTF/Config.wtf"))), QByteArray("SET gxWindow \"1\""));
+    QCOMPARE(contentOf(folder.filePath(QStringLiteral("Screenshots/shot.png"))), QByteArray("png"));
+    QCOMPARE(outcome.summary.kept, QStringList{QStringLiteral("settings.ini")});
+    QCOMPARE(QStringList(outcome.receipt.files.keys()), QStringList({QStringLiteral("Data/extra.dat"),
+      QStringLiteral("Data/world.dat"), QStringLiteral("Game.exe"), QStringLiteral("ankh-plugins/login.dll"),
+      QStringLiteral("settings.ini")}));
+    const std::optional<Receipt> stored = readReceipt(first.folder, problem);
+    QVERIFY2(stored.has_value(), qPrintable(problem));
+    QVERIFY(!planUpdate(alpha(), {client2Package(server), pluginPackage(server)}, *stored, problem));
+    QVERIFY(problem.isEmpty());
+  }
+
+  void aGameThatCannotMoveUpWithoutWritingOverANameIsLeftAsItWas()
+  {
+    FakeFileServer server;
+    serveEverything(server);
+    QTemporaryDir library;
+    const Receipt first = installNested(server, library.path());
+    const QDir folder(first.folder);
+    writeFile(folder.filePath(QStringLiteral("Data")), "a file where the game's Data folder would go");
+
+    QString problem;
+    const std::optional<InstallPlan> plan = planUpdate(alpha(), {client2Package(server), pluginPackage(server)}, first, problem);
+    QVERIFY2(plan.has_value(), qPrintable(problem));
+    InstallJob job(*plan, server.url(), QStringLiteral("t"), QStringLiteral("2026.11.14.1200"));
+    Outcome outcome;
+    run(job, outcome);
+    QVERIFY(outcome.isFailed);
+    QVERIFY2(outcome.failure.contains(QStringLiteral("cannot move up out of Alpha")), qPrintable(outcome.failure));
+    QCOMPARE(QFileInfo(folder.filePath(QStringLiteral("Alpha/Game.exe"))).size(), qint64(200));
+    QCOMPARE(QFileInfo(folder.filePath(QStringLiteral("Alpha/ankh-plugins/login.dll"))).size(), qint64(1100));
+    QVERIFY(!QFile::exists(folder.filePath(QStringLiteral("Game.exe"))));
+    const std::optional<Receipt> stored = readReceipt(first.folder, problem);
+    QVERIFY2(stored.has_value(), qPrintable(problem));
+    QCOMPARE(stored->client.version, QStringLiteral("2026.10.13"));
   }
 
   void anInstallTakesTheOptionalPluginsItIsToldToAndRefusesUnknownOnes()

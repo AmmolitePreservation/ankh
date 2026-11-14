@@ -24,6 +24,61 @@ namespace {
 
 constexpr qint64 hashChunkBytes = 16 * 1024 * 1024;
 
+// The one folder every file of the old client sat in, when the new client puts none of its files there: the client
+// used to unpack into a folder of the install and now unpacks into the install itself. Empty otherwise.
+QString clientFolderLeftBehind(const Receipt& old, const QString& clientName, const QMap<QString, OwnedFile>& newFiles)
+{
+  QString common;
+  for (auto entry = old.files.constBegin(); entry != old.files.constEnd(); ++entry) {
+    if (entry.value().package != clientName) {
+      continue;
+    }
+    const qsizetype slash = entry.key().indexOf(QLatin1Char('/'));
+    if (slash < 0) {
+      return QString();
+    }
+    const QString top = entry.key().left(slash);
+    if (!common.isEmpty() && top != common) {
+      return QString();
+    }
+    common = top;
+  }
+  if (common.isEmpty()) {
+    return QString();
+  }
+  for (auto entry = newFiles.constBegin(); entry != newFiles.constEnd(); ++entry) {
+    if (entry.value().package == clientName && entry.key().startsWith(common + QLatin1Char('/'))) {
+      return QString();
+    }
+  }
+  return common;
+}
+
+// Moves everything in folder/subfolder, the game's own files with the packages', up into folder, then removes the
+// emptied subfolder. A name folder already holds is refused, so nothing is written over.
+QString moveContentsUp(const QDir& folder, const QString& subfolder)
+{
+  const QDir source(folder.filePath(subfolder));
+  const QFileInfoList entries = source.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot | QDir::Hidden | QDir::System);
+  for (const QFileInfo& entry : entries) {
+    if (QFileInfo::exists(folder.filePath(entry.fileName()))) {
+      return QStringLiteral("%1 holds both %2 and %3, so the game cannot move up out of %4.")
+        .arg(folder.path(), entry.fileName(), QDir(subfolder).filePath(entry.fileName()), subfolder);
+    }
+  }
+  for (const QFileInfo& entry : entries) {
+    const QString target = folder.filePath(entry.fileName());
+    if (!QDir().rename(entry.absoluteFilePath(), target)) {
+      return QStringLiteral("Could not move %1 up out of %2 (is the game running?); press Update again to finish it.")
+        .arg(entry.fileName(), subfolder);
+    }
+  }
+  if (!folder.rmdir(subfolder)) {
+    return QStringLiteral("Moved the game up out of %1 but could not remove that folder; press Update again.").arg(subfolder);
+  }
+  return QString();
+}
+
 QString sizeText(qint64 bytes)
 {
   return QLocale().formattedDataSize(bytes, 1, QLocale::DataSizeTraditionalFormat);
@@ -796,11 +851,27 @@ void InstallJob::applyInstall()
 // file that exists is never written over.
 void InstallJob::applyUpdate()
 {
-  const Receipt& old = *installPlan.existing;
+  Receipt old = *installPlan.existing;
   const QDir folder(installPlan.folder);
   QSet<QString> fetchedNames;
   for (const Package& package : queue) {
     fetchedNames.insert(package.name);
+  }
+  if (fetchedNames.contains(installPlan.client.name)) {
+    const QString leftBehind = clientFolderLeftBehind(old, installPlan.client.name, ownedFiles);
+    if (!leftBehind.isEmpty()) {
+      const QString problem = moveContentsUp(folder, leftBehind);
+      if (!problem.isEmpty()) {
+        fail(problem);
+        return;
+      }
+      const QString prefix = leftBehind + QLatin1Char('/');
+      QMap<QString, OwnedFile> movedFiles;
+      for (auto entry = old.files.constBegin(); entry != old.files.constEnd(); ++entry) {
+        movedFiles.insert(entry.key().startsWith(prefix) ? entry.key().mid(prefix.size()) : entry.key(), entry.value());
+      }
+      old.files = movedFiles;
+    }
   }
   const QSet<QString> removedNames(installPlan.removed.cbegin(), installPlan.removed.cend());
   QMap<QString, OwnedFile> files;
