@@ -18,6 +18,12 @@ bool prefersSystem32Images()
   return policy.PreferSystem32Images != 0;
 }
 
+void letGameTakeForeground(qint64 processID)
+{
+  // Windows refuses this while Ankh is not the foreground window, and then the game should not take the front either.
+  AllowSetForegroundWindow(static_cast<DWORD>(processID));
+}
+
 void restartThroughExplorer()
 {
   wchar_t windowsFolder[MAX_PATH];
