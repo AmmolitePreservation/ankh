@@ -115,9 +115,17 @@ World parseWorld(const QJsonObject& object)
     requiredString(object, "variant"), requiredString(object, "version"), color, requiredInt(object, "eraStart"),
     requiredInt(object, "eraEnd"), optionalString(object, "status"), optionalInt(object, "accountDomainID"),
     optionalString(object, "accountDomain")};
-  // A site older than these two says neither: the game is then not started from here and keeps its account list.
+  // A site older than these says none of them: the game is then not started from here and keeps its account list.
   world.executable = object.value(QLatin1String("executable")).toString();
   world.givesCredential = object.value(QLatin1String("givesCredential")).toBool();
+  if (object.contains(QLatin1String("arguments"))) {
+    for (const QJsonValue& argument : requiredArray(object, "arguments")) {
+      if (!argument.isString()) {
+        throw ReplyError{QStringLiteral("an argument of a world's program is not text")};
+      }
+      world.arguments.append(argument.toString());
+    }
+  }
   return world;
 }
 

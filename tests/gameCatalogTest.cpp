@@ -52,10 +52,12 @@ private slots:
       QStringLiteral("Classic (1.12.1)"), QColor("#82b556"), 2004, 2006, QString(), 2, QStringLiteral("Arcanite Logins")};
     world.executable = QStringLiteral("WoW.exe");
     world.givesCredential = true;
+    world.arguments = QStringList{QStringLiteral("patchme"), QStringLiteral("-windowed")};
     const Game game = gameFromWorld(world);
     QVERIFY(!game.isAttached);
     QCOMPARE(game.executable, QStringLiteral("WoW.exe"));
     QVERIFY(game.givesCredential);
+    QCOMPARE(game.arguments, (QStringList{QStringLiteral("patchme"), QStringLiteral("-windowed")}));
     QCOMPARE(credentialUrl(QUrl(QStringLiteral("https://ammolite.test:1996")), game),
       QUrl(QStringLiteral("https://ammolite.test:1996/api/v1/servers/3/credential")));
   }

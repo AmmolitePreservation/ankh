@@ -34,6 +34,8 @@ struct Game {
   // A museum game whose client signs the player in with their own account: Ankh hands it the means at Play and shows
   // no accounts.
   bool givesCredential = false;
+  // What a museum game's program is started with.
+  QStringList arguments;
 
   bool startsThroughSteam() const { return steamAppID > 0; }
 };
