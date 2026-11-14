@@ -10,6 +10,7 @@ World of Warcraft Classic is the first game through the login model and EverQues
 - Where a server's changes are proven is set per game. EverQuest: on peridothousing and peridotguids, never on Peridot. World of Warcraft: on Arcanite itself, built from the fork's `claude` branch, with no clone and restarts as the work needs. The Phase 5 games are decided at their turn.
 - Nothing a production server's players use is removed before that server runs the new model.
 - Plugins reach a game folder Ankh manages only as versions of an Ammolite package applied by Ankh; development builds go to a separate copy of the game that Ankh does not manage.
+- No game gets exclusive fullscreen: every game runs as a borderless window covering its monitor at the monitor's own resolution, refresh rate and HDR state, whatever the game or the player asks for. A game's borderless plugin is required. No external library such as DXVK ships; such projects' approaches are studied, not used.
 
 ## Phase 0: names and the plugin repository
 
@@ -18,7 +19,7 @@ World of Warcraft Classic is the first game through the login model and EverQues
 - The plugins live in two repositories: `ankh-plugins` (public: the loader, the shared source and the plugins that know no online game) and a private one that carries it as a submodule and adds every online game. Layout in both: `core/`, `plugins/` (written once, for every game), `games/<game>/` (settings, the game's handlers for a plugin, the rare plugin only it needs). World of Warcraft, Motor City Online, Asheron's Call and Dungeons & Dragons Online build and run from it.
 - Every plugin of a game is an Ammolite package of its own, `<game>-<plugin>`, beside the game's loader, `<game>-loader`. The packages a game cannot run without are required and install with it; every other one installs when the player ticks it.
 - Exit: each game installs from its packages through Ankh and plays as before. Done for all four: each was updated through Ankh from the per-plugin packages, which removed the old tool packages' files, and started from its Ankh folder with the installed plugins loaded.
-- Found on the way, still open: a failed install, update or plugin change leaves no message while an update is still on offer (the offer's text takes the status line); and an update that moves a package's files leaves the emptied folder behind. A fresh World of Warcraft install crashed at its first start on some PCs; the game's part of `stability-guard` fixes it.
+- Found on the way, still open: a failed install, update or plugin change leaves no message while an update is still on offer (the offer's text takes the status line). A fresh World of Warcraft install crashed at its first start on some PCs; the game's part of `stability-guard` fixes it.
 
 ## Phase 1: accounts on Ammolite
 
@@ -54,6 +55,21 @@ Left on the client:
 - `WTF\Config.wtf` is shared by every client of an install and rewritten at each Enter World, so a starting client can read another's last character; the per-instance settings files of Phase 3 answer it.
 - Ankh: Play for museum games starts the installed client, and for World of Warcraft Classic hands it the player's sign-in and shows no accounts (seen on the workstation: the client Ankh started reported the site as its credential source; pressing Login in that freshly installed copy waits on the game's first-run terms, which a person accepts). Still to do: the Characters tab lists the account's characters and offers launch-to-character.
 - Exit: Play, Login with no typing; 100 characters of both teams on one account, made and selected from the character screen; 50 of them in the world at once and 40 in one raid group; the same character refused a second time; the account-keyed rules behaving as decided.
+
+## Display: every game borderless
+
+Starts once the account work in progress is finished. Learned from DXVK: a game that asks for fullscreen gets a borderless window, and its frames are presented by flipping rather than copying, which Windows treats like fullscreen (full refresh rate, variable refresh, low latency, instant Alt+Tab, mixed-refresh monitors). In order, each step measured before the next:
+
+1. A test setup on onyx that matches a player's: a 21:9 3440x1440 mode and a second monitor, and measurements of the display mode before and after a start, the frame rate before and after Alt+Tab, where the cursor may go, and whether the login screens are shown pixel for pixel.
+2. World of Warcraft Classic reproduced with those numbers, as the workstation showed it: the game believes it is fullscreen, so it keeps the cursor on its monitor and loses its frame rate after Alt+Tab; its login and character screens are rendered 3440 wide and squeezed into a 2560-wide picture, which softens their text.
+3. The game runs in its own windowed mode; `display-guard` keeps the window borderless, covering the monitor and in front at the start. Keeping the cursor in the window is a `display-guard` setting, off by default.
+4. Flip-model presentation in `display-guard` through Direct3D 9Ex, with the game's managed resources translated for it; proven on onyx, its frame rate and Alt+Tab measured, before it ships to any game.
+5. The login and character screens letterboxed natively: the game is given a 16:9 screen at the monitor's height there and draws it pixel for pixel into the window's center with black bars around it, mouse positions mapped to match; the world uses the full width.
+6. The in-world interface at 21:9 measured, and fixed if it stretches.
+7. Verified on a player's PC: ultrawide, three monitors, HDR, 175 Hz.
+8. Every game's borderless plugin required, then each game in turn: Asheron's Call (`display-guard`) and Motor City Online (`d3d8-display-guard`), Jade Empire and SOMA checked against the same measurements, Dungeons & Dragons Online's own windowed fullscreen forced by its plugins, and a borderless path for the TBC and WotLK clients, EverQuest, City of Heroes and Star Wars Galaxies.
+
+- Exit: on the workstation every game starts in front with no change of display mode, the cursor moves freely between monitors, the frame rate after Alt+Tab matches the one before, and the login screens' text is shown pixel for pixel.
 
 ## Phase 3: multiboxing
 
