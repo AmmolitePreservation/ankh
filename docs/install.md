@@ -46,10 +46,10 @@ The update downloads, verifies and extracts only the changed packages, then appl
 
 - a file whose listing entry (size and CRC-32) did not change is left alone, whatever its state on disk;
 - a file whose entry changed is written over, including any edit of yours;
-- a file the package dropped is deleted, as is every file of a package that left the edition;
+- a file the package dropped is deleted, as is every file of a package that left the edition, and a folder those deletions leave empty goes with them;
 - a file no package lists (settings the game created, addons, screenshots, logs) is never touched.
 
-Clients published before 2026.11.14 unpacked into a folder of their own inside the install (`World of Warcraft - Classic (1.12.1)\World of Warcraft - Arcanite`). When an update brings a client version that unpacks into the install itself, Ankh first moves everything in that folder up, the game's own files (settings, saved games, screenshots, addons) with the packages', reads the receipt's paths without the folder, and removes it; a name the install already holds outside that folder stops the update before anything moves.
+Clients published before 2026.11.14 unpacked into a folder of their own inside the install (`World of Warcraft - Classic (1.12.1)\World of Warcraft - Arcanite`). When an update brings a client version that unpacks into the install itself, Ankh first moves everything in that folder up, the game's own files (settings, saved games, screenshots, addons) with the packages', reads the receipt's paths without the folder, and removes it. An empty folder already at the top, such as one an older plugin layout left behind, gives way; any other name the install already holds outside that folder stops the update before anything moves.
 
 A file the package marks **write-once** (set per package on Ammolite, as patterns such as `*.ini`) is written on install and never overwritten: when its entry changes, your copy stays and the status line lists it. That is for shipped files the game saves settings into; a required setting inside such a file is the launcher's job at launch, not a package migration.
 

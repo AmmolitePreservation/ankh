@@ -23,6 +23,34 @@
 namespace {
 
 constexpr qint64 hashChunkBytes = 16 * 1024 * 1024;
+constexpr QDir::Filters everyEntry = QDir::AllEntries | QDir::NoDotAndDotDot | QDir::Hidden | QDir::System;
+
+bool isEmptyFolder(const QString& path)
+{
+  const QFileInfo info(path);
+  return info.isDir() && !info.isSymLink() && QDir(path).isEmpty(everyEntry);
+}
+
+// Removes the folders that deleting paths left empty, deepest first, up to but not including the install folder.
+QString removeEmptiedFolders(const QDir& folder, const QStringList& deletedPaths)
+{
+  QSet<QString> parents;
+  for (const QString& path : deletedPaths) {
+    for (QString parent = QFileInfo(path).path(); parent != QStringLiteral("."); parent = QFileInfo(parent).path()) {
+      parents.insert(parent);
+    }
+  }
+  QStringList deepestFirst(parents.cbegin(), parents.cend());
+  std::sort(deepestFirst.begin(), deepestFirst.end(), [](const QString& left, const QString& right) {
+    return left.count(QLatin1Char('/')) > right.count(QLatin1Char('/'));
+  });
+  for (const QString& parent : deepestFirst) {
+    if (isEmptyFolder(folder.filePath(parent)) && !folder.rmdir(parent)) {
+      return QStringLiteral("Could not remove the emptied folder %1; press Update again to finish it.").arg(parent);
+    }
+  }
+  return QString();
+}
 
 // The one folder every file of the old client sat in, when the new client puts none of its files there: the client
 // used to unpack into a folder of the install and now unpacks into the install itself. Empty otherwise.
@@ -55,19 +83,25 @@ QString clientFolderLeftBehind(const Receipt& old, const QString& clientName, co
 }
 
 // Moves everything in folder/subfolder, the game's own files with the packages', up into folder, then removes the
-// emptied subfolder. A name folder already holds is refused, so nothing is written over.
+// emptied subfolder. A name folder already holds is refused, so nothing is written over; an empty folder, such as
+// one an older plugin layout left behind, gives way.
 QString moveContentsUp(const QDir& folder, const QString& subfolder)
 {
   const QDir source(folder.filePath(subfolder));
-  const QFileInfoList entries = source.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot | QDir::Hidden | QDir::System);
+  const QFileInfoList entries = source.entryInfoList(everyEntry);
   for (const QFileInfo& entry : entries) {
-    if (QFileInfo::exists(folder.filePath(entry.fileName()))) {
+    const QString target = folder.filePath(entry.fileName());
+    if (QFileInfo::exists(target) && !isEmptyFolder(target)) {
       return QStringLiteral("%1 holds both %2 and %3, so the game cannot move up out of %4.")
         .arg(folder.path(), entry.fileName(), QDir(subfolder).filePath(entry.fileName()), subfolder);
     }
   }
   for (const QFileInfo& entry : entries) {
     const QString target = folder.filePath(entry.fileName());
+    if (QFileInfo::exists(target) && !folder.rmdir(entry.fileName())) {
+      return QStringLiteral("Could not remove the empty folder %1 to move the game up into its place; press Update again.")
+        .arg(entry.fileName());
+    }
     if (!QDir().rename(entry.absoluteFilePath(), target)) {
       return QStringLiteral("Could not move %1 up out of %2 (is the game running?); press Update again to finish it.")
         .arg(entry.fileName(), subfolder);
@@ -901,6 +935,11 @@ void InstallJob::applyUpdate()
       ++summary.deleted;
     }
     emit progressChanged(++done, total);
+  }
+  const QString emptiedProblem = removeEmptiedFolders(folder, toDelete);
+  if (!emptiedProblem.isEmpty()) {
+    fail(emptiedProblem);
+    return;
   }
   for (auto entry = ownedFiles.constBegin(); entry != ownedFiles.constEnd(); ++entry) {
     const QString& path = entry.key();
