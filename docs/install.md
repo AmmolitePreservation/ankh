@@ -7,7 +7,7 @@ Install on a game page downloads the edition's client and its required plugins f
 - Games live under one library folder, by default `clients` beside `ankh.exe`. Settings -> Games shows it and is the only place that changes it (the `library/root` setting must be a rooted path; anything else stops Ankh at start). A changed library affects new installs only.
 - One install can go somewhere else: Choose another folder on the install sheet puts that game in `<chosen folder>\<game> - <edition>` and changes nothing else.
 - Ankh remembers every install folder (`library/installs`), so a game outside the library, or one installed before the library changed, is still known after a restart. A remembered folder whose receipt is gone is forgotten.
-- Each install is one folder, `<game> - <edition label>` (`World of Warcraft - Classic (1.12.1)`), or `<game>` alone when the client serves several editions (`EverQuest`). Characters Windows refuses in a name become `-`.
+- Each install is one folder, `<game> - <edition label>` (`World of Warcraft - Classic (1.12.1)`), or `<game>` alone when the client serves several editions (`EverQuest`). Characters Windows refuses in a name become `-`. The client unpacks into that folder itself (`WoW.exe` beside `.ankh`), with no folder of its own inside; Ammolite refuses a client package that holds everything in one folder.
 - Every install folder carries `.ankh\receipt.json`: the client and each plugin with its version and SHA-256, and every file the packages placed with its size, CRC-32 and write-once flag from the server's listing. Ankh scans the library's receipts at start and after every install; a world is installed when its edition's client has a receipt. A receipt that cannot be read is listed under Settings -> Games and its game shows as not installed.
 - A receipt written by a release before 2026.11.12 calls its plugin list `tools`. Ankh reads it as it stands and writes it back with the field `plugins`, so the install it records stays installed.
 - Downloads and extraction happen in `.staging` beside the install folder (`<library>\.staging`, or `<chosen folder>\.staging`), so moving files into place never crosses a drive. A finished install leaves it empty.
@@ -48,6 +48,8 @@ The update downloads, verifies and extracts only the changed packages, then appl
 - a file whose entry changed is written over, including any edit of yours;
 - a file the package dropped is deleted, as is every file of a package that left the edition;
 - a file no package lists (settings the game created, addons, screenshots, logs) is never touched.
+
+Clients published before 2026.11.14 unpacked into a folder of their own inside the install (`World of Warcraft - Classic (1.12.1)\World of Warcraft - Arcanite`). When an update brings a client version that unpacks into the install itself, Ankh first moves everything in that folder up, the game's own files (settings, saved games, screenshots, addons) with the packages', reads the receipt's paths without the folder, and removes it; a name the install already holds outside that folder stops the update before anything moves.
 
 A file the package marks **write-once** (set per package on Ammolite, as patterns such as `*.ini`) is written on install and never overwritten: when its entry changes, your copy stays and the status line lists it. That is for shipped files the game saves settings into; a required setting inside such a file is the launcher's job at launch, not a package migration.
 
