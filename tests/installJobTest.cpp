@@ -692,6 +692,29 @@ private slots:
     QVERIFY(problem.isEmpty());
   }
 
+  void anEmptyFolderAnOlderLayoutLeftAtTheTopGivesWayToTheGameMovingUp()
+  {
+    FakeFileServer server;
+    serveEverything(server);
+    QTemporaryDir library;
+    const Receipt first = installNested(server, library.path());
+    const QDir folder(first.folder);
+    QVERIFY(folder.mkpath(QStringLiteral("ankh-plugins")));
+    QVERIFY(folder.mkpath(QStringLiteral("Data")));
+
+    QString problem;
+    const std::optional<InstallPlan> plan = planUpdate(alpha(), {client2Package(server), pluginPackage(server)}, first, problem);
+    QVERIFY2(plan.has_value(), qPrintable(problem));
+    InstallJob job(*plan, server.url(), QStringLiteral("t"), QStringLiteral("2026.11.14.1200"));
+    Outcome outcome;
+    run(job, outcome);
+    QVERIFY2(outcome.isDone, qPrintable(outcome.failure));
+    QVERIFY(!QFileInfo::exists(folder.filePath(QStringLiteral("Alpha"))));
+    QCOMPARE(QFileInfo(folder.filePath(QStringLiteral("Game.exe"))).size(), qint64(300));
+    QCOMPARE(QFileInfo(folder.filePath(QStringLiteral("Data/world.dat"))).size(), qint64(2400));
+    QCOMPARE(QFileInfo(folder.filePath(QStringLiteral("ankh-plugins/login.dll"))).size(), qint64(1100));
+  }
+
   void aGameThatCannotMoveUpWithoutWritingOverANameIsLeftAsItWas()
   {
     FakeFileServer server;
@@ -790,6 +813,36 @@ private slots:
     QCOMPARE(removed.receipt.files.size(), 5);
     QVERIFY(!removed.receipt.files.contains(QStringLiteral("maps/maps.ini")));
     QCOMPARE(QFileInfo(folder.filePath(QStringLiteral("Game.exe"))).size(), qint64(200));
+  }
+
+  void removingAPluginRemovesTheFoldersItLeftEmptyButNotOnesHoldingThePlayersFiles()
+  {
+    FakeFileServer server;
+    serveEverything(server);
+    QTemporaryDir library;
+    const Receipt first = installFirstVersion(server, library.path());
+    const QList<Package> packages = {clientPackage(server), pluginPackage(server), mapsPackage(server)};
+    QString problem;
+    const std::optional<InstallPlan> add = planPluginChange(alpha(), packages, first, {QStringLiteral("alpha-maps")}, problem);
+    QVERIFY2(add.has_value(), qPrintable(problem));
+    InstallJob addJob(*add, server.url(), QStringLiteral("t"), QStringLiteral("2026.11.08.1200"));
+    Outcome added;
+    run(addJob, added);
+    QVERIFY2(added.isDone, qPrintable(added.failure));
+    const QDir folder(first.folder);
+    QVERIFY(QFile::remove(folder.filePath(QStringLiteral("maps/maps.ini"))));
+    writeFile(folder.filePath(QStringLiteral("Data/notes.txt")), "the player's own");
+
+    const std::optional<InstallPlan> remove = planPluginChange(alpha(), packages, added.receipt, {}, problem);
+    QVERIFY2(remove.has_value(), qPrintable(problem));
+    InstallJob removeJob(*remove, server.url(), QStringLiteral("t"), QStringLiteral("2026.11.08.1200"));
+    Outcome removed;
+    run(removeJob, removed);
+    QVERIFY2(removed.isDone, qPrintable(removed.failure));
+    QCOMPARE(removed.summary.deleted, 1);
+    QVERIFY(!QFileInfo::exists(folder.filePath(QStringLiteral("maps"))));
+    QCOMPARE(contentOf(folder.filePath(QStringLiteral("Data/notes.txt"))), QByteArray("the player's own"));
+    QCOMPARE(QFileInfo(folder.filePath(QStringLiteral("Data/world.dat"))).size(), qint64(2400));
   }
 
   void aPluginChangeLeavesOutdatedPackagesAloneAndFetchesAMissingRequiredPlugin()
