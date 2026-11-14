@@ -19,7 +19,7 @@ QString scopeText()
   switch (installScope()) {
   case InstallScope::allUsers: return QStringLiteral("All users");
   case InstallScope::thisUser: return QStringLiteral("This user");
-  case InstallScope::buildFolder: return QStringLiteral("Not installed (running from a build folder)");
+  case InstallScope::notInstalled: return QStringLiteral("Not installed by the Ankh installer");
   }
   return QString();
 }
