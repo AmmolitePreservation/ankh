@@ -116,8 +116,6 @@ GamePage::GamePage(QWidget* parent)
 
   manageAccounts->setProperty("link", true);
   manageAccounts->setProperty("underlined", true);
-  manageAccounts->setEnabled(false);
-  manageAccounts->setToolTip(QStringLiteral("Game accounts are managed on the Ammolite site for now."));
   connect(manageAccounts, &QPushButton::clicked, this, [this] { emit manageLoginsRequested(game); });
   connect(realmChoice, &QComboBox::currentIndexChanged, this, [this] {
     if (!isFillingChoices && game.isAttached && realmChoice->isEnabled()) {
@@ -373,8 +371,8 @@ void GamePage::updateStatus()
       upToDateLabel->setToolTip(installDetail);
     }
     statusDetail->setText(!launchStatus.isEmpty() ? launchStatus
-      : game.givesCredential ? realmChoice->currentText()
-      : QStringLiteral("%1 %2 %3").arg(realmChoice->currentText(), QString(QChar(0x00B7)), accountChoice->currentText()));
+      : game.isAttached ? QStringLiteral("%1 %2 %3").arg(realmChoice->currentText(), QString(QChar(0x00B7)), accountChoice->currentText())
+      : realmChoice->currentText());
     primaryButton->setText(QStringLiteral("  Play"));
     if (!game.isAttached) {
       primaryButton->setEnabled(!game.executable.isEmpty() && launchStatus.isEmpty());
@@ -419,11 +417,6 @@ void GamePage::updateStatus()
     primaryButton->setEnabled(false);
     break;
   }
-  if (!game.isAttached) {
-    accountChoice->setEnabled((installState == InstallState::installed || installState == InstallState::updateAvailable)
-      && accountsProblem.isEmpty() && game.accountDomainID.has_value()
-      && accountChoice->count() > 0 && accountChoice->itemText(0) != QStringLiteral("No game account yet"));
-  }
   refreshIcons();
 }
 
@@ -440,38 +433,6 @@ void GamePage::showInstallProgress(const QString& text, qint64 done, qint64 tota
   statusDetail->setText(total > 0 ? QStringLiteral("%1 %2%").arg(text).arg(done * 100 / total) : text);
   progress->setRange(0, total > 0 ? 10000 : 0);
   progress->setValue(total > 0 ? static_cast<int>(done * 10000 / total) : 0);
-}
-
-void GamePage::refreshAccounts()
-{
-  if (game.isAttached) {
-    return;
-  }
-  accountChoice->clear();
-  if (!accountsProblem.isEmpty()) {
-    accountChoice->addItem(QStringLiteral("Could not load game accounts"));
-    accountChoice->setToolTip(accountsProblem);
-    accountChoice->setEnabled(false);
-    return;
-  }
-  accountChoice->setToolTip(QString());
-  if (!game.accountDomainID) {
-    accountChoice->addItem(QStringLiteral("This realm has no shared logins"));
-    accountChoice->setEnabled(false);
-    return;
-  }
-  for (const AccountDomain& domain : accountDomains) {
-    if (domain.accountDomainID != *game.accountDomainID) {
-      continue;
-    }
-    for (const GameLogin& login : domain.logins) {
-      accountChoice->addItem(login.gameUsername);
-    }
-  }
-  if (accountChoice->count() == 0) {
-    accountChoice->addItem(QStringLiteral("No game account yet"));
-    accountChoice->setEnabled(false);
-  }
 }
 
 void GamePage::clearDownloads()
@@ -643,20 +604,6 @@ void GamePage::refreshGame(const Game& newGame)
   updateStatus();
 }
 
-void GamePage::setGameAccounts(const QList<AccountDomain>& domains)
-{
-  accountDomains = domains;
-  accountsProblem.clear();
-  refreshAccounts();
-  updateStatus();
-}
-
-void GamePage::setGameAccountsFailed(const QString& message)
-{
-  accountsProblem = message;
-  refreshAccounts();
-}
-
 void GamePage::showGame(const Game& newGame)
 {
   game = newGame;
@@ -666,21 +613,19 @@ void GamePage::showGame(const Game& newGame)
   realmChoice->clear();
   realmChoice->addItem(game.isAttached ? QStringLiteral("Asking the game for its worlds...") : game.worldName);
   realmChoice->setEnabled(false);
+  accountChoice->clear();
   if (game.isAttached) {
-    accountChoice->clear();
     accountChoice->addItem(QStringLiteral("No login saved yet"));
-    accountChoice->setEnabled(false);
   }
+  accountChoice->setEnabled(false);
   isFillingChoices = false;
   launchStatus.clear();
-  // A game that signs the player in has nothing about accounts to show.
-  accountLabel->setVisible(!game.givesCredential);
-  accountChoice->setVisible(!game.givesCredential);
-  manageAccounts->setVisible(!game.givesCredential);
-  manageAccounts->setEnabled(game.isAttached);
-  manageAccounts->setToolTip(game.isAttached ? QStringLiteral("Logins for this game, kept on this computer.")
-    : QStringLiteral("Game accounts are managed on the Ammolite site for now."));
-  refreshAccounts();
+  // A museum world holds one account for the player, made at their first Play, so only an attached game has logins to choose.
+  accountLabel->setVisible(game.isAttached);
+  accountChoice->setVisible(game.isAttached);
+  manageAccounts->setVisible(game.isAttached);
+  manageAccounts->setEnabled(true);
+  manageAccounts->setToolTip(QStringLiteral("Logins for this game, kept on this computer."));
   showDownloads();
   refreshPlugins();
   tabs->setCurrentIndex(0);

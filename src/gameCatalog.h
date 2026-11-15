@@ -20,8 +20,6 @@ struct Game {
   QString initials;
   QColor tint;
   QString status;
-  std::optional<int> accountDomainID;
-  QString accountDomain;
   bool isInstalled;
   // An attached game: no realm, the player's own copy.
   bool isAttached = false;

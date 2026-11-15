@@ -57,14 +57,6 @@ QString optionalString(const QJsonObject& object, const char* key)
   return value.toString();
 }
 
-std::optional<int> optionalInt(const QJsonObject& object, const char* key)
-{
-  if (requiredValue(object, key).isNull()) {
-    return std::nullopt;
-  }
-  return requiredInt(object, key);
-}
-
 QJsonArray requiredArray(const QJsonObject& object, const char* key)
 {
   const QJsonValue value = requiredValue(object, key);
@@ -113,9 +105,8 @@ World parseWorld(const QJsonObject& object)
   }
   World world{requiredInt(object, "serverID"), requiredString(object, "name"), requiredString(object, "game"),
     requiredString(object, "variant"), requiredString(object, "version"), color, requiredInt(object, "eraStart"),
-    requiredInt(object, "eraEnd"), optionalString(object, "status"), optionalInt(object, "accountDomainID"),
-    optionalString(object, "accountDomain")};
-  // A site older than these says none of them: the game is then not started from here and keeps its account list.
+    requiredInt(object, "eraEnd"), optionalString(object, "status")};
+  // A site older than these says none of them: the game is then not started from here.
   world.executable = object.value(QLatin1String("executable")).toString();
   world.givesCredential = object.value(QLatin1String("givesCredential")).toBool();
   if (object.contains(QLatin1String("arguments"))) {
@@ -246,19 +237,6 @@ Manifest parseManifest(const QJsonObject& object)
     }
   }
   return manifest;
-}
-
-AccountDomain parseAccountDomain(const QJsonObject& object)
-{
-  AccountDomain domain{requiredInt(object, "accountDomainID"), requiredString(object, "name"), {}, {}};
-  for (const QJsonValue& capability : requiredArray(object, "capabilities")) {
-    domain.capabilities.append(capability.toString());
-  }
-  for (const QJsonValue& loginValue : requiredArray(object, "logins")) {
-    const QJsonObject login = objectAt(loginValue);
-    domain.logins.append({requiredInt(login, "gameAccountID"), requiredString(login, "gameUsername")});
-  }
-  return domain;
 }
 
 }
@@ -433,19 +411,6 @@ void AmmoliteClient::loadManifest(const QByteArray& etag)
       emit manifestLoaded(parseManifest(answer), reply->rawHeader("ETag"));
     },
     [this](const QString& message) { emit requestFailed(QStringLiteral("manifest"), message); });
-}
-
-void AmmoliteClient::loadGameAccounts()
-{
-  send("GET", QStringLiteral("/api/v1/me/gameAccounts"), QJsonObject(), true,
-    [this](const QJsonObject& answer) {
-      QList<AccountDomain> domains;
-      for (const QJsonValue& value : requiredArray(answer, "domains")) {
-        domains.append(parseAccountDomain(objectAt(value)));
-      }
-      emit gameAccountsLoaded(domains);
-    },
-    [this](const QString& message) { emit requestFailed(QStringLiteral("game accounts"), message); });
 }
 
 // Images are cached by their SHA-256, so a screenshot that changed on the server is fetched again and an unchanged one

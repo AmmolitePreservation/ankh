@@ -188,7 +188,7 @@ class InstallJobTest : public QObject {
   Game alpha() const
   {
     return {QStringLiteral("1"), 1, QStringLiteral("Alpha"), QStringLiteral("Classic"), QStringLiteral("classic"),
-      QStringLiteral("Alpha Prime"), QStringLiteral("AL"), QColor("#336699"), QStringLiteral("Online"), std::nullopt, QString(), false};
+      QStringLiteral("Alpha Prime"), QStringLiteral("AL"), QColor("#336699"), QStringLiteral("Online"), false};
   }
 
   Package clientPackage(const FakeFileServer& server) const

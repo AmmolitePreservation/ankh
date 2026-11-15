@@ -397,12 +397,7 @@ MainWindow::MainWindow()
       openSheet->setChecking(false, QString());
     }
   });
-  connect(client, &AmmoliteClient::gameAccountsLoaded, gamePage, &GamePage::setGameAccounts);
   connect(client, &AmmoliteClient::requestFailed, this, [this](const QString& what, const QString& message) {
-    if (what == QStringLiteral("game accounts")) {
-      gamePage->setGameAccountsFailed(message);
-      return;
-    }
     if (what == QStringLiteral("manifest")) {
       updateStatus = QStringLiteral("Could not check for updates: %1").arg(message);
       settingsPage->setUpdateStatus(updateStatus);
@@ -456,7 +451,6 @@ void MainWindow::enterSignedInState(const SignedInUser& user)
   hasCollection = false;
   manifestEtag.clear();
   checkManifest();
-  client->loadGameAccounts();
 }
 
 void MainWindow::enterSignedOutState(const QString& note)

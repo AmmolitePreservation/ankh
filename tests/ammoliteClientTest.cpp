@@ -283,8 +283,6 @@ private slots:
     QCOMPARE(arcanite.color, QColor("#82b556"));
     QCOMPARE(arcanite.eraStart, 2004);
     QCOMPARE(arcanite.status, QStringLiteral("Online, 12 playing"));
-    QCOMPARE(arcanite.accountDomainID, std::optional<int>(2));
-    QCOMPARE(arcanite.accountDomain, QStringLiteral("Arcanite Logins"));
     QCOMPARE(arcanite.executable, QStringLiteral("WoW.exe"));
     QVERIFY(arcanite.givesCredential);
     QCOMPARE(arcanite.arguments, QStringList());
@@ -295,8 +293,6 @@ private slots:
     QCOMPARE(manifest->worlds.at(2).arguments, QStringList());
     QVERIFY(!manifest->worlds.at(2).givesCredential);
     QCOMPARE(manifest->worlds.at(2).status, QString());
-    QCOMPARE(manifest->worlds.at(2).accountDomainID, std::optional<int>());
-    QCOMPARE(manifest->worlds.at(2).accountDomain, QString());
     QCOMPARE(manifest->packages.size(), 2);
     const Package& wowClient = manifest->packages.at(0);
     QCOMPARE(wowClient.name, QStringLiteral("worldofwarcraft-arcanite"));
@@ -510,23 +506,6 @@ private slots:
       QCOMPARE(manifest->collectionProblem, QStringLiteral("the category of the package mystery does not fit its role: %1").arg(shown));
       QVERIFY(!manifest->hasCollection);
     }
-  }
-
-  void gameAccountsAreParsedWithTheirLogins()
-  {
-    FakeServer server;
-    server.answer(QStringLiteral("GET /api/v1/me/gameAccounts"), 200, fixture("gameAccounts.json"));
-    AmmoliteClient client(server.url(), QStringLiteral("2026.11.08.0100"));
-    client.setToken(QStringLiteral("t"));
-    QList<AccountDomain> domains;
-    connect(&client, &AmmoliteClient::gameAccountsLoaded, this, [&](const QList<AccountDomain>& loaded) { domains = loaded; });
-    client.loadGameAccounts();
-    QTRY_COMPARE_WITH_TIMEOUT(domains.size(), 1, 5000);
-    QCOMPARE(domains.first().accountDomainID, 2);
-    QCOMPARE(domains.first().capabilities, QStringList({QStringLiteral("createAccount"), QStringLiteral("changePassword")}));
-    QCOMPARE(domains.first().logins.size(), 1);
-    QCOMPARE(domains.first().logins.first().gameAccountID, 11);
-    QCOMPARE(domains.first().logins.first().gameUsername, QStringLiteral("thrall"));
   }
 
   void signingOutRevokesTheTokenOnTheServer()
