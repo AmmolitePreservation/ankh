@@ -10,6 +10,7 @@ World of Warcraft Classic is the first game through the login model and EverQues
 - Where a server's changes are proven is set per game. EverQuest: on peridothousing and peridotguids, never on Peridot. World of Warcraft: on Arcanite itself, built from the fork's `claude` branch, with no clone and restarts as the work needs. The Phase 5 games are decided at their turn.
 - Nothing a production server's players use is removed before that server runs the new model.
 - Plugins reach a game folder Ankh manages only as versions of an Ammolite package applied by Ankh; development builds go to a separate copy of the game that Ankh does not manage.
+- No game gets exclusive fullscreen: every game runs as a borderless window covering its monitor at the monitor's own resolution, refresh rate and HDR state, whatever the game or the player asks for. A game's borderless plugin is required. A game that supports HDR keeps its HDR output borderless; none of today's games does. No external library such as DXVK ships; such projects' approaches are studied, not used.
 
 ## Phase 0: names and the plugin repository
 
@@ -18,20 +19,21 @@ World of Warcraft Classic is the first game through the login model and EverQues
 - The plugins live in two repositories: `ankh-plugins` (public: the loader, the shared source and the plugins that know no online game) and a private one that carries it as a submodule and adds every online game. Layout in both: `core/`, `plugins/` (written once, for every game), `games/<game>/` (settings, the game's handlers for a plugin, the rare plugin only it needs). World of Warcraft, Motor City Online, Asheron's Call and Dungeons & Dragons Online build and run from it.
 - Every plugin of a game is an Ammolite package of its own, `<game>-<plugin>`, beside the game's loader, `<game>-loader`. The packages a game cannot run without are required and install with it; every other one installs when the player ticks it.
 - Exit: each game installs from its packages through Ankh and plays as before. Done for all four: each was updated through Ankh from the per-plugin packages, which removed the old tool packages' files, and started from its Ankh folder with the installed plugins loaded.
-- Found on the way, still open: a failed install, update or plugin change leaves no message while an update is still on offer (the offer's text takes the status line); and an update that moves a package's files leaves the emptied folder behind. A fresh World of Warcraft install crashed at its first start on some PCs; the game's part of `stability-guard` fixes it.
+- Found on the way, still open: a failed install, update or plugin change leaves no message while an update is still on offer (the offer's text takes the status line). A fresh World of Warcraft install crashed at its first start on some PCs; the game's part of `stability-guard` fixes it.
 
 ## Phase 1: accounts on Ammolite
 
 - Added beside what exists: account verbs on the server handlers; one account per player per server; `moveCharacter` and the reversible merge that moves a player's characters into that account; the account's random password, set through the handler when the account is created, kept encrypted, and replaced only when access is removed or a reset is asked for; `GET /api/v1/servers/<id>/credential`, which returns that password to the signed-in player.
 - The cmangos handler carries the new verbs first (`moveCharacter` is `characters.account`); every other handler gains them in its game's phase.
 - Account domains, the claim flow, the account pages, `GET /me/gameAccounts` and Ankh's Account list keep serving every server that has not moved; each server sheds them at its own release.
-- Exit: on Arcanite, a player's test accounts merge into one and back again; the password Ammolite returns logs a stock client in, and stops doing so once the player's access is removed. Met for the merge: on Arcanite a test player's claimed account's 50 characters moved into the account the site made for them, back, and in again, through a database user that may only change a character's account and the realm's counts; the account's character list shows them after a login with nothing typed. Not yet seen: the password stopping to work once access is removed.
+- Exit: on Arcanite, a player's test accounts merge into one and back again; the password Ammolite returns logs a stock client in, and stops doing so once the player's access is removed. Met for the merge: on Arcanite a test player's claimed account's 50 characters moved into the account the site made for them, back, and in again, through a database user that may only change a character's account and the realm's counts; the account's character list shows them after a login with nothing typed. Met for access: the password the site handed out logged in to Arcanite's login server, was refused as banned while the player was disabled on the site, and logged in again once they were enabled, the password unchanged.
 
 ## Phase 2: World of Warcraft Classic
 
 Running on Arcanite, from the `claude` branch of the organization's mangos-classic fork:
 
 - A session per login with the lock on the character: characters of one account are in the world together, a character already in the world is refused a second time, and a character whose client dropped is taken over by its next login.
+- Seen with two stock clients of one account: Change Realm from the character list in the client holding the older key reconnects without a new login and its character enters the world beside the other's; one character entered from both within the same millisecond reaches the world once, and the other client drops back to its list, with no message, and enters another character.
 - `CharactersPerRealm` and `CharactersPerAccount` default to 100, and an account holds characters of both teams on every realm type (`AllowTwoSide.Accounts` defaults to 1): one account holds all of a player's characters, Alliance and Horde.
 - `account.sessionkey` holds the keys of the account's last 200 logins, newest first. The world server and realmd's reconnect accept any of them, so a login leaves the account's other clients their keys. Ten stock clients logging one account in within the same second all reach the character list.
 - Session keys are hashed on the client's 40 bytes at the world login, the reconnect proof and Warden, and realmd's reconnect goes on to serve the realm list, both as upstream has them. A protocol test run on Arcanite covers a reconnect and a world login by the newest key, the oldest key, a key with a zero top byte and a key that is not in the list.
@@ -43,8 +45,8 @@ Left on the server:
 
 - Merge upstream cmangos master. The fork stands at upstream `8ec338a17`; upstream has since reworked and hardened realmd's authentication (`4ad703442`, `2f390f546`, `933d18ee2`, `57cc05969`, `c98484f8b`, `42305c790`). Conflicts to expect in `WorldSocket.cpp`: upstream requires one 80-character key and reconnects to the account's one session, against the key list and a session per login.
 - Account state that sessions now share or overwrite: account data and tutorial flags, `active_realm_id`, mute and antispam flags (they reach one session), the one online character the account list commands show (`ShowAccountListHelper`), the script ban in `Player::BanPlayer`.
-- Rules keyed by account, each to be decided rather than inherited: bids on the account's own auctions, one guild charter signature per account, the bundled PlayerBot's master lookup and same-account tests.
-- Login paths not yet exercised or known wrong: a second login for a character whose first is still loading; a stock client's own reconnect to realmd (Change Realm from the character list), which only the protocol test has exercised; the build without playerbots, whose logout marks every character of the account offline and whose login callback leaks the load when the session is gone; the playerbot takeover with no account check.
+- Rules keyed by account, each decided rather than inherited. `mangosd.conf` settings, stock by default: `Auction.BidOnOwnAccount` (0: a bid on another character of the account's auction is refused, the seller online or not; Arcanite 0) and `Guild.CharterSignaturesPerCharacter` (0: one charter signature per account; Arcanite 1). Both proven on Arcanite with three characters of one account online, each setting both ways. The playerbots module Arcanite builds (the organization's cmangos-playerbots fork) adds any character of the player's account or guild as a bot with no limit on their number, characters played from their own clients included, and a bot obeys every character of its account: kept as it is.
+- Login paths known wrong: the build without playerbots, whose logout marks every character of the account offline and whose login callback leaks the load when the session is gone; the playerbot takeover with no account check.
 - Log noise: a `CMSG_CANCEL_TRADE` error line after a refused login or a return from the character list; an offline session's logout logged with "IP: bot".
 
 Left on the client:
@@ -54,6 +56,21 @@ Left on the client:
 - `WTF\Config.wtf` is shared by every client of an install and rewritten at each Enter World, so a starting client can read another's last character; the per-instance settings files of Phase 3 answer it.
 - Ankh: Play for museum games starts the installed client, and for World of Warcraft Classic hands it the player's sign-in and shows no accounts (seen on the workstation: the client Ankh started reported the site as its credential source; pressing Login in that freshly installed copy waits on the game's first-run terms, which a person accepts). Still to do: the Characters tab lists the account's characters and offers launch-to-character.
 - Exit: Play, Login with no typing; 100 characters of both teams on one account, made and selected from the character screen; 50 of them in the world at once and 40 in one raid group; the same character refused a second time; the account-keyed rules behaving as decided.
+
+## Display: every game borderless
+
+Starts once the account work in progress is finished. Learned from DXVK: a game that asks for fullscreen gets a borderless window, and its frames are presented by flipping rather than copying, which Windows treats like fullscreen (full refresh rate, variable refresh, low latency, instant Alt+Tab, mixed-refresh monitors). In order, each step measured before the next:
+
+1. A test setup on onyx that matches a player's: a 21:9 3440x1440 mode and a second monitor, and measurements of the display mode before and after a start, the frame rate before and after Alt+Tab, where the cursor may go, and whether the login screens are shown pixel for pixel.
+2. World of Warcraft Classic reproduced with those numbers, as the workstation showed it: the game believes it is fullscreen, so it keeps the cursor on its monitor and loses its frame rate after Alt+Tab; its login and character screens are rendered 3440 wide and squeezed into a 2560-wide picture, which softens their text.
+3. The game runs in its own windowed mode; `display-guard` keeps the window borderless, covering the monitor and in front at the start. Keeping the cursor in the window is a `display-guard` setting, off by default.
+4. Flip-model presentation in `display-guard` through Direct3D 9Ex, with the game's managed resources translated for it; proven on onyx, its frame rate and Alt+Tab measured, before it ships to any game.
+5. The login and character screens letterboxed natively: the game is given a 16:9 screen at the monitor's height there and draws it pixel for pixel into the window's center with black bars around it, mouse positions mapped to match; the world uses the full width.
+6. The in-world interface at 21:9 measured, and fixed if it stretches.
+7. Verified on a player's PC: ultrawide, three monitors, HDR, 175 Hz.
+8. Every game's borderless plugin required, then each game in turn: Asheron's Call (`display-guard`) and Motor City Online (`d3d8-display-guard`), Jade Empire and SOMA checked against the same measurements, Dungeons & Dragons Online's own windowed fullscreen forced by its plugins, and a borderless path for the TBC and WotLK clients, EverQuest, City of Heroes and Star Wars Galaxies.
+
+- Exit: on the workstation every game starts in front with no change of display mode, the cursor moves freely between monitors, the frame rate after Alt+Tab matches the one before, and the login screens' text is shown pixel for pixel.
 
 ## Phase 3: multiboxing
 

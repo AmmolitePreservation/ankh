@@ -750,6 +750,7 @@ void MainWindow::startMuseumGame(const Game& game)
   if (!program.isEmpty()) {
     QProcess gameProcess;
     gameProcess.setProgram(program);
+    gameProcess.setArguments(game.arguments);
     gameProcess.setWorkingDirectory(QFileInfo(program).absolutePath());
     QProcessEnvironment environment = QProcessEnvironment::systemEnvironment();
     if (game.givesCredential) {

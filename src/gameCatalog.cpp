@@ -35,6 +35,7 @@ Game gameFromWorld(const World& world)
     world.name, initialsFor(world.game), world.color, world.status, world.accountDomainID, world.accountDomain, false};
   game.executable = world.executable;
   game.givesCredential = world.givesCredential;
+  game.arguments = world.arguments;
   return game;
 }
 
