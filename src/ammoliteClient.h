@@ -31,8 +31,6 @@ struct World {
   int eraStart;
   int eraEnd;
   QString status;
-  std::optional<int> accountDomainID;
-  QString accountDomain;
   // The file name of the game's program in its client package; empty where Ankh cannot start the game.
   QString executable;
   // What the program is started with, in order.
@@ -126,18 +124,6 @@ struct Manifest {
   QString collectionProblem;
 };
 
-struct GameLogin {
-  int gameAccountID;
-  QString gameUsername;
-};
-
-struct AccountDomain {
-  int accountDomainID;
-  QString name;
-  QStringList capabilities;
-  QList<GameLogin> logins;
-};
-
 QUrl validatedServiceUrl(const QString& text);
 
 class AmmoliteClient : public QObject {
@@ -155,7 +141,6 @@ public:
   void signOut();
   void loadMe();
   void loadManifest(const QByteArray& etag);
-  void loadGameAccounts();
   void loadScreenshot(const QString& packageName, const PackageScreenshot& screenshot, const QString& cacheFolder);
 
 signals:
@@ -166,7 +151,6 @@ signals:
   void meLoaded(const SignedInUser& user);
   void manifestLoaded(const Manifest& manifest, const QByteArray& etag);
   void manifestUnchanged();
-  void gameAccountsLoaded(const QList<AccountDomain>& domains);
   void screenshotLoaded(const QString& packageName, const QString& sha256, const QByteArray& image);
   void screenshotFailed(const QString& packageName, const QString& message);
   void sessionExpired();

@@ -119,7 +119,7 @@ Illustrative initial rows:
 
 1. **Game header:** 48 px icon; game title; edition and build beneath; one Game options menu. No scenic banner.
 2. **Tabs:** Play, Characters when supported, Plugins, Media, About.
-3. **Launch setup:** a section heading, then Realm and Account dropdowns side by side with their labels above, a Manage accounts link under Account, and a collapsed More launch settings disclosure. The last valid choices are remembered per person and release. For a game that is not installed the dropdowns are disabled and a line says to install first.
+3. **Launch setup:** a section heading, then Realm and Account dropdowns side by side with their labels above (Account, with a Manage accounts link under it, for an attached game only), and a collapsed More launch settings disclosure. The last valid choices are remembered per person and release. For a game that is not installed the dropdowns are disabled and a line says to install first.
 Up“Up to date · Required compatibility ready.” An optional-plugins summary is a small link, not a promotional card.
 5. **Recent character:** a section with at most one small row (portrait, name, level, race, class and location) when reliable data exists. It identifies the account/realm context and does not imply automatic in-game selection.
 Ready“Ready to play” and “Arcanite · Main account.”

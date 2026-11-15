@@ -32,7 +32,7 @@ QString initialsFor(const QString& title)
 Game gameFromWorld(const World& world)
 {
   Game game{QStringLiteral("world%1").arg(world.serverID), world.serverID, world.game, world.version, world.variant,
-    world.name, initialsFor(world.game), world.color, world.status, world.accountDomainID, world.accountDomain, false};
+    world.name, initialsFor(world.game), world.color, world.status, false};
   game.executable = world.executable;
   game.givesCredential = world.givesCredential;
   game.arguments = world.arguments;
@@ -42,7 +42,7 @@ Game gameFromWorld(const World& world)
 Game gameFromAttached(const AttachedGame& attached)
 {
   return {QStringLiteral("attached/%1/%2").arg(attached.game, attached.variant), 0, attached.game, attached.edition,
-    attached.variant, QString(), initialsFor(attached.game), attached.color, QString(), std::nullopt, QString(), false, true,
+    attached.variant, QString(), initialsFor(attached.game), attached.color, QString(), false, true,
     attached.executable, attached.launcherConfig, attached.steamAppID};
 }
 

@@ -28,8 +28,6 @@ public:
   void setPackages(const QList<Package>& packages);
   void setInstallState(InstallState state, const QString& detail);
   void showInstallProgress(const QString& text, qint64 done, qint64 total);
-  void setGameAccounts(const QList<AccountDomain>& domains);
-  void setGameAccountsFailed(const QString& message);
   // What the Plugins tab shows: whether the game is installed, its installed plugins, and why plugins cannot change now.
   void setPluginState(bool isInstalled, const QStringList& installedNames, const QString& busyReason);
   void setResearchPluginsShown(bool isShown);
@@ -63,7 +61,6 @@ signals:
 
 private:
   void refreshIcons();
-  void refreshAccounts();
   void updateStatus();
   void clearDownloads();
   void showDownloads();
@@ -104,8 +101,6 @@ private:
   QLabel* statusDetail;
   QProgressBar* progress;
   QPushButton* primaryButton;
-  QList<AccountDomain> accountDomains;
-  QString accountsProblem;
   InstallState installState = InstallState::notInstalled;
   QString installDetail;
   QString launchStatus;

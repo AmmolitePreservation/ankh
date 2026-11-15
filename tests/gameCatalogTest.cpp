@@ -28,8 +28,7 @@ private slots:
   void aWorldBecomesAGameWithItsOwnIdentity()
   {
     const World world{3, QStringLiteral("Arcanite"), QStringLiteral("World of Warcraft"), QStringLiteral("classic"),
-      QStringLiteral("Classic (1.12.1)"), QColor("#82b556"), 2004, 2006, QStringLiteral("Online, 12 playing"), 2,
-      QStringLiteral("Arcanite Logins")};
+      QStringLiteral("Classic (1.12.1)"), QColor("#82b556"), 2004, 2006, QStringLiteral("Online, 12 playing")};
     const Game game = gameFromWorld(world);
     QCOMPARE(game.id, QStringLiteral("world3"));
     QCOMPARE(game.serverID, 3);
@@ -40,7 +39,6 @@ private slots:
     QCOMPARE(game.initials, QStringLiteral("WW"));
     QCOMPARE(game.tint, QColor("#82b556"));
     QCOMPARE(game.status, QStringLiteral("Online, 12 playing"));
-    QCOMPARE(game.accountDomainID, std::optional<int>(2));
     QVERIFY(!game.isInstalled);
     QCOMPARE(game.executable, QString());
     QVERIFY(!game.givesCredential);
@@ -49,7 +47,7 @@ private slots:
   void aWorldThatSignsThePlayerInCarriesItsProgramAndWhereToAskForTheAccount()
   {
     World world{3, QStringLiteral("Arcanite"), QStringLiteral("World of Warcraft"), QStringLiteral("classic"),
-      QStringLiteral("Classic (1.12.1)"), QColor("#82b556"), 2004, 2006, QString(), 2, QStringLiteral("Arcanite Logins")};
+      QStringLiteral("Classic (1.12.1)"), QColor("#82b556"), 2004, 2006, QString()};
     world.executable = QStringLiteral("WoW.exe");
     world.givesCredential = true;
     world.arguments = QStringList{QStringLiteral("patchme"), QStringLiteral("-windowed")};
@@ -74,7 +72,7 @@ private slots:
       {QStringLiteral("loose"), QStringLiteral("Unattached"), QStringLiteral("optionalPlugin"), {}, std::nullopt},
     };
     Game game = gameFromWorld(World{3, QStringLiteral("Arcanite"), QStringLiteral("World of Warcraft"), QStringLiteral("classic"),
-      QStringLiteral("Classic (1.12.1)"), QColor("#82b556"), 2004, 2006, QString(), std::nullopt, QString()});
+      QStringLiteral("Classic (1.12.1)"), QColor("#82b556"), 2004, 2006, QString()});
     QStringList names;
     for (const Package& package : packagesFor(game, packages)) {
       names.append(package.name);

@@ -45,7 +45,7 @@ The AmmolitePreservation organization holds a copy of every server we modify: a 
 - **Each emulator, in the organization's copy:** characters per account unlimited; several sessions per account with the lock per character; every rule the server keys by account decided rather than inherited.
 - **Each game's plugin set** with the login module: the Login-button swap, login boxes that take an Ammolite name and password, the character-screen capacity with search and filter, the server address from the launch. EverQuest's is new, on the plugin base the other games use; claudelink stays for MacroQuest research.
 - **Ankh Play for museum games.** Start the installed client aimed at the chosen server; the Characters tab lists the account's characters and offers launch-to-character.
-- **Removal, per server at its release:** `accountDomain` with its pages, forms and API, the account pages, the claim flow, Ankh's Account list and `GET /me/gameAccounts`. The `gameAccount` tables and Ankh's account domain fields go once no server needs them.
+- **Removal, for every server at once (the owner's call: the site was too cumbersome to keep them while games migrate):** players see no game accounts anywhere. The site's login pages, claim flow and game account API are gone, `GET /me/gameAccounts` answers no domains for Ankh releases that still ask, and Ankh shows no Account list for a museum game. A world's login system becomes a setting of the world in the admin pages. The `gameAccount` table stays only for admin merges of logins claimed earlier, and goes once no server needs one.
 
 Independent of these: multiboxing profiles and the Sessions board (DDO first), window layouts and per-instance settings files in the shared core.
 
