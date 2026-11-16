@@ -36,6 +36,7 @@ Game gameFromWorld(const World& world)
   game.executable = world.executable;
   game.givesCredential = world.givesCredential;
   game.arguments = world.arguments;
+  game.address = world.address;
   return game;
 }
 

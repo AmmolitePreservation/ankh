@@ -752,6 +752,9 @@ void MainWindow::startMuseumGame(const Game& game)
       environment.insert(QStringLiteral("ankhPluginsCredentialURL"), credentialUrl(client->baseUrl(), game).toString());
       environment.insert(QStringLiteral("ankhPluginsCredentialToken"), client->token());
     }
+    if (!game.address.isEmpty()) {
+      environment.insert(QStringLiteral("ankhPluginsServerAddress"), game.address);
+    }
     gameProcess.setProcessEnvironment(environment);
     qint64 processID = 0;
     if (gameProcess.startDetached(&processID)) {

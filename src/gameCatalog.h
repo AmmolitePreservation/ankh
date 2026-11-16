@@ -34,6 +34,8 @@ struct Game {
   bool givesCredential = false;
   // What a museum game's program is started with.
   QStringList arguments;
+  // Where a museum game's client connects, which Play hands it; empty where the client package alone aims the client.
+  QString address;
 
   bool startsThroughSteam() const { return steamAppID > 0; }
 };

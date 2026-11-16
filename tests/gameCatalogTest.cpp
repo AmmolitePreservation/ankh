@@ -51,11 +51,13 @@ private slots:
     world.executable = QStringLiteral("WoW.exe");
     world.givesCredential = true;
     world.arguments = QStringList{QStringLiteral("patchme"), QStringLiteral("-windowed")};
+    world.address = QStringLiteral("arcanite.example.org:3725");
     const Game game = gameFromWorld(world);
     QVERIFY(!game.isAttached);
     QCOMPARE(game.executable, QStringLiteral("WoW.exe"));
     QVERIFY(game.givesCredential);
     QCOMPARE(game.arguments, (QStringList{QStringLiteral("patchme"), QStringLiteral("-windowed")}));
+    QCOMPARE(game.address, QStringLiteral("arcanite.example.org:3725"));
     QCOMPARE(credentialUrl(QUrl(QStringLiteral("https://ammolite.test:1996")), game),
       QUrl(QStringLiteral("https://ammolite.test:1996/api/v1/servers/3/credential")));
   }

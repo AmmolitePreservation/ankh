@@ -286,9 +286,11 @@ private slots:
     QCOMPARE(arcanite.executable, QStringLiteral("WoW.exe"));
     QVERIFY(arcanite.givesCredential);
     QCOMPARE(arcanite.arguments, QStringList());
+    QCOMPARE(arcanite.address, QStringLiteral("arcanite.example.org:3725"));
     const World& peridot = manifest->worlds.at(1);
     QCOMPARE(peridot.executable, QStringLiteral("eqgame.exe"));
     QCOMPARE(peridot.arguments, QStringList{QStringLiteral("patchme")});
+    QCOMPARE(peridot.address, QString());
     QCOMPARE(manifest->worlds.at(2).executable, QString());
     QCOMPARE(manifest->worlds.at(2).arguments, QStringList());
     QVERIFY(!manifest->worlds.at(2).givesCredential);
