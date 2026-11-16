@@ -37,6 +37,9 @@ struct World {
   QStringList arguments;
   // The game's client signs the player in with their own account, which the site gives it: nothing to type or choose.
   bool givesCredential = false;
+  // Where the game's client connects, a host name with an optional port; empty where the client package alone aims
+  // the client.
+  QString address;
 };
 
 struct Edition {

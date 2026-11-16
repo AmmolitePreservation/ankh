@@ -109,6 +109,7 @@ World parseWorld(const QJsonObject& object)
   // A site older than these says none of them: the game is then not started from here.
   world.executable = object.value(QLatin1String("executable")).toString();
   world.givesCredential = object.value(QLatin1String("givesCredential")).toBool();
+  world.address = object.value(QLatin1String("address")).toString();
   if (object.contains(QLatin1String("arguments"))) {
     for (const QJsonValue& argument : requiredArray(object, "arguments")) {
       if (!argument.isString()) {
