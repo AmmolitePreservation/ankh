@@ -51,7 +51,7 @@ Left on the server:
 
 Left on the client:
 
-- `login` for `games/wow` does the Login-button credential swap, takes the player's Ammolite name and password typed at the login screen (with or without Ankh, retyped after a return to it), and takes a new account straight to its world's character list; still to do: the realm address from the launch and `sessionReport`.
+- `login` for `games/wow` does the Login-button credential swap, takes the player's Ammolite name and password typed at the login screen (with or without Ankh, retyped after a return to it), takes a new account straight to its world's character list, opens the login screen without the game's license screens, and connects to the address Ankh's launch names (a host with an optional port, which a world carries on the site and EverQuest's `login` takes the same way) in place of the one in the client's files; still to do: `sessionReport`.
 - Search and sort on the character screen: held back by the owner for now.
 - `WTF\Config.wtf` is shared by every client of an install and rewritten at each Enter World, so a starting client can read another's last character; the per-instance settings files of Phase 3 answer it.
 - Ankh: Play for museum games starts the installed client, and for World of Warcraft Classic hands it the player's sign-in and shows no accounts (seen on the workstation: the client Ankh started reported the site as its credential source; pressing Login in that freshly installed copy waits on the game's first-run terms, which a person accepts). Still to do: the Characters tab lists the account's characters and offers launch-to-character.
