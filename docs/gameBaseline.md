@@ -17,7 +17,7 @@ What every Ammolite game has, server and client, and where each game stands. A g
 
 - **A1 One account per player per server**, named after the Ammolite username, made by Ammolite.
 - **A2 At least 100 characters per account.**
-- **A3 Many at once.** Several sessions on one account, the lock on the character, and the game's largest event plus two groups all logged in at once from one account, proven: World of Warcraft 50 (40 raid + 2 groups of 5), EverQuest 84 (72 raid + 2 groups of 6), Motor City Online 18 personas (a race of 6 + 2 races), City of Heroes 64 (a league of 48 + 2 teams of 8), Asheron's Call to be set by the owner.
+- **A3 Many at once.** Several sessions on one account with the lock on the character. Before a game is signed off, its largest event plus two groups is proven logged in at once from one account, once: World of Warcraft 50 (40 raid + 2 groups of 5), EverQuest 84 (72 raid + 2 groups of 6), Motor City Online 18 personas (a race of 6 + 2 races), City of Heroes 64 (a league of 48 + 2 teams of 8), Asheron's Call to be set by the owner. After that one test, a single party logged in at once from one account is the check.
 - **A4 Merging.** A player's old accounts on a server merge into theirs, and the merge can be undone.
 - **A5 No account screens.** Ankh shows no account list or choice for the game.
 
@@ -53,7 +53,7 @@ done, partial, missing, n/a; "owner" where the owner's decision comes first. Fro
 | L6 | partial: realmd checks its own stored password | done | done | done | owner |
 | A1 | done | done | done | done | owner |
 | A2 | done | done | done | done | owner |
-| A3 | done (50); re-run since the upstream merge reached 10 | done (84, on the lab host) | partial (18 proven); no lock on the persona | partial (4 of 64 proven) | owner (target not set) |
+| A3 | done (50 at once, 2026-11-13) | done (84 at once, 2026-11-13) | partial: 18 at once proven (2026-11-16); no lock on the persona | partial: the 64 at once is owed (4 proven) | owner (target not set) |
 | A4 | done | done | done | done (never needed) | owner |
 | A5 | done | done | done | done | owner |
 | C1 | done | done | done | done | owner |
@@ -78,5 +78,5 @@ None. (World of Warcraft's reusable account password was an exception until the 
 4. **City of Heroes (S2, D3):** the server from the launch; the Ultra Mode dialog and the crash notice.
 5. **EverQuest (D4):** frame-control shipped.
 6. **Required display plugins (D1):** d3d8-display-guard for Motor City Online.
-7. **Tests owed:** 128-character passwords and 32-character names typed in every game; A3 re-runs (World of Warcraft after the merge, EverQuest on Peridot, City of Heroes 64 on the owner's go); D3 checks; D2 only when the owner asks for an ultrawide test.
+7. **Tests owed:** 128-character passwords and 32-character names typed in every game; City of Heroes' 64 at once (on the owner's go); D3 checks; D2 only when the owner asks for an ultrawide test.
 8. **Asheron's Call:** the owner's talk on its login design first, then every row.
