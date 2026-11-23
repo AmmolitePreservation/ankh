@@ -47,10 +47,10 @@ done, partial, missing, n/a; "owner" where the owner's decision comes first. Fro
 |---|---|---|---|---|---|
 | L1 | done; 128-character password not tested | partial; 128-character password not measured | partial; the game holds 127 password characters; a real 32-character user not tried | done; typed 32-character name not tested | owner |
 | L2 | done | done | done | done | owner |
-| L3 | partial: launch grant, forgotten after the first login; the account password it fetches is reusable | done | done | done | owner |
-| L4 | done; not tested in a client | done | done: the login dialog has no remember box; the game has no later login screen, a later login in the session asks for a restart | done | owner |
+| L3 | done: one-time keys realmd takes from its login_key table under NAME#ID | done | done | done | owner |
+| L4 | done | done | done: the login dialog has no remember box; the game has no later login screen, a later login in the session asks for a restart | done | owner |
 | L5 | done | done | partial: TLS and account-mismatch errors end in a Windows box | partial: the game's own box for empty login boxes shows no text (the client has none for AccountInfoRequired) | partial: fatal errors in a Windows box |
-| L6 | partial: realmd checks its own stored password | done | done | done | owner |
+| L6 | done: the client logs in only with keys Ammolite gives; the owner's own accounts keep their passwords until their move | done | done | done | owner |
 | A1 | done | done | done | done | owner |
 | A2 | done | done | done | done | owner |
 | A3 | done (50 at once, 2026-11-13) | done (84 at once, 2026-11-13) | partial: 18 at once proven (2026-11-16); no lock on the persona | partial: the 64 at once is owed (4 proven) | owner (target not set) |
@@ -72,11 +72,10 @@ None. (World of Warcraft's reusable account password was an exception until the 
 
 ## Work, in order
 
-1. **Login, World of Warcraft (L3, L6):** one-time keys in place of the account's password, each client naming its key to realmd. (Launch grants, forgetting them after the first login, City of Heroes' and Motor City Online's retyping are done; older Ankh releases keep working.)
-2. **stability-guard without the mouse hook (S3):** the exit guard keeps close requests, its grace and Ctrl+Alt+F4 without a system-wide hook.
-3. **Motor City Online (A3, L1, L5):** a lock on the persona; 128-character passwords; its remaining Windows boxes in the game.
-4. **City of Heroes (S2, D3, L5):** the server from the launch; the Ultra Mode dialog and the crash notice; text for the game's own empty-box message.
-5. **EverQuest (D4):** frame-control shipped.
-6. **Required display plugins (D1):** d3d8-display-guard for Motor City Online.
-7. **Tests owed:** 128-character passwords and 32-character names typed in every game; City of Heroes' 64 at once (on the owner's go); D3 checks; D2 only when the owner asks for an ultrawide test.
-8. **Asheron's Call:** the owner's talk on its login design first, then every row.
+1. **stability-guard without the mouse hook (S3):** the exit guard keeps close requests, its grace and Ctrl+Alt+F4 without a system-wide hook.
+2. **Motor City Online (A3, L1, L5):** a lock on the persona; 128-character passwords; its remaining Windows boxes in the game.
+3. **City of Heroes (S2, D3, L5):** the server from the launch; the Ultra Mode dialog and the crash notice; text for the game's own empty-box message.
+4. **EverQuest (D4):** frame-control shipped.
+5. **Required display plugins (D1):** d3d8-display-guard for Motor City Online.
+6. **Tests owed:** 128-character passwords and 32-character names typed in every game; City of Heroes' 64 at once (on the owner's go); D3 checks; D2 only when the owner asks for an ultrawide test.
+7. **Asheron's Call:** the owner's talk on its login design first, then every row.
