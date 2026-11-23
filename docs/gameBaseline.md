@@ -45,7 +45,7 @@ done, partial, missing, n/a; "owner" where the owner's decision comes first. Fro
 
 | Row | World of Warcraft | EverQuest | Motor City Online | City of Heroes | Asheron's Call |
 |---|---|---|---|---|---|
-| L1 | done; 128-character password not tested | partial; 128-character password not measured | partial: 128-character password typed (2026-11-23); a 32-character name not tried | done; typed 32-character name not tested | owner |
+| L1 | done (32-letter name and 128-character password typed 2026-11-23) | done (both filled through the game's own text setter 2026-11-23; the login screen's boxes set no length) | done (both typed 2026-11-23) | done (both typed 2026-11-23) | owner |
 | L2 | done | done | done | done (Ankh's Play could not start it until 2026-11-23: the site gave no program) | owner |
 | L3 | done: one-time keys realmd takes from its login_key table under NAME#ID | done | done | done | owner |
 | L4 | done | done | done: the login dialog has no remember box; the game has no later login screen, a later login in the session asks for a restart | done | owner |
@@ -72,5 +72,5 @@ None. (World of Warcraft's reusable account password was an exception until the 
 
 ## Work, in order
 
-1. **Tests owed:** 128-character passwords and 32-character names typed in every game (Motor City Online's password done); the at-scale tests of Motor City Online (18) and City of Heroes (64) on the owner's go; D3 checks; D2 only when the owner asks for an ultrawide test.
+1. **Tests owed:** the at-scale tests of Motor City Online (18) and City of Heroes (64) on the owner's go; D3 checks for EverQuest and Motor City Online; D2 only when the owner asks for an ultrawide test.
 2. **Asheron's Call:** the owner's talk on its login design first, then every row.
