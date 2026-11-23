@@ -46,21 +46,21 @@ done, partial, missing, n/a; "owner" where the owner's decision comes first. Fro
 | Row | World of Warcraft | EverQuest | Motor City Online | City of Heroes | Asheron's Call |
 |---|---|---|---|---|---|
 | L1 | done (32-letter name and 128-character password typed 2026-11-23) | done (both filled through the game's own text setter 2026-11-23; the login screen's boxes set no length) | done (both typed 2026-11-23) | done (both typed 2026-11-23) | owner |
-| L2 | done | done | done | done (Ankh's Play could not start it until 2026-11-23: the site gave no program) | owner |
+| L2 | done (through Ankh 2026-11-23) | done (through Ankh 2026-11-23, a fresh install's seizure warning, news and server choice included) | partial: through Ankh the intro's title movie waits for a click | done (Ankh's Play could not start it until 2026-11-23: the site gave no program) | owner |
 | L3 | done: one-time keys realmd takes from its login_key table under NAME#ID | done | done | done | owner |
 | L4 | done | done | done: the login dialog has no remember box; the game has no later login screen, a later login in the session asks for a restart | done | owner |
 | L5 | done | done | done | done: empty boxes get a sentence in the game's failed-login dialog | partial: fatal errors in a Windows box |
 | L6 | done: the client logs in only with keys Ammolite gives; the owner's own accounts keep their passwords until their move | done | done | done | owner |
 | A1 | done | done | done | done | owner |
 | A2 | done | done | done | done | owner |
-| A3 | done (50 at once, 2026-11-13) | done (84 at once, 2026-11-13) | partial: lock on the persona (2026-11-23); 18 at once proven before it and the launch grants, so the at-scale test again on the owner's go | partial: the 64 at once is owed (4 proven) | owner (target not set) |
+| A3 | done (50 at once, 2026-11-13) | done (84 at once, 2026-11-13) | done (18 at once, each its own persona, with the lock on the persona, 2026-11-23) | partial: the 64 at once is owed (4 proven) | owner (target not set) |
 | A4 | done | done | done | done (never needed) | owner |
 | A5 | done | done | done | done | owner |
 | C1 | done | done | done | done | owner |
 | C2 | done | done | done | done | owner |
 | D1 | done | done | done | done | partial: display-guard optional |
 | D2 | partial: world at 21:9 not measured | partial: ultrawide cursor not tested | partial: not tested | not tested | partial: not tested |
-| D3 | done | not tested | not tested | done: no Ultra Mode prompt, no crash-report box | not tested |
+| D3 | done | done: a fresh install's seizure warning and news pass by themselves | partial: the false low-RAM box is gone (2026-11-23); the rest not checked | done: no Ultra Mode prompt, no crash-report box | not tested |
 | D4 | done | done | done | done | partial: no background rate |
 | S1 | done | done | not checked | n/a (never shown) | not checked |
 | S2 | done | done | done | done | partial: scarab's own server setting |
@@ -72,5 +72,6 @@ None. (World of Warcraft's reusable account password was an exception until the 
 
 ## Work, in order
 
-1. **Tests owed:** the at-scale tests of Motor City Online (18) and City of Heroes (64) on the owner's go; D3 checks for EverQuest and Motor City Online; D2 only when the owner asks for an ultrawide test.
-2. **Asheron's Call:** the owner's talk on its login design first, then every row.
+1. **Motor City Online (L2, D3):** Play waits on the intro's title movie for a click; the rest of its first-start screens checked.
+2. **Tests owed:** City of Heroes' 64 at once (on the owner's go); D2 only when the owner asks for an ultrawide test.
+3. **Asheron's Call:** the owner's talk on its login design first, then every row.
