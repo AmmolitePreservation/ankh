@@ -227,6 +227,35 @@ private slots:
     QVERIFY(!isFailed);
   }
 
+  void aLaunchGrantIsAskedForTheWorldWithTheToken()
+  {
+    FakeServer server;
+    server.answer(QStringLiteral("POST /api/v1/servers/7/launchGrant"), 201,
+      QByteArray("{\"grant\":\"ammoliteGrant_xyz\",\"expiresAt\":\"2026-11-23T08:00:00Z\"}"));
+    AmmoliteClient client(server.url(), QStringLiteral("2026.11.08.0100"));
+    client.setToken(QStringLiteral("ammolite_abc"));
+    QString grant;
+    client.requestLaunchGrant(7, [&](const QString& granted) { grant = granted; }, [](const QString&) {});
+    QTRY_VERIFY_WITH_TIMEOUT(!grant.isEmpty(), 5000);
+    QCOMPARE(grant, QStringLiteral("ammoliteGrant_xyz"));
+    QCOMPARE(server.requests.size(), 1);
+    QCOMPARE(server.requests.first().authorization, QByteArray("Bearer ammolite_abc"));
+  }
+
+  void aRefusedLaunchGrantCarriesTheServersReason()
+  {
+    FakeServer server;
+    server.answer(QStringLiteral("POST /api/v1/servers/7/launchGrant"), 404, QByteArray("{\"error\":\"There is no such world.\"}"));
+    AmmoliteClient client(server.url(), QStringLiteral("2026.11.08.0100"));
+    client.setToken(QStringLiteral("ammolite_abc"));
+    QString message;
+    bool isGranted = false;
+    client.requestLaunchGrant(7, [&](const QString&) { isGranted = true; }, [&](const QString& refusal) { message = refusal; });
+    QTRY_VERIFY_WITH_TIMEOUT(!message.isEmpty(), 5000);
+    QCOMPARE(message, QStringLiteral("There is no such world."));
+    QVERIFY(!isGranted);
+  }
+
   void aPublicManifestCarriesOnlyTheRelease()
   {
     FakeServer server;
