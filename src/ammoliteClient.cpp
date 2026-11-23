@@ -414,6 +414,13 @@ void AmmoliteClient::loadManifest(const QByteArray& etag)
     [this](const QString& message) { emit requestFailed(QStringLiteral("manifest"), message); });
 }
 
+void AmmoliteClient::requestLaunchGrant(int serverID, const std::function<void(const QString&)>& onGranted,
+  const std::function<void(const QString&)>& onFailure)
+{
+  send("POST", QStringLiteral("/api/v1/servers/%1/launchGrant").arg(serverID), QJsonObject(), true,
+    [onGranted](const QJsonObject& answer) { onGranted(requiredString(answer, "grant")); }, onFailure);
+}
+
 // Images are cached by their SHA-256, so a screenshot that changed on the server is fetched again and an unchanged one
 // never is. A cached file whose hash does not match its name is discarded.
 void AmmoliteClient::loadScreenshot(const QString& packageName, const PackageScreenshot& screenshot, const QString& cacheFolder)

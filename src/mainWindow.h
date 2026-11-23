@@ -87,6 +87,7 @@ private:
   void refreshAttachedChoices();
   void startLaunch(const Game& game, const QString& world, const QString& username);
   void startMuseumGame(const Game& game);
+  void startMuseumProcess(const Game& game, const QString& program, const QString& launchGrant);
   void startPluginChange(const Game& game, const QStringList& optionalPluginNames);
   void refreshPluginState();
   void runPlan(const Game& game, const InstallPlan& plan);

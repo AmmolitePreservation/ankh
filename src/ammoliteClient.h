@@ -145,6 +145,10 @@ public:
   void loadMe();
   void loadManifest(const QByteArray& etag);
   void loadScreenshot(const QString& packageName, const PackageScreenshot& screenshot, const QString& cacheFolder);
+  // What Play hands the game it starts for the world serverID in place of this client's token: good only for that world's
+  // credential, for a few minutes.
+  void requestLaunchGrant(int serverID, const std::function<void(const QString&)>& onGranted,
+    const std::function<void(const QString&)>& onFailure);
 
 signals:
   void signedIn(const SignedInUser& user, const QString& token);

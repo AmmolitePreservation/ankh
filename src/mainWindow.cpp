@@ -741,28 +741,49 @@ void MainWindow::startMuseumGame(const Game& game)
   }
   QString note;
   const QString program = installedProgramPath(*receipt, game.executable, note);
-  if (!program.isEmpty()) {
-    QProcess gameProcess;
-    gameProcess.setProgram(program);
-    gameProcess.setArguments(game.arguments);
-    gameProcess.setWorkingDirectory(QFileInfo(program).absolutePath());
-    QProcessEnvironment environment = QProcessEnvironment::systemEnvironment();
-    if (game.givesCredential) {
-      // The game's login plugin takes both out of its environment and asks the site for the player's account at each login.
-      environment.insert(QStringLiteral("ankhPluginsCredentialURL"), credentialUrl(client->baseUrl(), game).toString());
-      environment.insert(QStringLiteral("ankhPluginsCredentialToken"), client->token());
-    }
-    if (!game.address.isEmpty()) {
-      environment.insert(QStringLiteral("ankhPluginsServerAddress"), game.address);
-    }
-    gameProcess.setProcessEnvironment(environment);
-    qint64 processID = 0;
-    if (gameProcess.startDetached(&processID)) {
-      letGameTakeForeground(processID);
-      note = QStringLiteral("Started %1 on %2.").arg(game.title, game.worldName);
-    } else {
-      note = QStringLiteral("Could not start %1.").arg(QDir::toNativeSeparators(program));
-    }
+  if (program.isEmpty()) {
+    installNotes.insert(game.id, note);
+    refreshInstallState();
+    return;
+  }
+  if (!game.givesCredential) {
+    startMuseumProcess(game, program, QString());
+    return;
+  }
+  installNotes.insert(game.id, QStringLiteral("Starting %1...").arg(game.title));
+  refreshInstallState();
+  client->requestLaunchGrant(game.serverID,
+    [this, game, program](const QString& launchGrant) { startMuseumProcess(game, program, launchGrant); },
+    [this, game](const QString& message) {
+      installNotes.insert(game.id, QStringLiteral("Could not start %1: %2").arg(game.title, message));
+      refreshInstallState();
+    });
+}
+
+void MainWindow::startMuseumProcess(const Game& game, const QString& program, const QString& launchGrant)
+{
+  QProcess gameProcess;
+  gameProcess.setProgram(program);
+  gameProcess.setArguments(game.arguments);
+  gameProcess.setWorkingDirectory(QFileInfo(program).absolutePath());
+  QProcessEnvironment environment = QProcessEnvironment::systemEnvironment();
+  if (game.givesCredential) {
+    // The game's login plugin takes both out of its environment and asks the site for the player's account with the
+    // grant, which is good only for this world's credential and only for a few minutes.
+    environment.insert(QStringLiteral("ankhPluginsCredentialURL"), credentialUrl(client->baseUrl(), game).toString());
+    environment.insert(QStringLiteral("ankhPluginsCredentialToken"), launchGrant);
+  }
+  if (!game.address.isEmpty()) {
+    environment.insert(QStringLiteral("ankhPluginsServerAddress"), game.address);
+  }
+  gameProcess.setProcessEnvironment(environment);
+  qint64 processID = 0;
+  QString note;
+  if (gameProcess.startDetached(&processID)) {
+    letGameTakeForeground(processID);
+    note = QStringLiteral("Started %1 on %2.").arg(game.title, game.worldName);
+  } else {
+    note = QStringLiteral("Could not start %1.").arg(QDir::toNativeSeparators(program));
   }
   installNotes.insert(game.id, note);
   refreshInstallState();
