@@ -46,7 +46,7 @@ done, partial, missing, n/a; "owner" where the owner's decision comes first. Fro
 | Row | World of Warcraft | EverQuest | Motor City Online | City of Heroes | Asheron's Call |
 |---|---|---|---|---|---|
 | L1 | done (32-letter name and 128-character password typed 2026-11-23) | done (both filled through the game's own text setter 2026-11-23; the login screen's boxes set no length) | done (both typed 2026-11-23) | done (both typed 2026-11-23) | owner |
-| L2 | done (through Ankh 2026-11-23) | done (through Ankh 2026-11-23, a fresh install's seizure warning, news and server choice included) | done (through Ankh 2026-11-23; the intro plays until a click, the owner's choice, and intro-skip's skipWholeIntro skips it) | done (Ankh's Play could not start it until 2026-11-23: the site gave no program) | owner |
+| L2 | done (through Ankh 2026-11-23; intro-skip since 2026-11-23: the intro at a first start plays until a click or key, and skipWholeIntro skips it) | done (through Ankh 2026-11-23, a fresh install's seizure warning, news and server choice included) | done (through Ankh 2026-11-23; the intro plays until a click, the owner's choice, and intro-skip's skipWholeIntro skips it) | done (Ankh's Play could not start it until 2026-11-23: the site gave no program) | owner |
 | L3 | done: one-time keys realmd takes from its login_key table under NAME#ID | done | done | done | owner |
 | L4 | done | done | done: the login dialog has no remember box; the game has no later login screen, a later login in the session asks for a restart | done | owner |
 | L5 | done | done | done | done: empty boxes get a sentence in the game's failed-login dialog | partial: fatal errors in a Windows box |
