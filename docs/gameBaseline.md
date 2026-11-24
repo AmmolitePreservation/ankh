@@ -60,7 +60,7 @@ done, partial, missing, n/a; "owner" where the owner's decision comes first. Fro
 | C2 | done | done | done | done | owner |
 | D1 | done | done | done | done | partial: display-guard optional |
 | D2 | partial: world at 21:9 not measured | partial: ultrawide cursor not tested | partial: not tested | not tested | partial: not tested |
-| D3 | done | done: a fresh install's seizure warning and news pass by themselves | partial: the false low-RAM box is gone (2026-11-23); the rest not checked | done: no Ultra Mode prompt, no crash-report box | not tested |
+| D3 | done | done: a fresh install's seizure warning and news pass by themselves | done: the false low-RAM box is gone (2026-11-23); a fresh install from the released packages opens no dialog (2026-11-24); the game's own startup picture shows for half a second before its window, kept by the owner's choice | done: no Ultra Mode prompt, no crash-report box | not tested |
 | D4 | done | done | done | done | partial: no background rate |
 | S1 | done | done | not checked | n/a (never shown) | not checked |
 | S2 | done | done | done | done | partial: scarab's own server setting |
@@ -72,6 +72,5 @@ None. (World of Warcraft's reusable account password was an exception until the 
 
 ## Work, in order
 
-1. **Motor City Online (D3):** the rest of its first-start screens checked.
-2. **Tests owed:** City of Heroes' 64 at once (on the owner's go); D2 only when the owner asks for an ultrawide test.
-3. **Asheron's Call:** the owner's talk on its login design first, then every row.
+1. **Tests owed:** City of Heroes' 64 at once (on the owner's go); D2 only when the owner asks for an ultrawide test.
+2. **Asheron's Call:** the owner's talk on its login design first, then every row.
