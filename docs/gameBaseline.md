@@ -72,6 +72,5 @@ None. (World of Warcraft's reusable account password was an exception until the 
 
 ## Work, in order
 
-1. **Motor City Online (D3):** the rest of its first-start screens checked.
-2. **Tests owed:** City of Heroes' 64 at once (on the owner's go); D2 only when the owner asks for an ultrawide test.
-3. **Asheron's Call:** the owner's talk on its login design first, then every row.
+1. **Tests owed:** City of Heroes' 64 at once (on the owner's go); D2 only when the owner asks for an ultrawide test.
+2. **Asheron's Call:** the owner's talk on its login design first, then every row.
