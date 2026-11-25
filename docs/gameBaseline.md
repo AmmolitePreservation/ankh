@@ -17,7 +17,7 @@ What every Ammolite game has, server and client, and where each game stands. A g
 
 - **A1 One account per player per server**, named after the Ammolite username, made by Ammolite.
 - **A2 At least 100 characters per account.**
-- **A3 Many at once.** Several sessions on one account with the lock on the character. Before a game is signed off, its largest event plus two groups is proven logged in at once from one account, once: World of Warcraft 50 (40 raid + 2 groups of 5), EverQuest 84 (72 raid + 2 groups of 6), Motor City Online 18 personas (a race of 6 + 2 races), City of Heroes 64 (a league of 48 + 2 teams of 8), Asheron's Call to be set by the owner. After that one test, a single party logged in at once from one account is the check.
+- **A3 Many at once.** Several sessions on one account with the lock on the character. Before a game is signed off, its largest event plus two groups is proven logged in at once from one account, once: World of Warcraft 50 (40 raid + 2 groups of 5), EverQuest 84 (72 raid + 2 groups of 6), Motor City Online 18 personas (a race of 6 + 2 races), City of Heroes 64 (a league of 48 + 2 teams of 8), Asheron's Call 54 (18 in hard content and 36 farming beside them). After that one test, a single party logged in at once from one account is the check.
 - **A4 Merging.** A player's old accounts on a server merge into theirs, and the merge can be undone.
 - **A5 No account screens.** Ankh shows no account list or choice for the game.
 
@@ -45,17 +45,17 @@ done, partial, missing, n/a; "owner" where the owner's decision comes first. Fro
 
 | Row | World of Warcraft | EverQuest | Motor City Online | City of Heroes | Asheron's Call |
 |---|---|---|---|---|---|
-| L1 | done (32-letter name and 128-character password typed 2026-11-23) | done (both filled through the game's own text setter 2026-11-23; the login screen's boxes set no length) | done (both typed 2026-11-23) | done (both typed 2026-11-23) | owner |
-| L2 | done (through Ankh 2026-11-23; intro-skip since 2026-11-23: the intro at a first start plays until a click or key, and skipWholeIntro skips it) | done (through Ankh 2026-11-23, a fresh install's seizure warning, news and server choice included) | done (through Ankh 2026-11-23; the intro plays until a click, the owner's choice, and intro-skip's skipWholeIntro skips it) | done (Ankh's Play could not start it until 2026-11-23: the site gave no program) | owner |
-| L3 | done: one-time keys realmd takes from its login_key table under NAME#ID | done | done | done | owner |
+| L1 | done (32-letter name and 128-character password typed 2026-11-23) | done (both filled through the game's own text setter 2026-11-23; the login screen's boxes set no length) | done (both typed 2026-11-23) | done (both typed 2026-11-23) | in progress: the in-game sign-in (server list, name and password, saved logins in Ankh's store) is being built |
+| L2 | done (through Ankh 2026-11-23; intro-skip since 2026-11-23: the intro at a first start plays until a click or key, and skipWholeIntro skips it) | done (through Ankh 2026-11-23, a fresh install's seizure warning, news and server choice included) | done (through Ankh 2026-11-23; the intro plays until a click, the owner's choice, and intro-skip's skipWholeIntro skips it) | done (Ankh's Play could not start it until 2026-11-23: the site gave no program) | done for Pyreal (Play to the character screen, 2026-11-25) |
+| L3 | done: one-time keys realmd takes from its login_key table under NAME#ID | done | done | done | done: Pyreal's ACE checks the one-time key with Ammolite |
 | L4 | done | done | done: the login dialog has no remember box; the game has no later login screen, a later login in the session asks for a restart | done | owner |
 | L5 | done | done | done | done: empty boxes get a sentence in the game's failed-login dialog | partial: fatal errors in a Windows box |
-| L6 | done: the client logs in only with keys Ammolite gives; the owner's own accounts keep their passwords until their move | done | done | done | owner |
-| A1 | done | done | done | done | owner |
-| A2 | done | done | done | done | owner |
-| A3 | done (50 at once, 2026-11-13) | done (84 at once, 2026-11-13) | done (18 at once, each its own persona, with the lock on the persona, 2026-11-23) | partial: the 64 at once is owed (4 proven) | owner (target not set) |
+| L6 | done: the client logs in only with keys Ammolite gives; the owner's own accounts keep their passwords until their move | done | done | done | done: Pyreal's ACE checks every password login with Ammolite (2026-11-25) |
+| A1 | done | done | done | done | done: made by Ammolite at the first good login |
+| A2 | done | done | done | done | partial: Pyreal allows 100; the client's character screen shows 20 |
+| A3 | done (50 at once, 2026-11-13) | done (84 at once, 2026-11-13) | done (18 at once, each its own persona, with the lock on the persona, 2026-11-23) | partial: the 64 at once is owed (4 proven) | partial: two sessions on one account proven; the 54 at once is owed |
 | A4 | done | done | done | done (never needed) | owner |
-| A5 | done | done | done | done | owner |
+| A5 | done | done | done | done | done |
 | C1 | done | done | done | done | owner |
 | C2 | done | done | done | done | owner |
 | D1 | done | done | done | done | partial: display-guard optional |
@@ -63,7 +63,7 @@ done, partial, missing, n/a; "owner" where the owner's decision comes first. Fro
 | D3 | done | done: a fresh install's seizure warning and news pass by themselves | done: the false low-RAM box is gone (2026-11-23); a fresh install from the released packages opens no dialog (2026-11-24); the game's own startup picture shows for half a second before its window, kept by the owner's choice | done: no Ultra Mode prompt, no crash-report box | not tested |
 | D4 | done | done | done | done | partial: no background rate |
 | S1 | done | done | not checked | n/a (never shown) | not checked |
-| S2 | done | done | done | done | partial: scarab's own server setting |
+| S2 | done | done | done | done | done: Play passes Pyreal's address on the command line |
 | S3 | done | done | done | done | done |
 
 ## Exceptions
@@ -73,4 +73,4 @@ None. (World of Warcraft's reusable account password was an exception until the 
 ## Work, in order
 
 1. **Tests owed:** City of Heroes' 64 at once (on the owner's go); D2 only when the owner asks for an ultrawide test.
-2. **Asheron's Call:** the owner's talk on its login design first, then every row.
+2. **Asheron's Call:** Pyreal to the full baseline first (owner, 2026-11-25), with the old `scarab` plugin removed and rebuilt as Ankh-style plugins; community servers are not held to these rows: their accounts and passwords are the player's own, kept in Ankh's login store, and Ankh's launch profiles start them.
