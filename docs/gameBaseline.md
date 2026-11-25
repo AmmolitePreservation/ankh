@@ -46,7 +46,7 @@ done, partial, missing, n/a; "owner" where the owner's decision comes first. Fro
 | Row | World of Warcraft | EverQuest | Motor City Online | City of Heroes | Asheron's Call |
 |---|---|---|---|---|---|
 | L1 | done (32-letter name and 128-character password typed 2026-11-23) | done (both filled through the game's own text setter 2026-11-23; the login screen's boxes set no length) | done (both typed 2026-11-23) | done (both typed 2026-11-23) | done (32-letter name and 128-character password typed in the in-game sign-in 2026-11-25; Pyreal's ACE fixed to read passwords of 128 and more) |
-| L2 | done (through Ankh 2026-11-23; intro-skip since 2026-11-23: the intro at a first start plays until a click or key, and skipWholeIntro skips it) | done (through Ankh 2026-11-23, a fresh install's seizure warning, news and server choice included) | done (through Ankh 2026-11-23; the intro plays until a click, the owner's choice, and intro-skip's skipWholeIntro skips it) | done (Ankh's Play could not start it until 2026-11-23: the site gave no program) | done for Pyreal (Play to the character screen, 2026-11-25) |
+| L2 | done (through Ankh 2026-11-23; intro-skip since 2026-11-23: the intro at a first start plays until a click or key, and skipWholeIntro skips it) | done (through Ankh 2026-11-23, a fresh install's seizure warning, news and server choice included) | done (through Ankh 2026-11-23; the intro plays until a click, the owner's choice, and intro-skip's skipWholeIntro skips it) | done (Ankh's Play could not start it until 2026-11-23: the site gave no program) | done for Pyreal (Ankh's Play to the character screen with nothing typed, 2026-11-25; the site gives Pyreal a credential since then) |
 | L3 | done: one-time keys realmd takes from its login_key table under NAME#ID | done | done | done | done: Pyreal's ACE checks the one-time key with Ammolite |
 | L4 | done | done | done: the login dialog has no remember box; the game has no later login screen, a later login in the session asks for a restart | done | owner |
 | L5 | done | done | done | done: empty boxes get a sentence in the game's failed-login dialog | partial: fatal errors in a Windows box |
@@ -58,11 +58,11 @@ done, partial, missing, n/a; "owner" where the owner's decision comes first. Fro
 | A5 | done | done | done | done | done |
 | C1 | done | done | done | done | owner |
 | C2 | done | done | done | done | owner |
-| D1 | done | done | done | done | partial: display-guard optional |
+| D1 | done | done | done | done | done: display-guard required; the game's settings windowed at the monitor's size, its window borderless from creation (2026-11-25) |
 | D2 | partial: world at 21:9 not measured | partial: ultrawide cursor not tested | partial: not tested | not tested | partial: not tested |
-| D3 | done | done: a fresh install's seizure warning and news pass by themselves | done: the false low-RAM box is gone (2026-11-23); a fresh install from the released packages opens no dialog (2026-11-24); the game's own startup picture shows for half a second before its window, kept by the owner's choice | done: no Ultra Mode prompt, no crash-report box | not tested |
-| D4 | done | done | done | done | partial: no background rate |
-| S1 | done | done | not checked | n/a (never shown) | not checked |
+| D3 | done | done: a fresh install's seizure warning and news pass by themselves | done: the false low-RAM box is gone (2026-11-23); a fresh install from the released packages opens no dialog (2026-11-24); the game's own startup picture shows for half a second before its window, kept by the owner's choice | done: no Ultra Mode prompt, no crash-report box | done: a fresh install from the released packages, started by Ankh's Play, opens one borderless window, changes no display mode and shows no dialog to the character screen and out (2026-11-25) |
+| D4 | done | done | done | done | done: 10 frames a second in the background (measured 2026-11-25) |
+| S1 | done | done | not checked | n/a (never shown) | n/a (the client never shows one; the EULA was Turbine's launcher's) |
 | S2 | done | done | done | done | done: Play passes Pyreal's address on the command line |
 | S3 | done | done | done | done | done |
 
