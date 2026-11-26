@@ -52,12 +52,12 @@ done, partial, missing, n/a; "owner" where the owner's decision comes first. Fro
 | L5 | done | done | done | done: empty boxes get a sentence in the game's failed-login dialog | done: the sign-in screen shows every refusal; a Play login the site refuses opens it on Pyreal with the reason (2026-11-25) |
 | L6 | done: the client logs in only with keys Ammolite gives; the owner's own accounts keep their passwords until their move | done | done | done | done: Pyreal's ACE checks every password login with Ammolite (2026-11-25) |
 | A1 | done | done | done | done | done: made by Ammolite at the first good login |
-| A2 | done | done | done | done | partial: Pyreal allows 100; the client's character screen shows 20 |
+| A2 | done | done | done | done | done: Pyreal allows 100 and the character screen holds every one (2026-11-26) |
 | A3 | done (50 at once, 2026-11-13) | done (84 at once, 2026-11-13) | done (18 at once, each its own persona, with the lock on the persona, 2026-11-23) | partial: the 64 at once is owed (4 proven) | partial: two sessions on one account proven; the 54 at once is owed |
 | A4 | done | done | done | done (never needed) | owner |
 | A5 | done | done | done | done | done |
-| C1 | done | done | done | done | owner |
-| C2 | done | done | done | done | owner |
+| C1 | done | done | done | done | done: a scroll bar and the wheel reach every character (2026-11-26) |
+| C2 | done | done | done | done | done: name search as you type; Filter with heritage, gender and level range from Pyreal; search only on community servers (2026-11-26) |
 | D1 | done | done | done | done | done: display-guard required; the game's settings windowed at the monitor's size, its window borderless from creation (2026-11-25) |
 | D2 | partial: world at 21:9 not measured | partial: ultrawide cursor not tested | partial: not tested | not tested | partial: not tested |
 | D3 | done | done: a fresh install's seizure warning and news pass by themselves | done: the false low-RAM box is gone (2026-11-23); a fresh install from the released packages opens no dialog (2026-11-24); the game's own startup picture shows for half a second before its window, kept by the owner's choice | done: no Ultra Mode prompt, no crash-report box | done: a fresh install from the released packages, started by Ankh's Play, opens one borderless window, changes no display mode and shows no dialog to the character screen and out (2026-11-25) |
